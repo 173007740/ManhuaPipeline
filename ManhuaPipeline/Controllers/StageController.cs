@@ -378,14 +378,14 @@ public class StageController : ControllerBase
                     var splitSkills = _db.GetSkills(uid, tags: proj.Tags);
                     var splitSkillNames = splitSkills.Count == 0 ? null : string.Join("、", splitSkills.Select(s => s.Name + (string.IsNullOrWhiteSpace(s.Element) ? "" : "（" + s.Element + "）")));
                     var stage4AssetCatalog = BuildAssetCatalogText(projectId);
-                    // L2 连续性层：先把六类连续性表准备到位（已有则复用，不重复调 LLM），再作为硬约束注入拆分
-                    var stage4Continuity = (await _continuity.EnsureContinuityTablesAsync(
-                            projectId, apiUrl, apiKey, model, assetCatalog: stage4AssetCatalog, thinkingMode: thinkingMode))
-                        ? _continuity.BuildContinuityText(projectId)
-                        : null;
-                    AppendProgressLog(progress, "连续性表", null, string.IsNullOrWhiteSpace(stage4Continuity)
-                        ? "无连续性约束（未抽取或表缺失），按原逻辑拆分"
-                        : "已注入六类连续性硬约束");
+                    // [已停用 2026-09-16] L2 连续性层：不再调用 LLM 抽取六类表，避免阶段 4 静默多一次大模型请求。
+                    // 原实现（恢复时解除注释即可）：
+                    // var stage4Continuity = (await _continuity.EnsureContinuityTablesAsync(
+                    //         projectId, apiUrl, apiKey, model, assetCatalog: stage4AssetCatalog, thinkingMode: thinkingMode))
+                    //     ? _continuity.BuildContinuityText(projectId)
+                    //     : null;
+                    string? stage4Continuity = null;
+                    AppendProgressLog(progress, "连续性表", null, "已停用，按原逻辑拆分");
                     // 全片目标时长区间：显式设置优先（Stage4 界面的"目标总时长"），其次剧本头部"建议时长"自动识别
                     var durationBudget = DurationBudgetParser.TryParse(proj.TargetDurationText) ?? DurationBudgetParser.TryParse(proj.ScriptContent);
                     result = await _llm.SplitIntoUnits(proj.ScriptContent, proj.EpisodeCount, apiUrl, apiKey, model, skillList: splitSkillNames, thinkingMode: thinkingMode, assetCatalog: stage4AssetCatalog, totalDurationMinSeconds: durationBudget?.MinSeconds, totalDurationMaxSeconds: durationBudget?.MaxSeconds, totalDurationDisplay: durationBudget?.Display, continuityText: stage4Continuity);
@@ -668,30 +668,11 @@ public class StageController : ControllerBase
     /// 原有语义：人工触发，未生成时阶段 9 行为与以前完全一致；生成后阶段 9 会按集注入【关键帧锚定】。
     /// 现改为：阶段 9 执行时自动前置（<see cref="EnsureKeyframesBeforeStage9"/>），本接口保留为「手动重生成/覆盖」入口。
     /// </summary>
+    // [已停用 2026-09-16] L3 关键帧层整体停用：不再调用 LLM。
+    // 前端入口（项目页左栏「关键帧」）已隐藏；原实现保留在 git 历史中，需要时取回。
     [HttpPost("keyframes/generate")]
-    public async Task<IActionResult> GenerateKeyframes(int projectId)
-    {
-        var uid = GetUserId();
-        if (uid == 0) return Unauthorized();
-        if (!_db.ProjectBelongsToUser(projectId, uid)) return NotFound(new { message = "项目不存在" });
-
-        if (!_db.KeyframeTableExists())
-            return BadRequest(new { message = "关键帧表不存在，请先执行 Database/Upgrade_关键帧层.sql 并重启应用" });
-
-        try
-        {
-            var (apiUrl, apiKey, model, provider, thinkingMode) = await GetLLMConfig();
-            _logger.LogInformation("[关键帧层] 开始生成 ProjectId={ProjectId}, Provider={Provider}, Model={Model}", projectId, provider, model);
-            var (written, message) = await _keyframes.GenerateAsync(projectId, apiUrl, apiKey, model, thinkingMode);
-            if (written == 0) return BadRequest(new { message, count = 0 });
-            return Ok(new { message, count = written });
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "GenerateKeyframes failed. ProjectId={ProjectId}", projectId);
-            return StatusCode(500, new { message = "关键帧方案生成失败：" + ex.Message });
-        }
-    }
+    public IActionResult GenerateKeyframes(int projectId)
+        => BadRequest(new { message = "关键帧功能已停用（不再调用 LLM）" });
 
     /// <summary>清空关键帧方案（重新生成前或不想让阶段 9 注入锚定时使用）。</summary>
     [HttpDelete("keyframes")]
@@ -712,38 +693,37 @@ public class StageController : ControllerBase
     /// </summary>
     private async Task EnsureKeyframesBeforePromptGeneration(int projectId, string apiUrl, string apiKey, string model, string? thinkingMode)
     {
-        try
-        {
-            if (!_db.KeyframeTableExists())
-            {
-                _logger.LogWarning("[关键帧层] ProjectKeyframes 表不存在，Stage 9 降级为无【关键帧锚定】：请先执行 Database/Upgrade_关键帧层.sql");
-                return;
-            }
-            var existing = _db.GetKeyframes(projectId);
-            if (existing.Count > 0 && !KeyframesStale(projectId, existing)) return;
-            if (existing.Count > 0)
-                // 旧关键帧锚的是旧分镜（缺时间轴 / 旧镜头 / 旧资产描述），留着会让 Stage 9 拿到过时锚点、跨镜头前后不一致。
-                // 不在此处预清空：GenerateAsync 内部 ReplaceKeyframes 是「同一事务里先删后插」，
-                // 生成失败时整批回滚，旧关键帧仍在；预清空反而会让一次失败把关键帧清空成 0。
-                _logger.LogInformation("[关键帧层] 检测到分镜/分集细化已更新，提示词生成前自动重建关键帧 ProjectId={ProjectId} 待替换旧关键帧={Count}", projectId, existing.Count);
-
-            var (written, message) = await _keyframes.GenerateAsync(projectId, apiUrl, apiKey, model, thinkingMode);
-            var line = $"[关键帧层] 前置生成结果：写入={written} {message}";
-            _logger.LogInformation("[关键帧层] 自动前置生成完成 ProjectId={ProjectId} 写入={Count} {Message}", projectId, written, message);
-            // 同步写进分镜规划日志与阶段 9 进度日志：关键帧是静默增强项，落库为 0 时页面看不出原因，日志里要能查到
-            StoryboardPlanningLogger.Append(line + "\n");
-            AppendKeyframeProgressLog(projectId, line);
-        }
-        catch (Exception ex)
-        {
-            // 关键帧是增强项，失败不能连带让提示词生成跑不起来
-            var detail = $"{ex.GetType().Name} {ex.Message}";
-            var inner = ex.GetBaseException();
-            if (inner != ex) detail += " | 内部异常：" + inner.GetType().Name + " " + inner.Message;
-            _logger.LogWarning(ex, "[关键帧层] 自动前置失败，降级为无锚定 ProjectId={ProjectId}", projectId);
-            StoryboardPlanningLogger.Append("[关键帧层] 前置生成异常：" + detail + "\n");
-            AppendKeyframeProgressLog(projectId, "[关键帧层] 前置生成异常：" + detail);
-        }
+        // [已停用 2026-09-16] L3 关键帧层整体停用：阶段 9 不再自动前置生成关键帧，避免静默调用 LLM。
+        // 恢复方法：解除下方注释块，并删除本行 return。
+        await Task.CompletedTask;
+        return;
+        // try
+        // {
+        //     if (!_db.KeyframeTableExists())
+        //     {
+        //         _logger.LogWarning("[关键帧层] ProjectKeyframes 表不存在，Stage 9 降级为无【关键帧锚定】：请先执行 Database/Upgrade_关键帧层.sql");
+        //         return;
+        //     }
+        //     var existing = _db.GetKeyframes(projectId);
+        //     if (existing.Count > 0 && !KeyframesStale(projectId, existing)) return;
+        //     if (existing.Count > 0)
+        //         _logger.LogInformation("[关键帧层] 检测到分镜/分集细化已更新，提示词生成前自动重建关键帧 ProjectId={ProjectId} 待替换旧关键帧={Count}", projectId, existing.Count);
+        //
+        //     var (written, message) = await _keyframes.GenerateAsync(projectId, apiUrl, apiKey, model, thinkingMode);
+        //     var line = $"[关键帧层] 前置生成结果：写入={written} {message}";
+        //     _logger.LogInformation("[关键帧层] 自动前置生成完成 ProjectId={ProjectId} 写入={Count} {Message}", projectId, written, message);
+        //     StoryboardPlanningLogger.Append(line + "\n");
+        //     AppendKeyframeProgressLog(projectId, line);
+        // }
+        // catch (Exception ex)
+        // {
+        //     var detail = $"{ex.GetType().Name} {ex.Message}";
+        //     var inner = ex.GetBaseException();
+        //     if (inner != ex) detail += " | 内部异常：" + inner.GetType().Name + " " + inner.Message;
+        //     _logger.LogWarning(ex, "[关键帧层] 自动前置失败，降级为无锚定 ProjectId={ProjectId}", projectId);
+        //     StoryboardPlanningLogger.Append("[关键帧层] 前置生成异常：" + detail + "\n");
+        //     AppendKeyframeProgressLog(projectId, "[关键帧层] 前置生成异常：" + detail);
+        // }
     }
 
     /// <summary>把关键帧结果写进阶段 9 进度日志（页面「进度日志」可见，也方便事后查库定位）。</summary>
