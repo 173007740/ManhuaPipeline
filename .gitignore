@@ -46,3 +46,20 @@ fix_h3/
 
 # 磁盘上已不存在、git 却仍尝试索引的残留条目
 *.inspect.ndjson
+
+# ============ 生成的媒体产物（视频/音频），一律不入库 ============
+*.mp4
+*.wav
+*.mp3
+*.webm
+*.mov
+*.mkv
+*.avi
+*.flv
+*.m4v
+*.m4a
+*.aac
+*.ogg
+
+# dotnet 本地工具缓存
+.tools/
