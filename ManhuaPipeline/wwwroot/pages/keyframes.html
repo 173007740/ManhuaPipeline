@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>关键帧 - 漫创引擎</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+    <style>
+        .page-title { color: #f1f5f9; margin-bottom: 6px; }
+        .page-sub { color: #64748b; font-size: 13px; margin-bottom: 20px; line-height: 1.7; }
+        .back-link { color: #a78bfa; text-decoration: none; font-size: 13px; display: inline-block; margin-bottom: 12px; }
+        .back-link:hover { color: #c4b5fd; }
+
+        .summary-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .summary-item { background: #1e293b; border-radius: 8px; padding: 10px 18px; text-align: center; min-width: 96px; }
+        .summary-item .num { font-size: 20px; font-weight: 700; color: #a78bfa; display: block; }
+        .summary-item .label { font-size: 11px; color: #64748b; }
+
+        .section-title { color: #e2e8f0; font-size: 15px; font-weight: 600; margin: 26px 0 12px; display: flex; align-items: center; gap: 8px; }
+        .section-title .tools { margin-left: auto; display: flex; gap: 8px; }
+        .mini-btn { background: #334155; color: #cbd5e1; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+        .mini-btn:hover { background: #475569; color: #fff; }
+        .mini-btn.primary { background: #7c3aed; color: #fff; }
+        .mini-btn.primary:hover { background: #6d28d9; }
+        .mini-btn.danger { background: #7f1d1d; color: #fecaca; }
+        .mini-btn.danger:hover { background: #991b1b; }
+        .mini-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+
+        .hint { background: rgba(234,179,8,0.10); border-left: 3px solid #facc15; color: #facc15; padding: 12px 16px; border-radius: 6px; font-size: 13px; line-height: 1.8; margin-bottom: 16px; }
+        .hint.err { background: rgba(239,68,68,0.10); border-left-color: #ef4444; color: #f87171; }
+        .hint.ok { background: rgba(34,197,94,0.10); border-left-color: #22c55e; color: #86efac; }
+
+        .ep-block { margin-bottom: 22px; }
+        .ep-head { color: #a78bfa; font-size: 13px; font-weight: 700; margin: 0 0 10px; display: flex; align-items: center; gap: 8px; }
+        .ep-head .count { color: #64748b; font-weight: 400; font-size: 12px; }
+
+        .kf-card { background: #1e293b; border-radius: 8px; padding: 14px 16px; margin-bottom: 10px; border-left: 3px solid #7c3aed; }
+        .kf-head { display: flex; align-items: center; gap: 10px; margin-bottom: 10px; flex-wrap: wrap; }
+        .kf-idx { background: rgba(124,58,237,0.22); color: #c4b5fd; border-radius: 6px; padding: 2px 9px; font-size: 12px; font-weight: 700; }
+        .kf-label { color: #e2e8f0; font-size: 14px; font-weight: 600; }
+        .kf-shot { color: #64748b; font-size: 12px; }
+        .kf-src { margin-left: auto; font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+        .kf-src.llm { background: rgba(34,197,94,0.18); color: #22c55e; }
+        .kf-src.fallback { background: rgba(148,163,184,0.18); color: #94a3b8; }
+
+        .kf-row { display: flex; gap: 10px; margin-bottom: 6px; font-size: 13px; line-height: 1.75; }
+        .kf-key { color: #64748b; min-width: 78px; flex-shrink: 0; }
+        .kf-val { color: #cbd5e1; word-break: break-word; white-space: pre-wrap; }
+        .kf-val.clue { color: #facc15; }
+        .kf-prompt { background: #0f172a; border-radius: 6px; padding: 10px 12px; margin-top: 8px; color: #cbd5e1; font-size: 12.5px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; }
+        .kf-prompt .lbl { color: #64748b; font-size: 11px; display: block; margin-bottom: 4px; }
+        .kf-prompt .cp { float: right; color: #60a5fa; cursor: pointer; font-size: 11px; }
+        .kf-prompt .cp:hover { color: #93c5fd; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="project.html?id=" id="backLink" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回项目</a>
+                <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container" style="max-width:100%;">
+        <a class="back-link" id="backLinkTop" href="project.html"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回项目</a>
+        <h2 class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">image</span> 关键帧 · L3 层</h2>
+        <div class="page-sub">
+            每个<b style="color:#a78bfa;">剧情节点</b>一张关键帧，每集 <b>8-16 张</b>、覆盖全集（开场、单元首镜、状态变化、信息增量、打斗节拍、收尾）。
+            关键帧的作用是把「<b style="color:#a78bfa;">角色站位 / 道具状态 / 场景朝向 / 线索可见性 / 镜头衔接</b>」在节点上定死，
+            作为分镜与视频生成之间的锚点，防止后续镜头站位漂移、道具状态倒退、线索提前暴露。<br>
+            数据来源：<code style="color:#64748b;">ProjectKeyframes</code>。生成入口在本页按钮，
+            <b>只有点了生成的项目</b>，阶段 9（提示词）才会按集注入【关键帧锚定】；没生成过则阶段 9 行为与以前完全一致。<br>
+            选点由系统按规则确定（不靠模型随手挑），模型只负责把节点写具体；模型失败时自动降级为按分镜拼装。
+        </div>
+
+        <div class="section-title">
+            <span class="material-icons" style="font-size:18px;">auto_awesome</span> 生成关键帧方案
+            <span class="tools">
+                <button class="mini-btn primary" id="btnGenerate" onclick="generate()"><i class="fas fa-bolt"></i> 生成关键帧方案</button>
+                <button class="mini-btn" onclick="copyAllPrompts()"><i class="fas fa-copy"></i> 复制图像提示词</button>
+                <button class="mini-btn danger" onclick="clearAll()"><i class="fas fa-trash"></i> 清空</button>
+                <button class="mini-btn" onclick="load()"><i class="fas fa-sync"></i> 刷新</button>
+            </span>
+        </div>
+        <div class="summary-bar" id="summaryBar"></div>
+        <div id="hintBar"></div>
+        <div id="listSection"><p style="color:#94a3b8;padding:16px;">加载中...</p></div>
+    </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script>
+        $.get("/api/auth/me", function (u) { if (!u || !u.userId) window.location.href = "login.html"; }).fail(function () { window.location.href = "login.html"; });
+
+        var qs = new URLSearchParams(location.search);
+        var projectId = parseInt(qs.get("id") || "0", 10) || 0;
+        var _data = null;
+
+        function esc(s) { if (s == null) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+        if (projectId) {
+            $("#backLink").attr("href", "project.html?id=" + projectId);
+            $("#backLinkTop").attr("href", "project.html?id=" + projectId);
+        } else {
+            $("#listSection").html("<div class='hint err'>缺少项目 ID：请从项目页左栏「关键帧」进入。</div>");
+        }
+
+        function load() {
+            if (!projectId) return;
+            $.get("/api/project/" + projectId + "/keyframes", function (d) {
+                _data = d;
+                render(d);
+            }).fail(function (x) {
+                var msg = (x.responseJSON && x.responseJSON.message) || x.statusText || "加载失败";
+                $("#summaryBar").empty();
+                $("#hintBar").html("<div class='hint err'>加载失败：" + esc(msg) + "</div>");
+                $("#listSection").empty();
+            });
+        }
+
+        function render(d) {
+            var rows = (d && d.keyframes) || [];
+            var eps = (d && d.episodeCounts) || [];
+            var tableExists = d && d.tableExists;
+
+            var h = "";
+            h += "<div class='summary-item'><span class='num'>" + ((d && d.count) || 0) + "</span><span class='label'>关键帧总数</span></div>";
+            var llmTotal = 0;
+            for (var i = 0; i < eps.length; i++) {
+                llmTotal += (eps[i].llmCount || 0);
+                h += "<div class='summary-item'><span class='num'>" + (eps[i].count || 0) + "</span><span class='label'>第 " + eps[i].episodeNumber + " 集</span></div>";
+            }
+            if (rows.length > 0) {
+                h += "<div class='summary-item'><span class='num' style='color:#22c55e;'>" + llmTotal + "</span><span class='label'>模型生成</span></div>";
+                h += "<div class='summary-item'><span class='num' style='color:#94a3b8;'>" + (rows.length - llmTotal) + "</span><span class='label'>降级拼装</span></div>";
+            }
+            $("#summaryBar").html(h);
+
+            var hint = "";
+            if (!tableExists) {
+                hint = "<div class='hint err'>数据库里还没有 <b>ProjectKeyframes</b> 表。请先执行 <code>ManhuaPipeline/Database/Upgrade_关键帧层.sql</code>，然后重启应用。在此之前本页只能读取为空，生成按钮也不可用。</div>";
+                $("#btnGenerate").prop("disabled", true);
+            } else if (rows.length === 0) {
+                hint = "<div class='hint'>还没有关键帧方案。点右上角「<b>生成关键帧方案</b>」：系统会先从分镜里挑出每集 8-16 个不可省的剧情节点，再让模型写成构图与锁定项。需要先完成阶段 5（分镜脚本）与阶段 3/4（蓝图/分集细化，作为背景）。</div>";
+            } else {
+                hint = "<div class='hint ok'>已生成 " + rows.length + " 张关键帧：阶段 9（提示词）会按集注入【关键帧锚定】，镜头站位/道具状态/线索呈现将与本表对齐。改了分镜后重新生成即可覆盖。</div>";
+            }
+            $("#hintBar").html(hint);
+
+            if (rows.length === 0) { $("#listSection").empty(); return; }
+
+            var byEp = {};
+            for (var i = 0; i < rows.length; i++) {
+                var r = rows[i];
+                var key = r.episodeNumber || 0;
+                if (!byEp[key]) byEp[key] = [];
+                byEp[key].push(r);
+            }
+            var epKeys = Object.keys(byEp).sort(function (a, b) { return a - b; });
+
+            var out = "";
+            for (var e = 0; e < epKeys.length; e++) {
+                var k = epKeys[e];
+                var list = byEp[k];
+                out += "<div class='ep-block'><div class='ep-head'><i class='fas fa-film'></i> 第 " + k + " 集";
+                out += "<span class='count'>（" + list.length + " 张关键帧，" +
+                    (list.length < 8 ? "<span style='color:#facc15;'>少于 8 张，建议检查分镜密度</span>" : "覆盖达标") + "）</span></div>";
+                for (var j = 0; j < list.length; j++) {
+                    out += kfCard(list[j]);
+                }
+                out += "</div>";
+            }
+            $("#listSection").html(out);
+        }
+
+        function kfRow(key, val, cls) {
+            if (!val) return "";
+            return "<div class='kf-row'><div class='kf-key'>" + key + "</div><div class='kf-val " + (cls || "") + "'>" + esc(val) + "</div></div>";
+        }
+
+        function kfCard(r) {
+            var h = "<div class='kf-card'>";
+            h += "<div class='kf-head'>";
+            h += "<span class='kf-idx'>#" + (r.sortOrder || 0) + "</span>";
+            h += "<span class='kf-label'>" + esc(r.nodeLabel || "关键帧") + "</span>";
+            h += "<span class='kf-shot'>镜头 " + esc(r.shotLabel || "-") + " ｜ 单元 " + esc(r.unitNumber || "-") + "</span>";
+            h += "<span class='kf-src " + (r.source === "llm" ? "llm" : "fallback") + "'>" + (r.source === "llm" ? "模型生成" : "降级拼装") + "</span>";
+            h += "</div>";
+            h += kfRow("节点理由", r.nodeReason);
+            h += kfRow("构图", r.composition);
+            h += kfRow("锁定站位", r.lockedCharacters);
+            h += kfRow("锁定道具", r.lockedProps);
+            h += kfRow("场景朝向", r.lockedSceneDirection);
+            h += kfRow("线索可见性", r.clueVisible, "clue");
+            h += kfRow("衔接下一帧", r.nextConnection);
+            if (r.imagePrompt) {
+                h += "<div class='kf-prompt'><span class='lbl'>关键帧图像提示词 <span class='cp' onclick=\"copyText(this)\">复制</span></span><span class='kf-img-text'>" + esc(r.imagePrompt) + "</span></div>";
+            }
+            h += "</div>";
+            return h;
+        }
+
+        function copyText(el) {
+            var box = $(el).closest(".kf-prompt").find(".kf-img-text").text();
+            fallbackCopy(box);
+        }
+
+        function copyAllPrompts() {
+            if (!_data || !_data.keyframes || _data.keyframes.length === 0) { alert("没有可复制的关键帧"); return; }
+            var lines = [];
+            for (var i = 0; i < _data.keyframes.length; i++) {
+                var r = _data.keyframes[i];
+                lines.push("【第" + r.episodeNumber + "集 #" + r.sortOrder + "】" + (r.nodeLabel || "") + "（镜头 " + (r.shotLabel || "-") + "）");
+                if (r.imagePrompt) lines.push(r.imagePrompt);
+                lines.push("");
+            }
+            fallbackCopy(lines.join("\n"));
+        }
+
+        function generate() {
+            if (!projectId) return;
+            if (!confirm("生成关键帧方案将覆盖该项目已有的关键帧（每集 8-16 张）。\n\n选点由系统按规则确定，模型只负责写构图与锁定项，可能需要 1-2 分钟。继续？")) return;
+            var btn = $("#btnGenerate");
+            btn.prop("disabled", true).html("<i class='fas fa-spinner fa-spin'></i> 生成中...");
+            $("#hintBar").html("<div class='hint'>正在挑选剧情节点并生成关键帧方案，请稍候（不要关闭页面）...</div>");
+            $.ajax({
+                url: "/api/project/" + projectId + "/stage/keyframes/generate",
+                method: "POST",
+                success: function (d) {
+                    btn.prop("disabled", false).html("<i class='fas fa-bolt'></i> 生成关键帧方案");
+                    alert((d && d.message) || "生成完成");
+                    load();
+                },
+                error: function (x) {
+                    btn.prop("disabled", false).html("<i class='fas fa-bolt'></i> 生成关键帧方案");
+                    var msg = (x.responseJSON && x.responseJSON.message) || x.statusText || "生成失败";
+                    $("#hintBar").html("<div class='hint err'>生成失败：" + esc(msg) + "</div>");
+                }
+            });
+        }
+
+        function clearAll() {
+            if (!projectId) return;
+            if (!confirm("清空该项目全部关键帧方案？清空后阶段 9 不再注入【关键帧锚定】（提示词本身不会自动重跑）。")) return;
+            $.ajax({
+                url: "/api/project/" + projectId + "/stage/keyframes",
+                method: "DELETE",
+                success: function () { alert("已清空"); load(); },
+                error: function (x) { alert((x.responseJSON && x.responseJSON.message) || "清空失败"); }
+            });
+        }
+
+        function fallbackCopy(text) {
+            if (navigator.clipboard && window.isSecureContext) {
+                navigator.clipboard.writeText(text).then(function () { toast("已复制"); }, function () { legacyCopy(text); });
+            } else { legacyCopy(text); }
+        }
+        function legacyCopy(text) {
+            var ta = document.createElement("textarea");
+            ta.value = text; ta.style.position = "fixed"; ta.style.opacity = "0";
+            document.body.appendChild(ta); ta.select();
+            try { document.execCommand("copy"); toast("已复制"); } catch (e) { alert("复制失败，请手动选择"); }
+            document.body.removeChild(ta);
+        }
+        function toast(msg) {
+            var d = $("<div style='position:fixed;bottom:30px;left:50%;transform:translateX(-50%);background:#7c3aed;color:#fff;padding:8px 18px;border-radius:6px;font-size:13px;z-index:9999;'>" + esc(msg) + "</div>");
+            $("body").append(d); setTimeout(function () { d.fadeOut(300, function () { d.remove(); }); }, 1400);
+        }
+
+        load();
+    </script>
+</body>
+</html>

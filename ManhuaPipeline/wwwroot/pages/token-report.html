@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Token统计报表 - 漫创引擎</title>
+<link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.container{max-width:100%;margin:0 auto;padding:32px 24px}
+.page-title{font-size:24px;font-weight:700;margin-bottom:24px}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s;height:40px!important;box-sizing:border-box}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{background:var(--card-hover)}
+.summary-bar{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:24px;align-items:center}
+.summary-item{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px 20px;min-width:160px;text-align:center}
+.summary-item .num{font-size:22px;font-weight:700;color:var(--text);display:block}
+.summary-item .label{font-size:12px;color:var(--text-muted);margin-top:4px;display:block}
+.table-wrap{background:var(--card);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+table{width:100%;border-collapse:collapse}
+th,td{padding:11px 14px;text-align:left;font-size:13px;border-bottom:1px solid var(--border)}
+th{background:rgba(255,255,255,0.04);color:var(--text-muted);font-weight:600;white-space:nowrap}
+td{color:var(--text)}
+tbody tr:hover td{background:rgba(255,255,255,0.02)}
+.bar{height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;min-width:140px}
+.bar>div{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:4px}
+</style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <span id="navUser" style="display:none;">
+          <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+          <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest">
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+          <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bar_chart</span> Token统计报表</div>
+      <a href="dashboard.html" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回工作台</a>
+    </div>
+    <div class="summary-bar" id="summaryBar"></div>
+    <div id="reportContent"><p style="color:#94a3b8;padding:20px;">加载中...</p></div>
+  </div>
+  </div>
+  <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+  <script src="../js/app.js?v=2"></script>
+  <script>
+    function escHtml(s){if(!s)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+    function fmtWan(n) { n = Number(n) || 0; return (n / 10000).toFixed(2); }
+    function fmtRaw(n) { n = Number(n) || 0; return n.toLocaleString("zh-CN"); }
+    function fmtDur(sec) { sec = Number(sec) || 0; var m = Math.floor(sec / 60); var s = sec % 60; return m > 0 ? m + "分" + s + "秒" : s + "秒"; }
+
+    function loadSummary() {
+      $.get("/api/config/token-usage", function(d) {
+        if (!d || !d.quotaTokens) return;
+        var pct = d.quotaTokens > 0 ? Math.min(100, Math.round(d.usedTokens / d.quotaTokens * 100)) : 0;
+        var warn = d.remainingTokens / d.quotaTokens < 0.1;
+        $("#summaryBar").html(
+          "<div class='summary-item'><span class='num'>" + fmtWan(d.quotaTokens) + " 万</span><span class='label'>资源包总量</span></div>" +
+          "<div class='summary-item'><span class='num' style='color:#facc15;'>" + fmtWan(d.usedTokens) + " 万 (" + pct + "%)</span><span class='label'>已消耗</span></div>" +
+          "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.14).toFixed(2) + "</span><span class='label'>已消耗金额·资源包<br>(1万 tokens=0.14元)</span></div>" +
+          "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.092).toFixed(2) + "</span><span class='label'>已消耗金额·4折按量<br>(1万 tokens=0.092元)</span></div>" +
+          "<div class='summary-item'><span class='num' style='color:" + (warn ? "#ef4444" : "#22c55e") + ";'>" + fmtWan(d.remainingTokens) + " 万</span><span class='label'>剩余</span></div>" +
+          (d.canEditQuota ? "<button onclick='showQuotaEdit()' style='margin-left:auto;background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>修改总量</button>" : "")
+        );
+      });
+    }
+
+    function loadProjects() {
+      $.get("/api/config/token-usage/projects", function(list) {
+        if (!list || list.length === 0) {
+          $("#reportContent").html("<p style='color:#94a3b8;padding:30px;text-align:center;'>暂无项目消耗记录</p>");
+          return;
+        }
+        $.get("/api/config/token-usage", function(g) {
+          var quota = g && g.quotaTokens ? g.quotaTokens : 0;
+          var totalSec = 0;
+          for (var ti = 0; ti < list.length; ti++) { totalSec += (list[ti].totalSeconds || 0); }
+          var h = "<div style='margin-bottom:12px;color:#94a3b8;font-size:13px;'>全部项目视频总时长：<span style='color:#34d399;font-weight:600;'>" + fmtDur(totalSec) + "</span></div>";
+          h += "<div class='table-wrap'><table><thead><tr><th>项目名称</th><th>项目ID</th><th>已消耗</th><th>消耗金额·资源包</th><th>消耗金额·4折</th><th>视频时长</th><th>占总资源包</th><th>消耗趋势</th><th></th></tr></thead><tbody>";
+          for (var i = 0; i < list.length; i++) {
+            var p = list[i];
+            var pct = quota > 0 ? (p.usedTokens / quota * 100) : 0;
+            var barW = Math.min(100, pct);
+            var pctText = pct.toFixed(2) + "%";
+            h += "<tr><td style='max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'><a href='project.html?id=" + p.projectId + "' style='color:var(--primary-light);text-decoration:none;'>" + escHtml(p.projectName || "未命名项目") + "</a></td>";
+            h += "<td>" + p.projectId + "</td>";
+            h += "<td>" + fmtWan(p.usedTokens) + " 万 <span style='color:#64748b;font-size:11px;'>(" + fmtRaw(p.usedTokens) + ")</span></td>";
+            h += "<td style='color:#f472b6;font-weight:600;'>¥" + (p.usedTokens / 10000 * 0.14).toFixed(2) + "</td>";
+            h += "<td style='color:#f472b6;font-weight:600;'>¥" + (p.usedTokens / 10000 * 0.092).toFixed(2) + "</td>";
+            h += "<td>" + fmtDur(p.totalSeconds) + "</td>";
+            h += "<td>" + pctText + "</td>";
+            h += "<td><div class='bar'><div style='width:" + barW + "%'></div></div></td>";
+            h += "<td><a href='project.html?id=" + p.projectId + "' style='color:#a78bfa;font-size:12px;text-decoration:none;'>进入项目 →</a></td>";
+            h += "</tr>";
+          }
+          h += "</tbody></table></div>";
+          $("#reportContent").html(h);
+        });
+      }).fail(function() {
+        $("#reportContent").html("<p style='color:#ef4444;padding:20px;'>加载失败</p>");
+      });
+    }
+
+    function showQuotaEdit() {
+      $.get("/api/config/token-usage", function(d) {
+        if (!d.canEditQuota) { alert("只有管理员可以修改全局 Token 配额"); return; }
+        var cur = d.quotaTokens ? (d.quotaTokens / 10000).toFixed(2) : "1400";
+        var h = "<div id='quotaModal' style='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'>";
+        h += "<div style='background:#1e293b;border-radius:12px;padding:24px;width:340px;max-width:90%;'>";
+        h += "<h3 style='color:#e2e8f0;margin:0 0 16px;font-size:16px;'>修改资源包总量</h3>";
+        h += "<label style='color:#94a3b8;font-size:13px;display:block;margin-bottom:6px;'>总量（万 tokens）</label>";
+        h += "<input id='quotaInput' type='number' step='1' value='" + cur + "' style='width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:8px 10px;font-size:14px;margin-bottom:16px;'>";
+        h += "<div style='display:flex;gap:8px;justify-content:flex-end;'>";
+        h += "<button onclick=\"$('#quotaModal').remove()\" style='background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>取消</button>";
+        h += "<button onclick='saveQuota()' style='background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>保存</button>";
+        h += "</div></div></div>";
+        $("body").append(h);
+      });
+    }
+    function saveQuota() {
+      var wan = parseFloat($("#quotaInput").val());
+      if (!wan || wan <= 0) { alert("请输入大于 0 的数量"); return; }
+      $.ajax({ url: "/api/config/token-usage", method: "PUT", contentType: "application/json",
+        data: JSON.stringify({ quotaTokens: Math.round(wan * 10000) }),
+        success: function() { $("#quotaModal").remove(); loadSummary(); loadProjects(); },
+        error: function(x) { alert("保存失败: " + (x.responseJSON?.message || x.statusText)); }
+      });
+    }
+
+    $(function() {
+      $.get("/api/auth/me", function(u) {
+        if (u && u.userId) { if (typeof API !== "undefined" && API.updateUI) API.updateUI(u); loadSummary(); loadProjects(); }
+        else { window.location.href = "login.html"; }
+      }).fail(function() { window.location.href = "login.html"; });
+    });
+  </script>
+
+<script>
+  (function() {
+    var canvas = document.getElementById("particleCanvas");
+    if (!canvas) return;
+    canvas.style.top = "0";
+    canvas.style.width = "100%";
+    canvas.style.pointerEvents = "none";
+    var ctx = canvas.getContext("2d");
+    var W, H;
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    var particles = [];
+    var COUNT = 70;
+    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    for (var i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
+        dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.4 + 0.15
+      });
+    }
+    var CONNECT_DIST = 130;
+    function anim() {
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < COUNT; i++) {
+        var p = particles[i];
+        p.x += p.dx; p.y += p.dy;
+        if (p.x < 0 || p.x > W) p.dx *= -1;
+        if (p.y < 0 || p.y > H) p.dy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + p.alpha + ")";
+        ctx.fill();
+        for (var j = i + 1; j < COUNT; j++) {
+          var q = particles[j];
+          var dx = p.x - q.x;
+          var dy = p.y - q.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_DIST) {
+            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+    anim();
+  })();
+</script>
+</body>
+</html>

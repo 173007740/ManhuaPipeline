@@ -1,0 +1,543 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>视频任务追踪 - 漫创引擎</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+    <style>
+        .task-filters {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+            align-items: center;
+        }
+
+            .task-filters select, .task-filters input {
+                background: #1e293b;
+                color: #e2e8f0;
+                border: 1px solid #475569;
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-size: 13px;
+            }
+
+            .task-filters button {
+                background: #7c3aed;
+                color: #fff;
+                border: none;
+                border-radius: 6px;
+                padding: 6px 14px;
+                cursor: pointer;
+                font-size: 13px;
+            }
+
+        .task-table {
+            width: 100%;
+            table-layout: fixed;
+            border-collapse: collapse;
+            background: #1e293b;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+
+            .task-table th {
+                background: #0f172a;
+                color: #94a3b8;
+                padding: 10px 12px;
+                text-align: left;
+                font-size: 12px;
+                font-weight: 600;
+                border-bottom: 1px solid #334155;
+            }
+
+            .task-table td {
+                padding: 10px 12px;
+                overflow-wrap: break-word;
+                border-bottom: 1px solid #334155;
+                font-size: 13px;
+                color: #e2e8f0;
+                vertical-align: top;
+            }
+
+            .task-table tr:hover td {
+                background: rgba(124,58,237,0.08);
+            }
+
+        .status-badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 10px;
+            font-size: 11px;
+            font-weight: 600;
+        }
+
+        .status-processing {
+            background: rgba(234,179,8,0.2);
+            color: #facc15;
+        }
+
+        .status-completed {
+            background: rgba(34,197,94,0.2);
+            color: #22c55e;
+        }
+
+        .status-succeeded {
+            background: rgba(34,197,94,0.2);
+            color: #22c55e;
+        }
+
+        .status-failed {
+            background: rgba(239,68,68,0.2);
+            color: #ef4444;
+        }
+
+        .status-pending {
+            background: rgba(148,163,184,0.2);
+            color: #94a3b8;
+        }
+
+        .detail-card {
+            background: #0f172a;
+            border-radius: 8px;
+            padding: 16px;
+            margin-top: 12px;
+            display: none;
+        }
+
+            .detail-card.show {
+                display: block;
+            }
+
+        .detail-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        .detail-item label {
+            color: #64748b;
+            font-size: 11px;
+            display: block;
+            margin-bottom: 2px;
+        }
+
+        .detail-item span {
+            color: #e2e8f0;
+            font-size: 13px;
+            word-break: break-all;
+        }
+
+        .video-preview video {
+            width: 100%;
+            max-width: 320px;
+            border-radius: 6px;
+        }
+
+        .summary-bar {
+            display: flex;
+            gap: 24px;
+            margin-bottom: 16px;
+            flex-wrap: wrap;
+        }
+
+        .summary-item {
+            background: #1e293b;
+            border-radius: 8px;
+            padding: 12px 20px;
+            text-align: center;
+            min-width: 100px;
+        }
+
+            .summary-item .num {
+                font-size: 22px;
+                font-weight: 700;
+                color: #a78bfa;
+                display: block;
+            }
+
+            .summary-item .label {
+                font-size: 11px;
+                color: #64748b;
+            }
+
+        .page-title {
+            color: #f1f5f9;
+            margin-bottom: 20px;
+        }
+
+        .back-link {
+            color: #a78bfa;
+            text-decoration: none;
+            font-size: 13px;
+            margin-bottom: 16px;
+            display: inline-block;
+        }
+
+            .back-link:hover {
+                color: #c4b5fd;
+            }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="project.html?id=" id="backLink" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回项目</a>
+                <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                <span id="navUser" style="display:none;">
+                    <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+                    <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                    <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:13px;"></span>
+                    <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                </span>
+                <span id="navGuest">
+                    <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                    <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                </span>
+            </div>
+        </div>
+    </nav>
+    <div class="container" style="max-width:100%;">
+        <h2 class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">history</span> 视频生成任务追踪</h2>
+
+        <!-- Token 用量 -->
+        <div class="summary-bar" id="tokenUsageBar" style="margin-bottom:12px;"></div>
+
+        <!-- 统计 -->
+        <div class="summary-bar" id="summaryBar"></div>
+
+        <!-- 模型说明 -->
+        <div class="summary-bar" style="margin-bottom:12px;padding:14px 18px;font-size:13px;line-height:1.9;color:#94a3b8;">
+            <div style="font-weight:700;margin-bottom:4px;color:#e2e8f0;">模型说明：</div>
+            <div><strong>1、视频模型：Doubao Seedance 2.0 mini</strong></div>
+            <div>Seedance 2.0-2.5 模型资源包，1400万 tokens = 196元 ，(1万 tokens=0.14元)</div>
+            <div>限时优惠（8/7 14:00 ~ 9/7 14:00）：Seedance 2.0 mini 按量 4 折（480p/720p），1万 tokens≈0.092元；fast 75 折</div>
+            <div><strong>2、视频增强：AI MediaKit（画质增强·大模型）</strong></div>
+            <div>多媒体处理资源包-100分钟 ，80元（0.8元/分钟）</div>
+            <div>抵扣规则：输出时长 × 2.5（抵扣系数）× 2（1080P换算系数）= 抵扣分钟数</div>
+            <div>参考成本：5秒镜头 ≈ 0.33元 ｜ 11秒 ≈ 0.73元 ｜ 15秒 ≈ 1元（按1080P估算）</div>
+        </div>
+
+        <!-- 筛选 -->
+        <div class="task-filters">
+            <select id="filterStatus"><option value="">全部状态</option><option value="processing">生成中</option><option value="enhancing">增强中</option><option value="completed">已完成</option><option value="failed">失败</option></select>
+            <input type="text" id="filterKeyword" placeholder="搜索任务ID..." style="width:200px;">
+            <button onclick="loadTasks()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">search</span> 查询</button>
+            <button onclick="refreshAll()" style="background:#475569;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sync</span> 刷新状态</button>
+            <button onclick="scanDuplicateFiles()" style="background:#475569;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">cleaning_services</span> 整理重复文件</button>
+        </div>
+
+        <!-- 任务列表 -->
+        <div id="taskContent"><p style="color:#94a3b8;padding:20px;">加载中...</p></div>
+    </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script>
+        $.get("/api/auth/me", function (u) { if (!u || !u.userId) window.location.href = "login.html"; }).fail(function () { window.location.href = "login.html"; });
+    </script>
+    <script>
+        const params = new URLSearchParams(location.search);
+        const projectId = params.get("id");
+        if (!projectId) { document.title = "未指定项目"; $("#taskContent").html("<p style='color:#ef4444;padding:20px;'>请指定项目 ID</p>"); }
+        $("#backLink").attr("href", "project.html?id=" + projectId);
+
+        function esc(s) { return $("<span>").text(s || "").html(); }
+
+        function apiLabel(s) { return s ? s : "-"; }
+        function statusClass(s) {
+            if (!s) return "pending";
+            if (s === "completed" || s === "succeeded") return "completed";
+            if (s === "failed") return "failed";
+            if (s === "processing" || s === "running") return "processing";
+            if (s === "enhancing") return "processing";
+            return "pending";
+        }
+
+        function statusLabel(s) {
+            if (s === "completed" || s === "succeeded") return "✓ 已完成";
+            if (s === "failed") return "✗ 失败";
+            if (s === "processing" || s === "running") return "⏳ 生成中";
+            if (s === "enhancing") return "✨ 增强中";
+            return "○ 等待中";
+        }
+
+        function timeStr(dt) {
+            if (!dt) return "-";
+            var d = new Date(dt);
+            return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+        }
+
+        function fmtWan(n) { n = Number(n) || 0; return (n / 10000).toFixed(2); }
+        function loadTokenUsage() {
+            if (!projectId) return;
+            $.when(
+                $.get("/api/config/token-usage"),
+                $.get("/api/project/" + projectId + "/video/token-usage")
+            ).done(function (global, project) {
+                var d = global[0];
+                var p = project && project[0] ? project[0] : null;
+                if (!d || !d.quotaTokens) return;
+                var pct = d.quotaTokens > 0 ? Math.min(100, Math.round(d.usedTokens / d.quotaTokens * 100)) : 0;
+                var warn = d.remainingTokens / d.quotaTokens < 0.1;
+                var html =
+                    "<div class='summary-item'><span class='num'>" + fmtWan(d.quotaTokens) + " 万</span><span class='label'>资源包总量</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#facc15;'>" + fmtWan(d.usedTokens) + " 万 (" + pct + "%)</span><span class='label'>已消耗</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.14).toFixed(2) + "</span><span class='label'>已消耗金额·资源包<br>(1万 tokens=0.14元)</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.092).toFixed(2) + "</span><span class='label'>已消耗金额·4折按量<br>(1万 tokens=0.092元)</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:" + (warn ? "#ef4444" : "#22c55e") + ";'>" + fmtWan(d.remainingTokens) + " 万</span><span class='label'>剩余</span></div>" +
+                    (p ? "<div class='summary-item'><span class='num' style='color:#a78bfa;'>" + fmtWan(p.usedTokens) + " 万</span><span class='label'>当前项目已用</span></div>" : "") +
+                    (p ? "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (p.usedTokens / 10000 * 0.14).toFixed(2) + "</span><span class='label'>本项目消耗金额·资源包<br>(1万 tokens=0.14元)</span></div>" : "") +
+                    (p ? "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (p.usedTokens / 10000 * 0.092).toFixed(2) + "</span><span class='label'>本项目消耗金额·4折按量<br>(1万 tokens=0.092元)</span></div>" : "") +
+                    (d.canEditQuota ? "<button onclick='showQuotaEdit()' style='margin-left:auto;background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;'>修改总量</button>" : "");
+                $("#tokenUsageBar").html(html);
+            }).fail(function () {
+                $("#tokenUsageBar").html("<p style='color:#94a3b8;font-size:12px;'>Token 用量加载失败</p>");
+            });
+        }
+        function showQuotaEdit() {
+            $.get("/api/config/token-usage", function (d) {
+                if (!d.canEditQuota) { alert("只有管理员可以修改全局 Token 配额"); return; }
+                var cur = d.quotaTokens ? (d.quotaTokens / 10000).toFixed(2) : "1400";
+                var h = "<div id='quotaModal' style='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'>";
+                h += "<div style='background:#1e293b;border-radius:12px;padding:24px;width:340px;max-width:90%;'>";
+                h += "<h3 style='color:#e2e8f0;margin:0 0 16px;font-size:16px;'>修改资源包总量</h3>";
+                h += "<label style='color:#94a3b8;font-size:13px;display:block;margin-bottom:6px;'>总量（万 tokens）</label>";
+                h += "<input id='quotaInput' type='number' step='1' value='" + cur + "' style='width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:8px 10px;font-size:14px;margin-bottom:16px;'>";
+                h += "<div style='display:flex;gap:8px;justify-content:flex-end;'>";
+                h += "<button onclick=\"$('#quotaModal').remove()\" style='background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>取消</button>";
+                h += "<button onclick='saveQuota()' style='background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>保存</button>";
+                h += "</div></div></div>";
+                $("body").append(h);
+            });
+        }
+        function saveQuota() {
+            var wan = parseFloat($("#quotaInput").val());
+            if (!wan || wan <= 0) { alert("请输入大于 0 的数量"); return; }
+            $.ajax({
+                url: "/api/config/token-usage", method: "PUT", contentType: "application/json",
+                data: JSON.stringify({ quotaTokens: Math.round(wan * 10000) }),
+                success: function () { $("#quotaModal").remove(); loadTokenUsage(); },
+                error: function (x) { alert("保存失败: " + (x.responseJSON?.message || x.statusText)); }
+            });
+        }
+
+        // ===== 整理重复文件（只搬不删）=====
+        // 判定只看文件内容：同一份视频被重复下载出的副本才搬走；重跑的不同版本内容不同，一律保留。
+        function fmtSize(n) {
+            n = Number(n) || 0;
+            if (n >= 1048576) return (n / 1048576).toFixed(1) + " MB";
+            if (n >= 1024) return (n / 1024).toFixed(0) + " KB";
+            return n + " B";
+        }
+
+        function scanDuplicateFiles() {
+            if (!projectId) return;
+            $.post("/api/project/" + projectId + "/video/maintenance/dedupe-local-files?dryRun=true")
+                .done(function (r) { showDedupeModal(r); })
+                .fail(function (x) { alert("扫描失败: " + (x.responseJSON?.message || x.statusText)); });
+        }
+
+        function showDedupeModal(r) {
+            var items = r.items || [];
+            var rows = items.map(function (it) {
+                return "<div style='padding:6px 0;border-bottom:1px solid #334155;font-size:12px;color:#cbd5e1;word-break:break-all;'>"
+                    + "<div style='color:#f472b6;'>待搬 " + esc(it.fileName) + "（" + fmtSize(it.size) + "）</div>"
+                    + "<div style='color:#94a3b8;'>保留 " + esc(it.keptFileName) + "　内容完全相同</div>"
+                    + "</div>";
+            }).join("");
+            if (!rows) rows = "<p style='color:#22c55e;font-size:13px;'>没有发现重复文件，无需整理。</p>";
+
+            var skipped = (r.skipped && r.skipped.length)
+                ? "<p style='color:#facc15;font-size:12px;margin:4px 0;'>跳过 " + r.skipped.length + " 个：" + esc(r.skipped.join("；")) + "</p>"
+                : "";
+
+            var h = "<div id='dedupeModal' style='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'>";
+            h += "<div style='background:#1e293b;border-radius:12px;padding:24px;width:620px;max-width:92%;max-height:82vh;display:flex;flex-direction:column;'>";
+            h += "<h3 style='color:#e2e8f0;margin:0 0 10px;font-size:16px;'>整理重复文件（只搬不删）</h3>";
+            h += "<div style='color:#94a3b8;font-size:12px;line-height:1.8;'>扫描 " + r.scannedFiles + " 个文件，发现 " + items.length + " 个重复副本，合计 " + fmtSize(r.duplicateBytes) + "。<br>"
+                + "只有<b style='color:#e2e8f0;'>字节完全相同</b>的副本会被搬走；不同版本（重跑、增强前后）内容不同，一律保留。</div>";
+            h += "<div style='overflow:auto;flex:1;margin:12px 0;'>" + rows + "</div>";
+            h += skipped;
+            h += "<div style='color:#64748b;font-size:11px;margin-bottom:10px;word-break:break-all;'>搬移目标：" + esc(r.quarantineRoot) + "</div>";
+            h += "<div style='display:flex;gap:8px;justify-content:flex-end;'>";
+            h += "<button onclick=\"$('#dedupeModal').remove()\" style='background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>取消</button>";
+            if (items.length) h += "<button onclick='execDedupe()' style='background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>确认搬走 " + items.length + " 个</button>";
+            h += "</div></div></div>";
+            $("body").append(h);
+        }
+
+        function execDedupe() {
+            $.post("/api/project/" + projectId + "/video/maintenance/dedupe-local-files?dryRun=false")
+                .done(function (r) {
+                    $("#dedupeModal").remove();
+                    var n = (r.items || []).length;
+                    alert("已搬走 " + n + " 个重复文件（" + fmtSize(r.duplicateBytes) + "）\n位置：" + r.quarantineRoot + "\n\n文件只是移动，没有删除。");
+                })
+                .fail(function (x) { alert("整理失败: " + (x.responseJSON?.message || x.statusText)); });
+        }
+
+        function loadTasks() {
+            if (!projectId) return;
+            $.get("/api/project/" + projectId + "/video/tasks", function (tasks) {
+                if (!tasks || tasks.length === 0) {
+                    $("#taskContent").html("<p style='color:#94a3b8;padding:20px;'>暂无视频生成任务记录</p>");
+                    $("#summaryBar").empty();
+                    return;
+                }
+
+                // Summary
+                var total = tasks.length, done = 0, fail = 0, processing = 0, doneSeconds = 0, enhanceDone = 0, enhanceSeconds = 0, enhanceCost = 0;
+                tasks.forEach(function (t) {
+                    if (t.status === "completed" || t.status === "succeeded") { done++; if (t.engine === "mediakit") enhanceDone++; }
+                    else if (t.status === "failed") fail++;
+                    else if (t.status === "processing" || t.status === "running" || t.status === "enhancing") processing++;
+                    if ((t.status === "completed" || t.status === "succeeded") && t.engine !== "mediakit") doneSeconds += (t.responseDuration || t.requestDuration || 0);
+                    if ((t.status === "completed" || t.status === "succeeded") && t.engine === "mediakit") {
+                        var outDur = t.requestDuration || 0; // 输出视频时长（秒）
+                        enhanceSeconds += outDur;
+                        var resCoef = (t.requestRatio === "2k") ? 4 : ((t.requestRatio === "720p") ? 1 : 2); // 计费换算系数(1080p=2)
+                        enhanceCost += (outDur / 60) * 2.5 * resCoef * 0.8; // 抵扣系数2.5 × 换算系数 × 0.8元/分
+                    }
+                });
+                function fmtDuration(s) {
+                    if (!s) return "0秒";
+                    var m = Math.floor(s / 60), r = s % 60;
+                    return m > 0 ? (m + "分" + (r > 0 ? r + "秒" : "")) : (r + "秒");
+                }
+                function fmtEnhance(s) {
+                    if (s === null || s === undefined || isNaN(s)) return "-";
+                    var m = Math.floor(s / 60), r = Math.round(s % 60);
+                    return m > 0 ? (m + "分" + r + "秒") : (r + "秒");
+                }
+                var enhanceCostText = "¥" + enhanceCost.toFixed(2);
+                $("#summaryBar").html(
+                    "<div class='summary-item'><span class='num'>" + total + "</span><span class='label'>总任务</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#22c55e;'>" + done + "</span><span class='label'>已完成</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#a78bfa;'>" + fmtDuration(doneSeconds) + "</span><span class='label'>已完成总时长</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#facc15;'>" + processing + "</span><span class='label'>处理中</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#f59e0b;'>" + enhanceDone + "</span><span class='label'>增强完成</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#ec4899;'>" + enhanceCostText + "</span><span class='label'>增强消费(估,1080p口径)</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#ef4444;'>" + fail + "</span><span class='label'>失败</span></div>"
+                );
+
+                // Filter
+                var filterStatus = $("#filterStatus").val();
+                var keyword = $("#filterKeyword").val().toLowerCase();
+                var filtered = tasks.filter(function (t) {
+                    if (filterStatus && t.status !== filterStatus) return false;
+                    if (keyword && t.taskId.toLowerCase().indexOf(keyword) < 0) return false;
+                    return true;
+                });
+
+                if (filtered.length === 0) {
+                    $("#taskContent").html("<p style='color:#94a3b8;padding:20px;'>没有匹配的任务</p>");
+                    return;
+                }
+
+                var h = "<table class='task-table'><thead><tr><th style='width:12%'>任务ID</th><th style='width:7%'>状态</th><th style='width:7%'>API 状态</th><th style='width:5%'>提示词ID</th><th style='width:10%'>请求参数</th><th style='width:16%'>返回结果</th><th style='width:12%'>提交时间</th><th style='width:12%'>完成时间</th><th style='width:9%'>操作</th></tr></thead><tbody>";
+                for (var i = 0; i < filtered.length; i++) {
+                    var t = filtered[i];
+                    var cl = statusClass(t.status);
+                    var paramsHtml = t.engine === "mediakit"
+                        ? ("增强 → " + (t.requestRatio || "-"))
+                        : (t.requestDuration + "s / " + t.requestRatio + (t.requestWatermark ? " / 水印" : "") + (t.requestGenerateAudio ? " / 音频" : ""));
+                    var enhanceBtn = "";
+                    if ((t.status === "completed" || t.status === "succeeded") && t.videoUrl && t.engine !== "mediakit")
+                        enhanceBtn = " <button class='btn btn-small' onclick='enhanceVideo(this," + t.promptId + ")' style='font-size:11px;background:#f59e0b;color:#fff;border-radius:4px;padding:3px 8px;border:none;cursor:pointer;'>✨ 画质增强</button>";
+                    var resultHtml = "";
+                    if (t.status === "completed" || t.status === "succeeded") {
+                        if (t.engine === "mediakit") {
+                            resultHtml = "✓ 增强完成<br>分辨率 " + (t.responseResolution || t.requestRatio || "-") + "<br>处理耗时 " + fmtEnhance(t.enhanceDuration);
+                        } else {
+                            var _durVal = t.responseDuration || t.requestDuration || 0; var actDur = _durVal ? (Number.isInteger(_durVal) ? _durVal + "s" : _durVal.toFixed(1) + "s") : "-";
+                            resultHtml = "时长 " + actDur + "<br>分辨率 " + (t.responseResolution || "-") + (t.enhanceResolution ? " → 增强" + t.enhanceResolution : "") + "<br>" + (t.responseUsageTokens ? t.responseUsageTokens + " tokens" : "") + (t.responseSeed ? " / seed:" + t.responseSeed : "");
+                        }
+                        if (t.videoUrl) resultHtml += "<br><a href='" + t.videoUrl + "' target='_blank' style='color:#22c55e;font-size:11px;'>▶ 播放</a>";
+                    } else if (t.status === "failed") {
+                        resultHtml = "<span style='color:#ef4444;font-size:11px;'>" + esc(t.errorMessage) + "</span>";
+                    } else if (t.engine === "mediakit") {
+                        resultHtml = "<span style='color:#a78bfa;font-size:11px;'>⏳ 增强处理中...</span>";
+                    }
+                    h += "<tr><td style='font-family:monospace;font-size:11px;max-width:120px;word-break:break-all;'>" + esc(t.taskId) + "<br><span style='font-size:10px;color:#64748b;'>" + (t.engine === "mediakit" ? "画质增强" : (t.engine || "volcano")) + "</span></td>" +
+                        "<td><span class='status-badge status-" + cl + "'>" + statusLabel(t.status) + "</span></td><td style='font-size:11px;'>" + apiLabel(t.apiStatus) + "</td>" +
+                        "<td>" + t.promptId + "</td>" +
+                        "<td style='font-size:11px;'>" + paramsHtml + "</td>" +
+                        "<td style='font-size:11px;'>" + resultHtml + "</td>" +
+                        "<td style='font-size:11px;'>" + timeStr(t.createdAt) + "</td>" +
+                        "<td style='font-size:11px;'>" + timeStr(t.completedAt) + "</td>" +
+                        "<td>" + (t.videoUrl ? "<a href='" + t.videoUrl + "' target='_blank' class='btn btn-small' style='font-size:11px;background:#7c3aed;color:#fff;border-radius:4px;padding:3px 8px;text-decoration:none;display:inline-block;'>🎬 查看视频</a>" : "") + " <button class='btn btn-small' onclick='refreshTask(this,\"" + t.taskId + "\")' style='font-size:11px;background:#2563eb;color:#fff;border-radius:4px;padding:3px 8px;border:none;cursor:pointer;'>🔄 获取最新状态</button>" + enhanceBtn + "</td></tr>";
+                }
+                h += "</tbody></table>";
+                $("#taskContent").html(h);
+            }).fail(function () {
+                $("#taskContent").html("<p style='color:#ef4444;padding:20px;'>加载失败</p>");
+            });
+        }
+
+        function refreshAll() {
+            if (!projectId) return;
+            // Get all processing tasks from SeedancePrompts and re-query status
+            $.get("/api/project/" + projectId + "/prompt", function (prompts) {
+                var processing = prompts.filter(function (p) { return p.status === "processing" || p.status === "running" || p.status === "pending" || p.status === "enhancing"; });
+                if (processing.length === 0) {
+                    loadTasks();
+                    return;
+                }
+                var done = 0;
+                processing.forEach(function (p, idx) {
+                    $.get("/api/project/" + projectId + "/video/status/" + p.promptId, function () {
+                        done++;
+                        if (done >= processing.length) loadTasks();
+                    }).always(function () {
+                        done++;
+                        if (done >= processing.length) loadTasks();
+                    });
+                });
+            });
+        }
+
+
+        function enhanceVideo(btn, promptId) {
+            if (!projectId) return;
+            if (!confirm("确定对该镜头的视频执行画质增强吗？（480p/720p 提升到 1080p/2k，按量计费，处理约几分钟到十几分钟）")) return;
+            $(btn).prop('disabled', true).html('<i class="fas fa-spinner fa-pulse"></i> 增强中...');
+            $.post('/api/project/' + projectId + '/video/enhance/' + promptId)
+                .done(function (r) {
+                    alert(r.message || '画质增强已提交');
+                    loadTasks();
+                }).fail(function (x) {
+                    alert('增强提交失败: ' + (x.responseJSON && x.responseJSON.message ? x.responseJSON.message : x.statusText));
+                    $(btn).prop('disabled', false).html('✨ 画质增强');
+                });
+        }
+
+        function refreshTask(btn, taskId) {
+            if (!projectId) return;
+            $(btn).prop('disabled', true).html('<i class="fas fa-spinner fa-pulse"></i> 刷新中...');
+            $.post('/api/project/' + projectId + '/video/refresh-task/' + encodeURIComponent(taskId))
+                .done(function (r) {
+                    loadTasks();
+                }).fail(function (x) {
+                    alert('刷新失败: ' + (x.responseJSON?.message || x.statusText));
+                    $(btn).prop('disabled', false).html('🔄 获取最新状态');
+                });
+        }
+        $(function () {
+            $.get("/api/auth/me").done(function (u) {
+                if (u && u.userId) { loadTokenUsage(); loadTasks(); }
+                else { window.location.href = "login.html"; }
+            }).fail(function () { window.location.href = "login.html"; });
+        });
+    </script>
+</body>
+</html>

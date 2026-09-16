@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>视频风格管理 - 漫创引擎</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+  <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+  <style>
+    .container{max-width:100%;padding:32px 24px;}
+    .page-title{font-size:24px;font-weight:700;margin-bottom:24px;color:var(--primary-light);}
+    .action-bar{display:flex;gap:12px;align-items:center;}
+    .btn-grad{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
+    .btn-grad:hover{opacity:0.9;}
+    .style-table{width:100%;border-collapse:collapse;background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;}
+    .style-table th{background:rgba(124,58,237,0.25);color:#c4b5fd;font-size:13px;font-weight:600;padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);}
+    .style-table td{padding:10px 14px;color:#e2e8f0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:middle;}
+    .style-table tr:hover td{background:rgba(255,255,255,0.03);}
+    .tag-default{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:2px 8px;font-size:12px;}
+    .btn-edit{background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;}
+    .btn-del{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;margin-left:6px;}
+  </style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <a href="config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+        <span id="navUser" style="display:none;">
+          <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest" style="display:none;">
+          <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 视频风格管理<span style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;">用于“提示词生成”时注入视频风格，可增删改</span></div>
+      <div class="action-bar">
+        <button class="btn-grad" onclick="openStyleModal()"><i class="fas fa-plus"></i> 新增风格</button>
+      </div>
+    </div>
+
+    <table class="style-table" id="styleTable">
+      <thead>
+        <tr><th style="width:60px;">ID</th><th style="width:180px;">风格名称</th><th>风格提示词（注入模板）</th><th style="width:80px;">默认</th><th style="width:160px;">操作</th></tr>
+      </thead>
+      <tbody id="styleBody"><tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;">加载中...</td></tr></tbody>
+    </table>
+  </div>
+
+  <div id="styleModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;" onclick="if(event.target===this)closeStyleModal()">
+    <div style="background:#1e293b;border-radius:12px;padding:24px;max-width:520px;width:90%;border:1px solid rgba(255,255,255,0.1);">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+        <h3 style="color:#f1f1f5;font-size:16px;margin:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#a78bfa">palette</span> <span id="styleModalTitle">新增风格</span></h3>
+        <button onclick="closeStyleModal()" style="background:none;border:none;color:#94a3b8;font-size:20px;cursor:pointer;">&times;</button>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格名称</label>
+        <input id="styleName" type="text" placeholder="如：米哈游二次元、写实风格、赛博朋克" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;">
+      </div>
+      <div style="margin-bottom:20px;">
+        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格提示词（生成提示词时注入）</label>
+        <textarea id="stylePrompt" rows="4" placeholder="如：米哈游二次元风格，画面色彩高饱和，柔光遍布，角色面部细节及表情刻画细腻" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;resize:vertical;"></textarea>
+      </div>
+      <div style="display:flex;justify-content:flex-end;gap:10px;">
+        <button onclick="closeStyleModal()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;">取消</button>
+        <button onclick="saveStyle()" style="background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;font-weight:600;">保存</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+<script src="../js/app.js?v=2"></script>
+<script>
+var editingStyleId = null;
+
+function loadStyles() {
+  $.get("/api/video-style", function (list) {
+    var h = "";
+    if (!list || list.length === 0) {
+      h = '<tr><td colspan="5" style="text-align:center;color:#94a3b8;padding:24px;">暂无风格，请先新增</td></tr>';
+    } else {
+      for (var i = 0; i < list.length; i++) {
+        var s = list[i];
+        h += "<tr><td>" + s.styleId + "</td><td style='font-weight:600;color:#f1f1f5;'>" + escHtml(s.styleName) + "</td><td>" + escHtml(s.stylePrompt) + "</td><td>" + (s.isDefault ? "<span class='tag-default'>默认</span>" : "") + "</td><td><button class='btn-edit' onclick='openStyleModal(" + s.styleId + ")'><i class='fas fa-pen'></i> 编辑</button><button class='btn-del' onclick='deleteStyle(" + s.styleId + ")'><i class='fas fa-trash'></i> 删除</button></td></tr>";
+      }
+    }
+    $("#styleBody").html(h);
+  }).fail(function () { $("#styleBody").html('<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:24px;">加载失败</td></tr>'); });
+}
+
+function openStyleModal(styleId) {
+  editingStyleId = styleId || null;
+  $("#styleName").val("");
+  $("#stylePrompt").val("");
+  if (editingStyleId) {
+    $("#styleModalTitle").text("编辑风格");
+    $.get("/api/video-style", function (list) {
+      for (var i = 0; i < list.length; i++) {
+        if (list[i].styleId === editingStyleId) {
+          $("#styleName").val(list[i].styleName);
+          $("#stylePrompt").val(list[i].stylePrompt);
+          break;
+        }
+      }
+    });
+  } else {
+    $("#styleModalTitle").text("新增风格");
+  }
+  $("#styleModal").css("display", "flex");
+}
+
+function closeStyleModal() { $("#styleModal").hide(); }
+
+function saveStyle() {
+  var name = $("#styleName").val().trim();
+  var prompt = $("#stylePrompt").val().trim();
+  if (!name) { alert("请输入风格名称"); return; }
+  if (!prompt) { alert("请输入风格提示词"); return; }
+  $.ajax({
+    url: "/api/video-style",
+    method: "POST",
+    contentType: "application/json",
+    data: JSON.stringify({ styleId: editingStyleId, styleName: name, stylePrompt: prompt }),
+    success: function () { closeStyleModal(); loadStyles(); },
+    error: function (x) { alert("保存失败: " + (x.responseJSON?.message || x.statusText)); }
+  });
+}
+
+function deleteStyle(styleId) {
+  if (!confirm("确定删除该风格？使用该风格的项目将恢复为默认风格。")) return;
+  $.ajax({
+    url: "/api/video-style/" + styleId,
+    method: "DELETE",
+    success: function () { loadStyles(); },
+    error: function (x) { alert("删除失败: " + (x.responseJSON?.message || x.statusText)); }
+  });
+}
+
+$(function () {
+  $.get("/api/auth/me", function (user) {
+    if (!user || user.userId === 0) { window.location.href = "login.html"; return; }
+  });
+  loadStyles();
+});
+</script>
+<script>
+(function() {
+    var c = document.getElementById("particleCanvas");
+    if (!c) return;
+    c.style.top = "0"; c.style.width = "100%"; c.style.pointerEvents = "none";
+    var ctx = c.getContext("2d");
+    var W, H;
+    function resize(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; }
+    resize(); window.addEventListener("resize", resize);
+    var p = [], COUNT = 70;
+    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    for (var i = 0; i < COUNT; i++) p.push({
+      x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+1.2,
+      dx:(Math.random()-0.5)*0.4, dy:(Math.random()-0.5)*0.4-0.15,
+      color:colors[Math.floor(Math.random()*3)], alpha:Math.random()*0.4+0.15
+    });
+    var DIST = 130;
+    !function anim(){
+      ctx.clearRect(0,0,W,H);
+      for (var i = 0; i < COUNT; i++) {
+        var q = p[i]; q.x += q.dx; q.y += q.dy;
+        if (q.x < 0 || q.x > W) q.dx *= -1;
+        if (q.y < 0 || q.y > H) q.dy *= -1;
+        ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI*2);
+        ctx.fillStyle = q.color + q.alpha + ")"; ctx.fill();
+        for (var j = i+1; j < COUNT; j++) {
+          var r = p[j], dx = q.x - r.x, dy = q.y - r.y, d = Math.sqrt(dx*dx+dy*dy);
+          if (d < DIST) {
+            var a = (1 - d/DIST) * 0.2;
+            ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
+            ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(anim);
+    }();
+  })();
+
+</script>
+</body>
+</html>

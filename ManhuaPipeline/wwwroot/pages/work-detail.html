@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>作品详情 - 漫创引擎</title>
+  <link rel="stylesheet" href="/lib/material-icons/material-icons.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .detail-wrap{max-width:960px;margin:0 auto;}
+    .detail-title{font-size:26px;font-weight:700;color:#f1f5f9;margin:0 0 18px 0;line-height:1.4;}
+    .video-area{background:#000;border-radius:12px;overflow:hidden;border:1px solid #334155;margin-bottom:20px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;}
+    .video-area video{width:100%;height:100%;display:block;}
+    .detail-meta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
+    .meta-item{display:inline-flex;align-items:center;gap:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd;border-radius:20px;padding:6px 14px;font-size:13px;}
+    .meta-item .material-icons{font-size:15px;}
+    .detail-desc{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
+    .detail-desc h3{color:#e2e8f0;font-size:15px;margin:0 0 10px 0;font-weight:600;}
+    .detail-desc p{color:#94a3b8;font-size:14px;line-height:1.8;margin:0;white-space:pre-wrap;word-break:break-word;}
+    .back-link{display:inline-flex;align-items:center;gap:6px;color:#a78bfa;text-decoration:none;font-size:14px;margin-bottom:18px;}
+    .back-link:hover{color:#c4b5fd;}
+    .empty-tip{color:#94a3b8;font-size:14px;padding:20px 0;}
+    .container{max-width:100%;padding:32px 24px;}
+  </style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <a href="works.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
+        <a href="config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+        <span id="navUser" style="display:none;">
+          <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest" style="display:none;">
+          <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="detail-wrap">
+      <a class="back-link" href="works.html"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回作品展示</a>
+      <div id="detailBody">
+        <p style="color:#94a3b8;text-align:center;padding:60px 0;">加载中...</p>
+      </div>
+    </div>
+  </div>
+
+  <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+  <script>
+    function escHtml(s){if(!s)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+    function fmtTime(t){
+      if(!t) return '';
+      var d = new Date(t);
+      if(isNaN(d.getTime())) return String(t);
+      var p = function(n){ return (n<10?'0':'')+n; };
+      return d.getFullYear()+'-'+p(d.getMonth()+1)+'-'+p(d.getDate())+' '+p(d.getHours())+':'+p(d.getMinutes());
+    }
+
+    function loadDetail(){
+      var id = new URLSearchParams(location.search).get('id');
+      if(!id){ $('#detailBody').html('<p class="empty-tip">缺少作品 ID</p>'); return; }
+      $.get('/api/works/' + id, function(w){
+        if(!w){ $('#detailBody').html('<p class="empty-tip">作品不存在</p>'); return; }
+
+        var videoHtml = '';
+        if(w.workUrl){
+          if(/.(mp4|webm|mov|m4v)$/i.test(w.workUrl)){
+            videoHtml = '<video src="' + w.workUrl + '" controls autoplay preload="metadata" controlsList="nodownload" disablepictureinpicture oncontextmenu="return false;" style="width:100%;height:100%;border-radius:12px;background:#000;"></video>';
+          } else {
+            videoHtml = '<a href="' + escHtml(w.workUrl) + '" target="_blank" style="color:#a78bfa;font-size:14px;">点击打开作品链接</a>';
+          }
+        } else {
+          videoHtml = '<span style="color:#64748b;font-size:14px;">暂无视频</span>';
+        }
+
+        var h = '';
+        h += '<h1 class="detail-title">' + escHtml(w.title) + '</h1>';
+        h += '<div class="video-area">' + videoHtml + '</div>';
+        h += '<div class="detail-meta">';
+        h += '<span class="meta-item"><span class="material-icons">person</span> 上传作者：' + escHtml(w.authorName || '未知') + '</span>';
+        h += '<span class="meta-item"><span class="material-icons">schedule</span> 上传时间：' + fmtTime(w.createdAt) + '</span>';
+        h += '</div>';
+        h += '<div class="detail-desc"><h3>作品详情</h3><p>' + (w.description ? escHtml(w.description) : '暂无描述') + '</p></div>';
+        $('#detailBody').html(h);
+      }).fail(function(x){ $('#detailBody').html('<p class="empty-tip">加载失败：' + (x.responseJSON?.message || x.statusText) + '</p>'); });
+    }
+
+    $(function(){
+      $.get('/api/auth/me', function(u){ if(u && u.userId>0 && typeof API !== 'undefined' && API.updateUI) API.updateUI(u); });
+      loadDetail();
+    });
+  </script>
+
+  </div>
+
+<script>
+  (function() {
+    var canvas = document.getElementById("particleCanvas");
+    if (!canvas) return;
+    canvas.style.top = "0";
+    canvas.style.width = "100%";
+    canvas.style.pointerEvents = "none";
+    var ctx = canvas.getContext("2d");
+    var W, H;
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    var particles = [];
+    var COUNT = 70;
+    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    for (var i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
+        dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.4 + 0.15
+      });
+    }
+    var CONNECT_DIST = 130;
+    function anim() {
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < COUNT; i++) {
+        var p = particles[i];
+        p.x += p.dx; p.y += p.dy;
+        if (p.x < 0 || p.x > W) p.dx *= -1;
+        if (p.y < 0 || p.y > H) p.dy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + p.alpha + ")";
+        ctx.fill();
+        for (var j = i + 1; j < COUNT; j++) {
+          var q = particles[j];
+          var dx = p.x - q.x;
+          var dy = p.y - q.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_DIST) {
+            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+    anim();
+  })();
+
+  function showBatchUpload(){ $('#batchFiles').val(''); $('#batchTags').val(''); $('#batchPreview').hide(); $('#batchProgress').hide(); $('#batchResult').hide(); $('#batchUploadModal').css('display','flex'); }
+  function closeBatchUpload(){ $('#batchUploadModal').hide(); }
+  $('#batchFiles').on('change',function(){
+    var count = this.files.length;
+    if(count>0){ $('#batchCount').text(count); $('#batchPreview').show(); }
+    else{ $('#batchPreview').hide(); }
+  });
+  function doBatchUpload(){
+    var files = $('#batchFiles')[0].files;
+    if(!files||files.length===0){ alert('请选择图片'); return; }
+    var cat = $('#batchCategory').val();
+    var sub = $('#batchSubCategory').val();
+    var fd = new FormData();
+    for(var i=0;i<files.length;i++) fd.append('files', files[i]);
+    fd.append('category', cat);
+    fd.append('subCategory', sub);
+    fd.append('tags', $('#batchTags').val());
+    $('#batchProgress').show();
+    $('#batchResult').hide();
+    var total = files.length;
+    $('#batchProgressText').text('0 / '+total);
+    $('#batchProgressBar').css('width','0%');
+    $('.btn-primary:contains(开始上传)').prop('disabled',true).text('上传中...');
+    $.ajax({url:'/api/reference/upload-batch', method:'POST', data:fd, processData:false, contentType:false,
+      xhr:function(){
+        var xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress',function(e){
+          if(e.lengthComputable){ var pct=Math.round(e.loaded/e.total*100); $('#batchProgressBar').css('width',pct+'%'); $('#batchProgressText').text(Math.round(e.loaded/total/1024)+'KB / '+Math.round(e.total/1024)+'KB'); }
+        },false);
+        return xhr;
+      },
+      success:function(r){
+        var msg='上传完成：成功 '+r.success+' 张';
+        if(r.failed>0) msg+=', 失败 '+r.failed+' 张';
+        $('#batchProgressBar').css('width','100%');
+        $('#batchResult').html('<span style="color:#22c55e;">'+msg+'</span>').show();
+        $('.btn-primary:contains(上传中...)').prop('disabled',false).text('开始上传');
+        closeBatchUpload(); loadAssets();
+      },
+      error:function(x){
+        $('#batchResult').html('<span style="color:#ef4444;">上传失败: '+(x.responseJSON?.message||x.statusText)+'</span>').show();
+        $('.btn-primary:contains(上传中...)').prop('disabled',false).text('开始上传');
+      }
+    });
+  }
+
+</script>
+</body>
+</html>

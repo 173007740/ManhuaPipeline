@@ -1,0 +1,45 @@
+﻿[19:26:01] connected
+[19:29:11] rows to migrate: 26
+[19:29:37] prompt 375 (project 5): 2 imgs -> ["/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png"]
+[19:29:55] prompt 376 (project 5): 3 imgs -> ["/uploads/reference/f8859c927901ac8a036c61383a42abfb.png","/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/u
+[19:30:11] prompt 377 (project 5): 3 imgs -> ["/uploads/reference/f8859c927901ac8a036c61383a42abfb.png","/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/u
+[19:30:29] prompt 378 (project 5): 4 imgs -> ["/uploads/reference/4d2cd9bd177ae24a055a058f22e845e6.png","/uploads/reference/8ceb2c063af97aac353f7e1e65d10e3e.png","/u
+[19:30:29] prompt 379 (project 5): 2 imgs -> ["/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png","/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png"]
+[19:30:30] prompt 380 (project 5): 4 imgs -> ["/uploads/reference/db050211847c045b74bcedf07c1e36d6.png","/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/u
+[19:30:32] prompt 382 (project 5): 8 imgs -> ["/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png","/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/u
+[19:30:34] prompt 385 (project 5): 7 imgs -> ["/uploads/reference/4d2cd9bd177ae24a055a058f22e845e6.png","/uploads/reference/8ceb2c063af97aac353f7e1e65d10e3e.png","/u
+[19:30:36] prompt 387 (project 5): 7 imgs -> ["/uploads/reference/4d2cd9bd177ae24a055a058f22e845e6.png","/uploads/reference/8ceb2c063af97aac353f7e1e65d10e3e.png","/u
+[19:30:36] prompt 388 (project 5): 2 imgs -> ["/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png"]
+[19:30:37] prompt 389 (project 5): 2 imgs -> ["/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png","/u
+[19:30:37] prompt 390 (project 5): 2 imgs -> ["/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png"]
+[19:30:38] prompt 391 (project 5): 2 imgs -> ["/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png"]
+[19:30:39] prompt 481 (project 6): 4 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/65199272-dedd-4831-a34e-c8176170ae42.png"
+[19:30:40] prompt 482 (project 6): 3 imgs -> ["/uploads/reference/c168100a28bfbac30847d1939321afa8.png","/uploads/reference/b7c1f1f4e07ffe2aa4e0d405663c8275.png","/u
+[19:30:41] prompt 484 (project 6): 3 imgs -> ["/uploads/reference/f2e31f56bb5d9624de85cca0a30f8d24.png","/uploads/reference/d9342681aeb08f5fdef669835f94a8d6.png","/u
+[19:30:42] prompt 485 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c0dfb372d46620dd4955565cbdf9e583.png"]
+[19:30:42] prompt 486 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c0dfb372d46620dd4955565cbdf9e583.png"]
+[19:30:44] prompt 487 (project 6): 5 imgs -> ["/uploads/reference/88da5baf14e43c364ae345c8be2155e3.png","/uploads/reference/0112384dff9608abdcd7dff8d6815867.png","/u
+[19:30:45] prompt 488 (project 6): 6 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/e50703b6aaf13f0dca348e69ed02ad90.png","/u
+[19:30:46] prompt 490 (project 6): 3 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c3ff440cbdb32de8ebe06897698c1917.png","/u
+[19:30:46] prompt 491 (project 6): 3 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c3ff440cbdb32de8ebe06897698c1917.png","/u
+[19:30:47] prompt 493 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/6f76dd22f834c59feeec035aa3fc00b5.png"]
+[19:30:47] prompt 494 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/6f76dd22f834c59feeec035aa3fc00b5.png"]
+[19:30:48] prompt 496 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/b52da45633c64316f086ee127a2fd8ce.png"]
+[19:30:48] prompt 497: no base64 found (skip)
+[19:30:48] DONE. converted imgs=85 savedMB=111.5 failedRows=0
+[19:33:27] connected
+[19:34:31] rows to migrate: 13
+[19:34:32] prompt 497 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/b52da45633c64316f086ee127a2fd8ce.png"]
+[19:34:32] prompt 498 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c0dfb372d46620dd4955565cbdf9e583.png"]
+[19:34:32] prompt 499 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c0dfb372d46620dd4955565cbdf9e583.png"]
+[19:34:33] prompt 500 (project 6): 3 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/98dc9376f752e6f03ab82400f6bd5694.png","/u
+[19:34:34] prompt 501 (project 6): 3 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c0dfb372d46620dd4955565cbdf9e583.png","/u
+[19:34:35] prompt 502 (project 6): 4 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/a3b6b40faf4707759b84cb2c2c7b3cf8.png","/u
+[19:34:36] prompt 503 (project 6): 4 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/c0dfb372d46620dd4955565cbdf9e583.png","/u
+[19:34:36] prompt 504 (project 6): 3 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/a3b6b40faf4707759b84cb2c2c7b3cf8.png","/u
+[19:34:37] prompt 505 (project 6): 3 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/a3b6b40faf4707759b84cb2c2c7b3cf8.png","/u
+[19:34:37] prompt 507 (project 6): 2 imgs -> ["/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png","/uploads/reference/3b9d825fd3b1a138c7505ed4db26ff4e.png"]
+[19:34:38] prompt 509 (project 6): 1 imgs -> "/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png"
+[19:34:38] prompt 511 (project 6): 1 imgs -> "/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png"
+[19:34:38] prompt 514 (project 6): 1 imgs -> "/uploads/reference/ba86eae44022585879b05e7bb5e67bc7.png"
+[19:34:38] DONE. converted imgs=31 savedMB=52.1 failedRows=0

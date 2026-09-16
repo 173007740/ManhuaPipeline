@@ -1,0 +1,144 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>注册 - 漫创引擎</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+<link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+  <style>
+    .avatar-upload { display:flex; align-items:center; gap:16px; margin-bottom:16px; }
+    .avatar-preview { width:64px; height:64px; border-radius:50%; object-fit:cover; border:2px solid var(--border-light); background:var(--bg-card); }
+    .avatar-upload-btn { cursor:pointer; padding:8px 16px; border-radius:8px; border:1px dashed var(--border-light); background:var(--bg-glass); color:var(--text-muted); font-size:13px; transition:all 0.2s; }
+    .avatar-upload-btn:hover { border-color:var(--primary-light); color:var(--primary-light); }
+    #avatarInput { display:none; }
+  </style>
+<style>.navbar,.auth-card,.container{position:relative;z-index:1;}.auth-card{background:rgba(15,23,42,0.85)!important;backdrop-filter:blur(12px);}</style></head>
+<body>
+<div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+    <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+    <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+  </a>
+      <div class="nav-links" id="navLinks">
+      <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+      <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+      <span id="navUser" style="display:none;">
+        <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+        <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:13px;"></span>
+        <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+      </span>
+      <span id="navGuest">
+        <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+      </span>
+    </div>
+    </div>
+  </nav>
+  <div class="container">
+    <div class="auth-card">
+      <h2><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</h2>
+      <form id="registerForm" enctype="multipart/form-data">
+        <div class="form-group">
+          <label>用户名</label>
+          <input type="text" id="username" required>
+        </div>
+        <div class="form-group">
+          <label>昵称（选填）</label>
+          <input type="text" id="nickname" placeholder="设置你的显示名称">
+        </div>
+        <div class="form-group">
+          <label>邮箱</label>
+          <input type="email" id="email" required>
+        </div>
+        <div class="form-group">
+          <label>密码</label>
+          <input type="password" id="password" required minlength="6">
+        </div>
+        <div class="form-group">
+          <label>头像（选填）</label>
+          <div class="avatar-upload">
+            <img id="avatarPreview" class="avatar-preview" src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' fill='%2322222e'/%3E%3Ctext x='50' y='58' text-anchor='middle' fill='%237878a0' font-size='36'%3E👤%3C/text%3E%3C/svg%3E" alt="头像预览">
+            <label class="avatar-upload-btn"><span class="material-icons" style="font-size:inherit;vertical-align:middle">camera_alt</span> 选择头像<input type="file" id="avatarInput" accept="image/*"></label>
+          </div>
+        </div>
+        <p id="regError" style="color:#e74c3c;margin-bottom:12px;display:none;"></p>
+        <button type="submit" class="btn btn-primary" style="width:100%;justify-content:center;">注册</button>
+        <p style="margin-top:12px;text-align:center;">
+          已有账号？<a href="login.html" style="color:var(--primary-light);"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </p>
+      </form>
+    </div>
+  </div>
+  <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+  <script src="../js/app.js?v=2"></script>
+  <script>
+    // 头像预览
+    $("#avatarInput").change(function() {
+      var file = this.files[0];
+      if (file) {
+        var reader = new FileReader();
+        reader.onload = function(e) { $("#avatarPreview").attr("src", e.target.result); };
+        reader.readAsDataURL(file);
+      }
+    });
+
+    // 注册提交（使用 FormData 支持文件上传）
+    $("#registerForm").submit(function(e) {
+      e.preventDefault();
+      var fd = new FormData();
+      fd.append("username", $("#username").val());
+      fd.append("nickname", $("#nickname").val());
+      fd.append("email", $("#email").val());
+      fd.append("password", $("#password").val());
+      var file = $("#avatarInput")[0].files[0];
+      if (file) fd.append("avatar", file);
+
+      $.ajax({
+        url: "/api/auth/register",
+        method: "POST",
+        data: fd,
+        processData: false,
+        contentType: false
+      }).done(function() {
+        window.location.href = "dashboard.html";
+      }).fail(function(xhr) {
+        $("#regError").text(xhr.responseJSON?.message || "注册失败").show();
+      });
+    });
+  </script>
+<script>
+  (function() {
+    var canvas = document.getElementById("particleCanvas");
+    canvas.style.top = "0"; canvas.style.width = "100%"; canvas.style.pointerEvents = "none";
+    if (!canvas) return;
+    var ctx = canvas.getContext("2d");
+    var W, H;
+    function resize() { W = canvas.width = canvas.parentElement.offsetWidth; H = canvas.height = canvas.parentElement.offsetHeight; }
+    resize(); window.addEventListener("resize", resize);
+    var particles = [], COUNT = 70, colors = ["rgba(124,58,237,","rgba(59,130,246,","rgba(167,139,250,"];
+    for (var i = 0; i < COUNT; i++) { particles.push({ x: Math.random()*W, y: Math.random()*H, r: Math.random()*2+1.2, dx: (Math.random()-0.5)*0.4, dy: (Math.random()-0.5)*0.4-0.15, color: colors[Math.floor(Math.random()*colors.length)], alpha: Math.random()*0.4+0.15 }); }
+    var CONNECT_DIST = 130;
+    function anim() {
+      ctx.clearRect(0,0,W,H);
+      for (var i = 0; i < COUNT; i++) {
+        var p = particles[i]; p.x += p.dx; p.y += p.dy;
+        if (p.x < 0 || p.x > W) p.dx *= -1; if (p.y < 0 || p.y > H) p.dy *= -1;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI*2); ctx.fillStyle = p.color + p.alpha + ")"; ctx.fill();
+        for (var j = i+1; j < COUNT; j++) {
+          var q = particles[j], dx = p.x-q.x, dy = p.y-q.y, dist = Math.sqrt(dx*dx+dy*dy);
+          if (dist < CONNECT_DIST) { var a = (1-dist/CONNECT_DIST)*0.2; ctx.beginPath(); ctx.moveTo(p.x,p.y); ctx.lineTo(q.x,q.y); ctx.strokeStyle = "rgba(124,58,237,"+a+")"; ctx.lineWidth = 0.6; ctx.stroke(); }
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+    anim();
+  })();
+</script></body>
+</html>
+

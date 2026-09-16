@@ -1,0 +1,321 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>项目管理 - 漫创引擎</title>
+<link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+<link rel="stylesheet" href="../css/style.css">
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-height:100vh}
+.container{max-width:100%;margin:0 auto;padding:32px 24px}
+.page-title{font-size:24px;font-weight:700;margin-bottom:24px}
+.btn{padding:10px 20px;border:none;border-radius:8px;cursor:pointer;font-size:14px;font-weight:500;display:inline-flex;align-items:center;gap:6px;transition:all 0.2s}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border)}
+.btn-outline:hover{background:var(--card-hover)}
+.btn-small{padding:6px 14px;font-size:13px}
+.btn-danger{background:var(--danger);color:#fff}
+.btn-danger:hover{background:#dc2626}
+.project-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:20px}
+.project-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);overflow:hidden;transition:all 0.2s}
+.project-card:hover{border-color:var(--primary);background:var(--card-hover)}
+.project-cover{width:100%;height:180px;background:#1e293b;display:flex;align-items:center;justify-content:center;font-size:56px;background-size:cover;background-position:center}
+.project-info{padding:16px}
+.project-info h3{font-size:16px;font-weight:600;margin-bottom:4px}.project-desc{font-size:13px;color:var(--text-muted);margin:4px 0;overflow:hidden;text-overflow:ellipsis;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;}
+.project-info .meta{font-size:12px;color:var(--text-muted)}
+.project-actions{display:flex;gap:8px;padding:12px 16px;border-top:1px solid var(--border)}
+.empty-state{display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;min-height:300px;padding:40px;color:var(--text-muted)}
+.empty-state .icon{font-size:64px;margin-bottom:16px;opacity:0.5}
+.modal-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center}
+.modal{background:#1e293b;border-radius:12px;padding:24px;width:90%;max-width:480px;border:1px solid var(--border);max-height:90vh;overflow-y:auto}
+.modal h3{font-size:18px;margin-bottom:16px}
+.modal label{display:block;font-size:13px;color:var(--text-muted);margin-bottom:4px}
+.modal input{width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px}
+.modal-actions{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+#editCoverPreview{max-width:100%;max-height:200px;border-radius:8px;margin-bottom:12px;object-fit:cover}
+.cover-upload-area{position:relative;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:12px}
+.cover-upload-area:hover{border-color:var(--primary);background:rgba(124,58,237,0.05)}
+.cover-upload-area input{position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer}
+
+.summary-bar{display:flex;gap:16px;margin-bottom:12px;flex-wrap:wrap}
+.summary-item{background:#1e293b;border-radius:8px;padding:12px 20px;text-align:center;min-width:110px}
+.summary-item .num{font-size:22px;font-weight:700;color:#a78bfa;display:block}
+.summary-item .label{font-size:11px;color:#64748b}
+</style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+      <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+      <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+    </a>
+        <div class="nav-links" id="navLinks">
+      <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+      <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+      <span id="navUser" style="display:none;">
+        <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;;font-size:14px"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+        <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+        <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+      </span>
+      <span id="navGuest">
+        <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+      </span>
+    </div>
+  </div>
+</nav>
+<div class="container">
+  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+  <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assignment</span> 项目管理<span class="project-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+  <div style="display:flex;align-items:center;gap:8px;">
+    <button class="btn btn-primary" onclick="showCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</button>
+    <button class="btn btn-outline" onclick="toggleSort()" id="sortBtn"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="sortLabel">最新</span></button>
+  </div>
+</div>
+  <div class="summary-bar" id="durationStatBar" style="margin-bottom:10px;"></div>
+  <div id="durationStatDetail" style="margin-bottom:20px;"></div>
+  <div id="projectGrid" class="project-grid"></div>
+  <div id="emptyState" class="empty-state" style="display:none;">
+    <div class="icon">📦</div>
+    <p>还没有项目</p>
+    <p style="margin-top:8px;"><a href="dashboard.html" style="color:var(--primary-light);">去工作台创建项目</a></p>
+  </div>
+</div>
+<!-- 新建项目弹窗 -->
+<div id="createProjectModal" class="modal-overlay" style="display:none;">
+  <div class="modal">
+    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:var(--primary-light)">add</span> 新建项目</h3>
+    <input type="hidden" id="createProjectDramaId">
+    <label>项目名称</label>
+    <input type="text" id="createProjectTitle" placeholder="输入项目名称">
+    <label>描述（选填）</label>
+    <textarea id="createProjectDesc" rows="3" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;font-family:inherit;"></textarea>
+    <label style="display:block;font-size:13px;color:var(--text-muted);margin-bottom:4px;">封面（选填）</label>
+    <div class="cover-upload-area" style="position:relative;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px;">
+      <span class="material-icons" style="font-size:24px;color:var(--text-muted);display:block;margin-bottom:8px;">cloud_upload</span>
+      <span style="font-size:13px;color:var(--text-muted);">点击上传封面图片</span>
+      <input type="file" id="createProjectCover" accept="image/*" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;">
+    </div>
+    <div id="createCoverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;"></div>
+    <div id="dramaSelectorWrap" style="margin-bottom:12px;">
+      <label>所属漫剧</label>
+      <select id="createProjectDramaSelect" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
+        <option value="">请选择漫剧</option>
+      </select>
+    </div>
+    <div class="modal-actions">
+      <button class="btn btn-outline" onclick="$('#createProjectModal').hide()">取消</button>
+      <button class="btn btn-primary" onclick="doCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check</span> 创建</button>
+    </div>
+  </div>
+</div>
+
+<div id="editProjectModal" class="modal-overlay">
+  <div class="modal" style="width:800px;max-width:92%;">
+    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:var(--primary-light)">edit</span> 编辑项目</h3>
+    <input type="hidden" id="editProjectId">
+    <label>项目名称</label>
+    <input type="text" id="editProjectTitle" placeholder="输入项目名称">
+    <label>描述（选填）</label>
+    <textarea id="editProjectDesc" rows="3" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;font-family:inherit;"></textarea>
+    <label>标签（逗号分隔，自动绑定参考图时按标签过滤资产库）</label>
+    <input type="text" id="editProjectTags" placeholder="如：纸上山河,古风" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
+    <label>资产库类型（项目资产图自动同步进参考图库时，写进图库的「类型」；选“未设置”则沿用资产分类：角色/道具/环境/特效）</label>
+    <select id="editProjectLibCategory" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
+      <option value="">未设置（沿用资产分类）</option>
+      <option value="动漫">动漫</option>
+      <option value="写实">写实</option>
+      <option value="游戏">游戏</option>
+      <option value="仙侠">仙侠</option>
+    </select>
+    <label>项目封面</label>
+    <img id="editCoverPreview" style="display:none;">
+    <div class="cover-upload-area">
+      <span class="material-icons" style="font-size:24px;color:var(--text-muted);display:block;margin-bottom:8px;">cloud_upload</span>
+      <span style="font-size:13px;color:var(--text-muted);">点击上传封面图片</span>
+      <input type="file" id="editCoverInput" accept="image/*">
+    </div>
+    <div style="display:flex;gap:8px;margin-bottom:12px;">
+      <button id="btnRemoveCover" class="btn btn-outline btn-small" style="display:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 移除封面</button>
+    </div>
+    <div class="modal-actions">
+      <button id="btnCancelEditProject" class="btn btn-outline">取消</button>
+      <button id="btnSaveEditProject" class="btn btn-primary"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check</span> 保存</button>
+    </div>
+  </div>
+</div>
+<script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+<script src="../js/app.js?v=3"></script>
+<script>
+$(function(){
+  $.get("/api/auth/me",function(u){
+    if(!u||!u.userId){window.location.href="login.html";return}
+    
+    var params=new URLSearchParams(window.location.search);
+    var dramaId=params.get("dramaId");
+    var dramaTitle=params.get("title");
+    if(dramaTitle)$(".page-title").html('<span class="material-icons" style="font-size:inherit;vertical-align:middle">assignment</span> '+dramaTitle+' - 项目管理<span class="project-count" style="color:#94a3b8;font-size:13px;font-weight:400;"></span>');
+    loadAllProjects(dramaId);
+    loadDurationStats(dramaId);
+  }).fail(function(){window.location.href="login.html"});
+});
+function fmtDur(sec){
+  sec=Math.round(sec||0);
+  var m=Math.floor(sec/60), s=sec%60;
+  return m+"分"+(s<10?"0":"")+s+"秒";
+}
+function fmtDT(v){
+  if(!v) return "—";
+  var d=new Date(v);
+  if(isNaN(d.getTime())) return "—";
+  function pad(n){return n<10?"0"+n:""+n}
+  return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes());
+}
+function loadDurationStats(dramaId){
+  var url=dramaId?"/api/project/duration-stats?dramaId="+dramaId:"/api/project/duration-stats";
+  $.get(url,function(list){
+    if(!list||!list.length){$("#durationStatBar").empty();$("#durationStatDetail").empty();return}
+    var projects=list.length, prompts=0, total=0, done=0;
+    list.forEach(function(x){prompts+=(x.promptCount||0);total+=(x.totalDurationSec||0);done+=(x.completedDurationSec||0);});
+    $("#durationStatBar").html(
+      '<div class="summary-item"><span class="num">'+projects+'</span><span class="label">项目数</span></div>'+
+      '<div class="summary-item"><span class="num">'+prompts+'</span><span class="label">提示词总数</span></div>'+
+      '<div class="summary-item"><span class="num" style="color:#22c55e;">'+fmtDur(total)+'</span><span class="label">提示词总时长</span></div>'+
+      '<div class="summary-item"><span class="num" style="color:#a78bfa;">'+fmtDur(done)+'</span><span class="label">已完成视频时长</span></div>'
+    );
+    var rows=list.map(function(x){
+      return '<span style="display:inline-block;background:#1e293b;border-radius:6px;padding:6px 10px;font-size:12px;margin:0 6px 6px 0;color:#94a3b8;">'+
+        escHtml(x.title)+' · '+fmtDur(x.totalDurationSec||0)+' ('+(x.promptCount||0)+'条)</span>';
+    }).join("");
+    $("#durationStatDetail").html('<div style="font-size:12px;color:#64748b;margin-bottom:6px;">按项目明细（提示词口径）</div>'+rows);
+  }).fail(function(){});
+}
+function loadAllProjects(dramaId){
+  var url=dramaId?"/api/drama/"+dramaId+"/projects":"/api/project";
+  $.get(url,function(projects){
+    var $grid=$("#projectGrid"),$empty=$("#emptyState");
+    $grid.empty();
+    if(!projects||!projects.length){$grid.hide();$empty.show();return}
+    $grid.show();$empty.hide();
+    $('.project-count').text('共 '+projects.length+' 个项目');
+    projects.sort(function(a,b){
+      var da=new Date(a.createdAt||a.updatedAt).getTime();
+      var db=new Date(b.createdAt||b.updatedAt).getTime();
+      return sortOrder==="desc" ? db-da : da-db;
+    });
+    projects.forEach(function(p){
+      $grid.append(
+        '<div class="project-card">' +
+        '<div class="project-cover" style="'+(p.coverImage?'background-image:url('+p.coverImage+');background-size:cover;background-position:center;':'')+'">'+(p.coverImage?'':'📁')+'</div>' +
+        '<div class="project-info"><h3>'+escHtml(p.title)+'</h3>' +
+        (p.description?'<p class="project-desc">'+escHtml(p.description)+'</p>':'') +
+        '<div class="meta">创建 '+fmtDT(p.createdAt||p.updatedAt)+'<br>更新 '+fmtDT(p.updatedAt||p.createdAt)+'<br>阶段 '+p.currentStage+'/10</div></div>' +
+        '<div class="project-actions">' +
+        '<a href="project.html?id='+p.projectId+'" class="btn btn-outline btn-small"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_forward</span> 进入</a>' +
+        '<button class="btn btn-outline btn-small btn-edit-project" data-id="'+p.projectId+'" data-title="'+escAttr(p.title)+'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">image</span> 编辑</button>' +
+        '<button class="btn btn-outline btn-small btn-del-project" data-id="'+p.projectId+'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button></div></div>'
+      );
+    });
+  });
+}
+var sortOrder = "desc";
+function toggleSort(){
+  sortOrder = sortOrder === "desc" ? "asc" : "desc";
+  $("#sortLabel").text(sortOrder === "desc" ? "最新" : "最早");
+  loadAllProjects(new URLSearchParams(window.location.search).get("dramaId"));
+}
+function showCreateProject(){
+  var params=new URLSearchParams(window.location.search);
+  var dramaId=params.get("dramaId");
+  $("#createProjectTitle").val("");
+  $("#createProjectDesc").val("");
+  if(dramaId){
+    $("#createProjectDramaId").val(dramaId);
+    $("#dramaSelectorWrap").hide();
+  }else{
+    $("#createProjectDramaId").val("");
+    $("#dramaSelectorWrap").show();
+    var sel=$("#createProjectDramaSelect").empty().append('<option value="">请选择漫剧</option>');
+    $.get("/api/drama",function(dramas){
+      dramas.forEach(function(d){sel.append('<option value="'+d.dramaId+'">'+escHtml(d.title)+'</option>')});
+    });
+  }
+  $("#createProjectModal").css("display","flex");
+}
+var createCoverFile = null;
+$(document).on("change","#createProjectCover",function(){
+  var file=this.files[0];
+  if(file){
+    createCoverFile=file;
+    var reader=new FileReader();
+    reader.onload=function(e){$("#createCoverPreview").html('<img src="'+e.target.result+'" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">').show()};
+    reader.readAsDataURL(file);
+  }
+});
+function doCreateProject(){
+  var title=$("#createProjectTitle").val().trim();
+  if(!title){alert("请输入项目名称");return}
+  var dramaId=$("#createProjectDramaId").val() || $("#createProjectDramaSelect").val();
+  if(!dramaId){alert("请选择所属漫剧");return}
+  var desc=$("#createProjectDesc").val().trim();
+  var done=function(){$("#createProjectModal").hide();loadAllProjects(new URLSearchParams(window.location.search).get("dramaId"))};
+  $.ajax({url:"/api/project",method:"POST",contentType:"application/json",data:JSON.stringify({dramaId:parseInt(dramaId),title:title,description:desc,scriptContent:""}),success:function(r){
+    var pid=r.projectId;
+    if(createCoverFile){
+      var fd=new FormData();
+      fd.append("file",createCoverFile);
+      $.ajax({url:"/api/project/"+pid+"/cover-upload",method:"POST",data:fd,processData:false,contentType:false,success:done,error:function(x){alert("封面上传失败: "+(x.responseJSON?.message||x.statusText));done()}});
+    }else{done()}
+  },error:function(x){alert("失败: "+(x.responseJSON?.message||x.statusText))}});
+}
+function escHtml(t){return String(t).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;")}
+function escAttr(t){return String(t).replace(/"/g,"&quot;").replace(/'/g,"&#39;")}
+</script>
+
+  </div>
+
+<script>
+  (function() {
+    var c = document.getElementById("particleCanvas");
+    if (!c) return;
+    c.style.top = "0"; c.style.width = "100%"; c.style.pointerEvents = "none";
+    var ctx = c.getContext("2d");
+    var W, H;
+    function resize(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; }
+    resize(); window.addEventListener("resize", resize);
+    var p = [], COUNT = 70;
+    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    for (var i = 0; i < COUNT; i++) p.push({
+      x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+1.2,
+      dx:(Math.random()-0.5)*0.4, dy:(Math.random()-0.5)*0.4-0.15,
+      color:colors[Math.floor(Math.random()*3)], alpha:Math.random()*0.4+0.15
+    });
+    var DIST = 130;
+    !function anim(){
+      ctx.clearRect(0,0,W,H);
+      for (var i = 0; i < COUNT; i++) {
+        var q = p[i]; q.x += q.dx; q.y += q.dy;
+        if (q.x < 0 || q.x > W) q.dx *= -1;
+        if (q.y < 0 || q.y > H) q.dy *= -1;
+        ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI*2);
+        ctx.fillStyle = q.color + q.alpha + ")"; ctx.fill();
+        for (var j = i+1; j < COUNT; j++) {
+          var r = p[j], dx = q.x - r.x, dy = q.y - r.y, d = Math.sqrt(dx*dx+dy*dy);
+          if (d < DIST) {
+            var a = (1 - d/DIST) * 0.2;
+            ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
+            ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(anim);
+    }();
+  })();
+</script></body>
+</html>

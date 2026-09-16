@@ -1,0 +1,582 @@
+因为 我想做打斗动作，以及运镜的相关内容，所以增加了 分镜库和打斗库，那么对于打斗镜头，怎么做才最好，毕竟交给 LLM自己发挥总是达不到想要的效果
+
+
+
+
+
+
+14:07
+
+
+
+
+
+
+最好的方式不是让 LLM 自由设计打斗，而是采用：
+模板决定动作与运镜，LLM 只负责把角色、场景、武器填进去。
+
+当前系统虽然注入了分镜库和打斗库，但 Stage 5 得到的打斗模板主要是“名称、层级、时长、适用场景、节拍摘要”，完整动作、运镜和约束要到 Stage 9 才注入。因此 LLM 在分镜阶段仍有较大发挥空间：[StageController.cs (line 215)](D:\\CodexProject\\ManhuaPipeline\\ManhuaPipeline\\Controllers\\StageController.cs:215)。
+推荐工作方式
+Stage 4 打斗单元
+→ 代码筛选匹配模板
+→ LLM 只能选择模板 ID
+→ 按模板节拍填入角色和场景
+→ 校验动作、运镜、时长、连续性
+→ 锁定 Stage 5 分镜
+→ Stage 9 只扩写成视频提示词，不重新设计动作
+1. 打斗模板必须结构化
+不要只写这种抽象描述：
+快—快—顿—重，镜头有冲击力。
+
+应该明确到时间段：
+模板ID：FIGHT_11_COUNTER_01
+适用：双人近战、反击、11秒
+参与者：A进攻，B防守反击
+
+0–2秒：
+动作：A从画面左侧突进，B原地架势防守
+运镜：全景固定，轻微前推
+结束状态：A进入攻击距离，B完成格挡准备
+
+2–5秒：
+动作：A横斩，B后仰闪避并侧步
+运镜：中景横向跟随，保持人物完整肢体
+结束状态：A招式落空，身体重心前倾
+
+5–8秒：
+动作：B抓住空档反击，命中A肩部
+运镜：近景快速推近，命中瞬间短暂停顿
+结束状态：A向右后方失去平衡
+
+8–11秒：
+动作：A落地稳住，B收招保持戒备
+运镜：中景缓慢拉远
+结束状态：双方重新形成对峙
+每段至少要明确：
+开始姿态
+动作主体和承受者
+动作方向
+运镜方式
+景别
+结束姿态
+下一镜头接续状态
+禁止事项
+2. 分镜库使用“原子指令”
+一条指令只负责一件事，例如：
+CAM_TRACK_SIDE：横向跟随角色移动，保持人物全身完整
+CAM_IMPACT_PUSH：命中前快速推近，命中瞬间短暂停顿
+SHOT_WIDE_ANCHOR：全景建立双方位置和空间方向
+SHOT_REACTION_CLOSE：近景捕捉受击表情和身体反馈
+TRANS_MOTION_MATCH：以上一镜头动作方向连接下一镜头
+打斗模板只能引用这些固定指令 ID：
+运镜：CAM_TRACK_SIDE
+命中镜头：CAM_IMPACT_PUSH
+收尾：SHOT_WIDE_ANCHOR
+这样 LLM 不需要重新发明运镜。
+3. 代码先筛选，LLM 后选择
+不要把整个打斗库全部交给 LLM。代码应先根据以下条件筛选：
+双人、多人或群战
+徒手、刀剑、法术或追逐
+5、11、15 秒
+普通交手、压制、反击、高潮对决
+是否释放技能
+T3、T4、T5 阶段
+室内、室外、狭窄空间或开阔场地
+筛选出最匹配的 1–3 个模板后，LLM 只能从这些模板中选择，不能创建新模板。
+4. 技能库负责视觉效果，不负责基础动作
+建议明确分工：
+打斗库：身体动作、攻防关系、节奏和命中反馈。
+分镜库：景别、机位、运镜、转场和光影。
+技能库：技能形态、颜色、释放过程和视觉特效。
+LLM：把实际角色、武器、技能和场景填进模板。
+例如：
+基础动作：来自 FIGHT_11_COUNTER_01
+运镜：来自 CAM_TRACK_SIDE + CAM_IMPACT_PUSH
+技能效果：来自 SKILL_T4_FIRE_BLADE
+角色替换：A=主角，B=敌人
+技能不能覆盖动作逻辑。即使释放大招，也必须说明起手、释放、命中、受击和收招。
+5. Stage 5 就要拿到完整模板
+完整的：
+ActionPrompt
+CameraPrompt
+ConstraintPrompt
+时间节拍
+开始与结束状态
+应该在 Stage 5 分镜规划时就确定。
+Stage 9 只负责把已确定的分镜翻译成 Seedance 提示词，不能重新改变动作、镜头和技能安排。否则 Stage 5 和最终视频提示词可能不一致。
+6. 增加硬性校验
+LLM 输出后由代码检查：
+模板 ID 是否真实存在。
+运镜 ID 是否来自分镜库。
+各时间段总和是否等于 5、11 或 15 秒。
+每段是否有开始状态和结束状态。
+上一镜结束状态是否能连接下一镜开始状态。
+是否出现角色瞬移、武器换手、方向反转。
+T5 是否只出现在高潮镜头。
+一个时间段是否塞入过多复杂动作。
+命中镜头是否包含受击反馈。
+是否擅自创造库外技能或运镜。
+不合格时只让 LLM 修复错误字段，不重新生成整段打斗。
+视频生成层面的关键原则
+为了让 Seedance 更稳定：
+一个时间段只保留一个主要攻防动作。
+复杂连招拆成多个镜头，不要一句话写十几个动作。
+明确左、右、前、后和人物相对位置。
+每段都写清起始姿态和结束姿态。
+运镜不要同时“推拉摇移环绕变焦”全部使用。
+命中必须包含攻击、接触、受击反馈和落点。
+大幅运镜时减少复杂肢体动作；复杂动作时让镜头相对稳定。
+11 秒打斗通常用“建立位置 → 进攻 → 反击命中 → 收势衔接”最稳定。
+核心就是：打斗库提供“动作骨架”，分镜库提供“摄像机骨架”，技能库提供“视觉皮肤”，LLM只做受控填充。这样结果会比现在单纯把库作为参考文本交给 LLM 稳定得多。
+
+
+14:07
+
+
+
+
+
+
+
+你说的很有道理，情况分两种，一种文戏，然后LLM 自由发挥；二打斗，就是你刚才说的这么多，那么技术点来了，怎么控制分镜的时候 ，让代码自己判断动作？或者说动作要写到剧本？
+
+
+
+
+
+
+14:12
+
+
+
+
+
+
+关键答案是：
+不要让代码直接“理解剧本并创造动作”，也不要把所有招式都写进剧本。
+让 LLM 只负责把剧本提取成结构化的“打斗意图”，再由代码按规则选择动作模板。
+
+这是一种混合方案：LLM 负责理解，代码负责决策，模板负责动作。
+两条分镜路线
+Stage 4 单元分类
+├─ 文戏/情感、日常/喜剧、悬疑
+│  └─ 交给 LLM 自由设计分镜
+│
+└─ 打斗/动作、追逐、高潮对决
+   └─ 提取打斗意图 → 代码选择模板 → LLM受控填充
+当前 Stage 4 已经输出：
+类型
+时长
+地点
+核心动作/情绪
+起始状态
+结束状态
+对话
+关键元素
+这些字段已经足够作为判断入口：[LLMService.cs (line 68)](D:\\CodexProject\\ManhuaPipeline\\ManhuaPipeline\\Services\\LLMService.cs:68)。
+第一步：代码判断是否进入打斗模式
+代码不需要理解复杂语义，只判断 Stage 4 的类型：
+var controlledCombatTypes = new[]
+{
+    "打斗/动作",
+    "追逐/逃亡",
+    "高潮/对决"
+};
+
+var useCombatPipeline = controlledCombatTypes.Contains(unit.Type);
+文戏继续走现在的自由分镜逻辑。
+打斗则进入受控流程。
+第二步：LLM只提取“打斗意图”
+不要直接让 LLM 输出完整动作，而是要求返回 JSON：
+{
+  "participants": [
+    { "name": "顾九霄", "role": "A", "weapon": "长剑" },
+    { "name": "赵无极", "role": "B", "weapon": "长刀" }
+  ],
+  "combatForm": "双人刀剑近战",
+  "objective": "顾九霄阻止赵无极带走卷轴",
+  "intensity": 4,
+  "duration": 11,
+  "environment": "狭窄书房",
+  "requiredSkills": ["白刃阵云"],
+  "requiredActions": [
+    "赵无极先手劈砍",
+    "顾九霄闪避",
+    "顾九霄反击命中"
+  ],
+  "result": "赵无极负伤后带着卷轴逃走",
+  "startState": "双方隔着书案对峙",
+  "endState": "赵无极破窗逃走，顾九霄留在室内",
+  "forbidden": [
+    "赵无极不能被杀死",
+    "卷轴不能掉落"
+  ]
+}
+这里 LLM 只回答：
+谁打谁
+为什么打
+使用什么武器
+谁先手
+谁反击
+最终谁赢
+必须出现什么技能
+剧情结束状态是什么
+它不能决定具体模板和完整运镜。
+第三步：代码选择打斗模板
+代码根据结构化字段筛选模板：
+参与人数：2人
+战斗类型：刀剑近战
+时长：11秒
+强度：T4
+空间：狭窄室内
+剧情结构：先手攻击 → 闪避 → 反击 → 逃走
+筛选顺序建议：
+时长必须匹配。
+人数必须匹配。
+武器类型尽量匹配。
+场地类型尽量匹配。
+强度/T级匹配。
+攻防结构匹配。
+最后按模板优先级选最高的一条。
+伪代码：
+var candidates = templates
+    .Where(t => t.Duration == intent.Duration)
+    .Where(t => t.ParticipantCount == intent.Participants.Count)
+    .Where(t => t.SceneTags.Contains(intent.EnvironmentType))
+    .OrderByDescending(t => CalculateMatchScore(t, intent))
+    .ToList();
+
+var selectedTemplate = candidates.First();
+这样同样输入一般会选择同样模板，不再完全依赖 LLM发挥。
+第四步：将角色填入模板
+模板中不要写具体人物，而是写角色槽位：
+A：主动方/主角
+B：防守方/敌人
+C：旁观者或援助者
+代码负责替换：
+A = 顾九霄
+B = 赵无极
+模板原始动作：
+A侧身闪避B的纵向劈砍，抓住B重心前倾的空档横向反击。
+替换后：
+顾九霄侧身闪避赵无极的纵向劈砍，抓住赵无极重心前倾的空档横向反击。
+运镜仍然来自模板，不让 LLM重新创造。
+第五步：LLM只能润色，不能改变骨架
+最后一次调用 LLM 时明确锁定：
+模板ID：FIGHT_11_COUNTER_01
+禁止修改：
+- 时间段
+- 动作顺序
+- 攻防结果
+- 运镜指令
+- 技能名称
+- 开始状态
+- 结束状态
+
+只允许：
+- 将A/B替换为实际角色
+- 补充动作细节
+- 补充表情、衣物和环境反馈
+- 调整为自然中文
+返回结果里仍然必须包含模板 ID 和分镜指令 ID，方便代码检查。
+动作要不要写进剧本？
+不需要把每一个闪避、挥刀、转身都写进剧本。
+剧本应该写“剧情必须发生的动作”，例如：
+赵无极挥刀阻拦顾九霄。顾九霄避开攻击，以白刃阵云反击，将赵无极击伤。赵无极带着卷轴破窗逃走。
+
+这已经足够。
+模板负责补充：
+怎么挥刀
+怎么闪避
+如何反击
+镜头如何跟随
+命中时如何表现
+如何衔接破窗逃走
+必须写进剧本或动作备注的内容包括：
+战斗目标
+谁先手
+谁获胜
+谁受伤
+必须使用的技能
+重要道具是否丢失
+谁最终逃走或留下
+不允许改变的剧情结果
+普通拳脚细节和运镜不需要写进剧本。
+关键打斗可以增加“导演备注”
+对于重要战斗，最好不要只依赖剧本正文，可以给单元增加：
+【动作导演备注】
+战斗形式：双人刀剑反击
+指定模板：FIGHT_11_COUNTER_01
+强度：T4
+必用技能：白刃阵云
+必须结果：赵无极负伤，但成功带卷轴逃走
+禁止：角色死亡、卷轴掉落、第三人参战
+优先级可以固定为：
+导演手动指定模板
+> 剧本中的明确动作要求
+> LLM提取的打斗意图
+> 代码默认模板
+最终建议是：文戏让 LLM 当导演；打斗让代码当动作导演，模板当武术指导，LLM只当执行分镜师。这样既保留文戏的灵活性，也能让打斗动作和运镜稳定可控。
+
+
+14:13
+
+
+
+
+
+
+
+OK ，那基于目前项目，怎么改
+
+
+
+
+
+
+14:18
+
+
+
+
+
+
+已处理 1m 47s
+
+
+
+基于当前项目，最合适的是做一个“V1 模板控制版”，先不改数据库、不推翻现有流水线，也不修改你刚才说要保留的 1–6 项。
+核心变化只有一个：
+Stage 5 不再统一让 LLM 自由生成，而是先把单元分成“文戏”和“打斗”，分别走两套生成器。
+
+改造后的 Stage 5
+读取 Stage 4 单元
+        ↓
+按类型分流
+├─ 文戏/情感、日常/喜剧、悬疑
+│  └─ 使用当前 LLM 自由分镜
+│
+└─ 打斗/动作、追逐/逃亡、高潮对决
+   ├─ LLM 提取结构化打斗意图
+   ├─ 代码选择打斗模板
+   ├─ 代码选择分镜指令
+   ├─ 匹配技能
+   ├─ LLM 按锁定模板填充
+   └─ 输出原有 Markdown 分镜格式
+需要新增的代码
+1. StageUnitParser
+新增一个服务，把 Stage 4 文本解析为：
+public class StageUnit
+{
+    public int EpisodeNumber { get; set; }
+    public string UnitNumber { get; set; } = "";
+    public string Type { get; set; } = "";
+    public int Duration { get; set; }
+    public string Location { get; set; } = "";
+    public string CoreAction { get; set; } = "";
+    public string StartState { get; set; } = "";
+    public string EndState { get; set; } = "";
+    public string Dialogue { get; set; } = "";
+    public string KeyElements { get; set; } = "";
+}
+这些字段当前 Stage 4 已经全部输出，所以不需要改数据库。
+2. CombatIntent
+打斗单元先让 LLM 返回 JSON，而不是直接生成分镜：
+public class CombatIntent
+{
+    public List<CombatParticipant> Participants { get; set; } = [];
+    public string CombatForm { get; set; } = "";
+    public string Objective { get; set; } = "";
+    public int Intensity { get; set; }
+    public int Duration { get; set; }
+    public string EnvironmentType { get; set; } = "";
+    public List<string> RequiredSkills { get; set; } = [];
+    public List<string> RequiredActions { get; set; } = [];
+    public string Result { get; set; } = "";
+    public string StartState { get; set; } = "";
+    public string EndState { get; set; } = "";
+    public List<string> Forbidden { get; set; } = [];
+}
+这一阶段温度建议使用 0.1，只允许提取剧本已有信息。
+3. FightTemplateSelector
+由代码选择打斗模板，不让 LLM随意选择。
+当前打斗模板已有：
+Tier
+Duration
+Scene
+Beat
+ActionPrompt
+CameraPrompt
+ConstraintPrompt
+第一版可以直接复用，不需要加字段。
+匹配规则：
+score = 0;
+
+if (template.Duration == intent.Duration)
+    score += 100;
+
+if (template.Tier == intent.Intensity)
+    score += 30;
+
+if (template.Scene 包含 intent.CombatForm)
+    score += 20;
+
+if (template.Scene 包含 intent.EnvironmentType)
+    score += 15;
+
+if (template.Beat 与 requiredActions 匹配)
+    score += 10;
+然后取分数最高的模板。
+如果剧本明确指定模板，则直接使用指定模板，不再评分。
+4. ShotDirectiveSelector
+不要把整个分镜指令库全部交给 LLM，而是由代码按类别选出需要的指令。
+例如：
+打斗开始：
+- 全景建立空间
+- 固定或轻推
+
+追击阶段：
+- 横向跟随
+- 手持跟拍
+
+命中阶段：
+- 快速推近
+- 命中顿帧
+- 受击特写
+
+结束阶段：
+- 中景拉远
+- 动作匹配转场
+选择结果可以是：
+public class SelectedDirectives
+{
+    public string EstablishingShot { get; set; } = "";
+    public string ActionCamera { get; set; } = "";
+    public string ImpactCamera { get; set; } = "";
+    public string EndingShot { get; set; } = "";
+    public string Transition { get; set; } = "";
+}
+5. StoryboardPlanningService
+新增一个总调度服务：
+public async Task<string> PlanAsync(
+    List<StageUnit> units,
+    List<ShotDirectiveItem> directives,
+    List<FightTemplateItem> templates,
+    List<SkillItem> skills)
+{
+    foreach (var unit in units)
+    {
+        if (IsCombatUnit(unit))
+        {
+            // 提取意图
+            // 选择模板
+            // 选择运镜
+            // 匹配技能
+            // 受控生成
+        }
+        else
+        {
+            // 调用原有自由分镜
+        }
+    }
+}
+然后把 [StageController.cs (line 203)](D:\\CodexProject\\ManhuaPipeline\\ManhuaPipeline\\Controllers\\StageController.cs:203) 的 Stage 5 改成调用这个服务。
+Controller 不再自己拼三大段库文本。
+打斗提示词怎么锁定
+交给 LLM 的内容不再是全部库，而是已经选好的内容：
+【控制模式】
+打斗模板锁定，禁止自由更换模板。
+
+【打斗单元】
+第2集，单元2.3
+参与者：A=顾九霄，B=赵无极
+目标：阻止赵无极带走卷轴
+必须结果：赵无极负伤后带卷轴逃走
+
+【指定模板】
+模板ID：12
+模板名：双人反击·快快顿重
+节拍：接近→先手攻击→闪避→反击命中→收势
+动作：完整 ActionPrompt
+运镜：完整 CameraPrompt
+约束：完整 ConstraintPrompt
+
+【指定分镜指令】
+建立镜头：SHOT_WIDE_ANCHOR
+追击运镜：CAM_TRACK_SIDE
+命中运镜：CAM_IMPACT_PUSH
+结束镜头：SHOT_MEDIUM_PULL
+
+【指定技能】
+白刃阵云，T4
+完整 PromptVideo
+
+【禁止修改】
+禁止改变动作顺序。
+禁止改变战斗结果。
+禁止创建库外技能。
+禁止创建库外运镜。
+禁止让赵无极死亡。
+禁止让卷轴掉落。
+LLM只能把 A/B 替换成实际角色，并补充表情、环境和自然语言。
+Stage 5 输出增加控制标记
+仍然输出当前页面能够识别的 Markdown，但增加几行元数据：
+#### 【单元2.3】书房交锋
+
+- **控制模式**: 打斗模板
+- **打斗模板**: 12 / 双人反击·快快顿重
+- **技能**: 白刃阵云
+- **分镜指令**: SHOT_WIDE_ANCHOR, CAM_TRACK_SIDE, CAM_IMPACT_PUSH
+- **单元类型**: 打斗/动作
+
+- **镜头编号**: 2.3-1
+...
+现有前端会忽略不认识的字段，所以不需要立刻改页面；Stage 9 也能看到模板信息。
+Stage 9 怎么调整
+[AgentService.cs (line 81)](D:\\CodexProject\\ManhuaPipeline\\ManhuaPipeline\\Services\\AgentService.cs:81) 继续读取 Stage 5。
+但打斗镜头增加一条规则：
+Stage 9 只能把 Stage 5 分镜扩写成 Seedance 提示词，不得改变模板 ID、动作顺序、运镜指令、技能和战斗结果。
+
+打斗模板的完整：
+ActionPrompt
+CameraPrompt
+ConstraintPrompt
+应当在 Stage 5 和 Stage 9 都注入：
+Stage 5 用于确定分镜。
+Stage 9 用于强化最终视频提示词。
+Stage 9 不能重新选择另一套模板。
+现有数据库怎么使用
+第一版不需要改表：
+Stage 4 单元仍保存在 StageData。
+Stage 5 分镜仍保存在 StageData。
+打斗模板继续使用 FightTemplate。
+分镜指令继续使用 ShotDirective。
+技能继续使用 SkillLibrary。
+模板 ID 和指令名称直接写进 Stage 5 文本。
+这样可以先验证效果，不碰历史数据。
+现有库内容需要统一规范
+打斗模板的 Scene 建议改成标准标签：
+双人|刀剑|近战|室内|反击
+不要写成长篇散文。
+Beat 写成固定节拍：
+建立位置→先手攻击→闪避→反击命中→收势
+ActionPrompt 写具体动作骨架。
+CameraPrompt 只写摄像机行为。
+ConstraintPrompt 写禁止事项和连续性规则。
+推荐实施顺序
+新增 StageUnitParser 和类型分流。
+新增 CombatIntent JSON 提取。
+新增 FightTemplateSelector。
+新增 ShotDirectiveSelector。
+新增 StoryboardPlanningService。
+Stage 5 接入受控打斗分镜。
+Stage 9 增加“不得改变模板”的规则。
+使用一个文戏单元和一个打斗单元做对比测试。
+第一版大约会涉及：
+新增 4–5 个 C# 文件。
+修改 StageController.cs。
+修改 LLMService.cs。
+修改 AgentService.cs。
+不修改数据库结构。
+不修改现有阶段顺序和 Stage 11 逻辑。
+我建议就从这个无数据库迁移的 V1 开始，先验证打斗动作和运镜是否达到预期，再考虑增加模板手动指定界面。

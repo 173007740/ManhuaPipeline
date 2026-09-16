@@ -1,0 +1,428 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>漫创引擎 · AI 叙事导演工作台</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+    <style>
+        /* ========== Landing Page 专用样式 ========== */
+        .landing-hero {
+            position: relative;
+            min-height: calc(100vh - 64px);
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+            text-align: center;
+            padding: 60px 24px;
+        }
+
+            .landing-hero::before {
+                content: '';
+                position: absolute;
+                inset: 0;
+                background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(124,58,237,0.15) 0%, transparent 70%);
+            }
+
+        .landing-hero-content {
+            position: relative;
+            z-index: 1;
+            max-width: 800px;
+        }
+
+        .landing-badge {
+            display: inline-block;
+            padding: 6px 18px;
+            border-radius: 50px;
+            background: rgba(124,58,237,0.15);
+            border: 1px solid rgba(124,58,237,0.25);
+            color: var(--primary-light);
+            font-size: 13px;
+            font-weight: 600;
+            letter-spacing: 1px;
+            margin-bottom: 24px;
+        }
+
+        .landing-hero h1 {
+            font-size: clamp(36px,6vw,68px);
+            font-weight: 800;
+            line-height: 1.12;
+            background: linear-gradient(135deg, #f1f1f5 30%, #a78bfa 70%, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            margin-bottom: 20px;
+        }
+
+        .landing-hero p {
+            font-size: clamp(16px,2vw,20px);
+            color: var(--text-muted);
+            max-width: 600px;
+            margin: 0 auto 36px;
+            line-height: 1.7;
+        }
+
+        .landing-hero .btn-group {
+            display: flex;
+            gap: 14px;
+            justify-content: center;
+            flex-wrap: wrap;
+        }
+
+        .landing-hero .btn {
+            padding: 14px 36px;
+            font-size: 16px;
+            font-weight: 600;
+            border-radius: 50px;
+            text-decoration: none;
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.25s;
+        }
+
+        .landing-hero .btn-primary {
+            background: var(--accent-gradient);
+            color: #fff;
+            box-shadow: 0 4px 24px var(--glow-purple);
+        }
+
+            .landing-hero .btn-primary:hover {
+                transform: translateY(-2px);
+                box-shadow: 0 8px 32px var(--glow-purple);
+            }
+
+        .landing-hero .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border-light);
+        }
+
+            .landing-hero .btn-outline:hover {
+                background: var(--bg-card-hover);
+                border-color: var(--primary-light);
+            }
+
+        /* ===== 功能特性区 ===== */
+        .features-section {
+            padding: 80px 28px;
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .features-header {
+            text-align: center;
+            margin-bottom: 56px;
+        }
+
+            .features-header h2 {
+                font-size: clamp(28px,3.5vw,40px);
+                font-weight: 700;
+                margin-bottom: 12px;
+            }
+
+            .features-header p {
+                color: var(--text-muted);
+                font-size: 16px;
+                max-width: 560px;
+                margin: 0 auto;
+            }
+
+        .features-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
+            gap: 20px;
+        }
+
+        .feature-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 32px 24px;
+            transition: all 0.3s;
+            cursor: default;
+        }
+
+            .feature-card:hover {
+                background: var(--bg-card-hover);
+                border-color: rgba(124,58,237,0.3);
+                transform: translateY(-4px);
+                box-shadow: var(--shadow-md);
+            }
+
+        .feature-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 14px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            margin-bottom: 18px;
+        }
+
+        .feature-card h3 {
+            font-size: 17px;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .feature-card p {
+            font-size: 14px;
+            color: var(--text-muted);
+            line-height: 1.6;
+        }
+
+        /* ===== Footer ===== */
+        .landing-footer {
+            border-top: 1px solid var(--border);
+            padding: 40px 28px;
+            text-align: center;
+            color: var(--text-dim);
+            font-size: 13px;
+        }
+
+            .landing-footer a {
+                color: var(--text-muted);
+                text-decoration: none;
+                margin: 0 12px;
+            }
+
+                .landing-footer a:hover {
+                    color: var(--primary-light);
+                }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="/" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                <a href="pages/dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                <a href="pages/config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+                <span id="navUser" style="display:none;">
+                    <a href="pages/asset-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 我的资产</a>
+                    <a href="pages/profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                    <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+                    <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                </span>
+                <span id="navGuest">
+                    <a href="pages/register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                    <a href="pages/login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Hero -->
+    <section class="landing-hero">
+        <div id="particleWrap" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+        <div class="landing-hero-content">
+            <div class="landing-badge">✦ MANGA ENGINE · AI 驱动漫创引擎 · 一站式漫剧创作平台</div>
+            <h1>创意无界<br>引擎驱动<br>让每一个念头，都成为作品</h1>
+            <p>捕捉那个还没有完全成形的念头，从剧本到分镜，从角色到提示词，一站式漫剧创作平台。</p>
+            <div class="btn-group">
+                <a href="pages/dashboard.html" class="btn btn-primary btn-start"><span class="material-icons" style="font-size:inherit;vertical-align:middle">rocket_launch</span> 开始创作</a>
+                <a href="#features" class="btn btn-outline"><span class="material-icons" style="font-size:inherit;vertical-align:middle">info</span> 了解更多</a>
+            </div>
+        </div>
+    </section>
+
+    <!-- 功能特性 -->
+    <section class="features-section" id="features">
+        <div class="features-header">
+            <h2>核心功能</h2>
+            <p>从灵感到成品，全流程 AI 辅助创作</p>
+        </div>
+        <div class="features-grid">
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(124,58,237,0.15);color:#a78bfa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">lightbulb</span></div>
+                <h3>灵感工作台</h3>
+                <p>从想法建立创作项目，与 AI 一起梳理创意</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">smart_toy</span></div>
+                <h3>AI 创意梳理</h3>
+                <p>与 AI 对话式探索，将碎片灵感转化为完整剧本</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(16,185,129,0.15);color:#34d399;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span></div>
+                <h3>角色与视觉</h3>
+                <p>探索角色设计、资产管理与视觉风格定义</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">layers</span></div>
+                <h3>提示词模板</h3>
+                <p>复用成熟的提示词结构，高效生成 AI 创作内容</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(236,72,153,0.15);color:#f472b6;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">videocam</span></div>
+                <h3>分镜制作</h3>
+                <p>管理剧本与分镜制作，分集分单元精细编排</p>
+            </div>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(139,92,246,0.15);color:#a78bfa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check_circle</span></div>
+                <h3>内容管理</h3>
+                <p>提交并管理原创内容，追踪每个项目的进度</p>
+            </div>
+            <a href="pages/asset-library.html" style="text-decoration:none;display:block;">
+                <div class="feature-card">
+                    <div class="feature-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span></div>
+                    <h3>我的资产</h3>
+                    <p>查找已保存的创作资产，快速复用历史资源</p>
+                </div>
+            </a>
+            <div class="feature-card">
+                <div class="feature-icon" style="background:rgba(236,72,153,0.15);color:#f472b6;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">workspace_premium</span></div>
+                <h3>账户与权益</h3>
+                <p>管理资料与配置，享受持续更新的创作能力</p>
+            </div>
+        </div>
+    </section>
+
+    <footer class="landing-footer">
+        <div style="margin-bottom:12px;">
+            <a href="pages/login.html">登录</a>
+            <a href="pages/register.html">注册</a>
+            <a href="#">用户协议</a>
+            <a href="#">隐私政策</a>
+        </div>
+        <div>
+            © 2025 漫创引擎 · AI 叙事导演工作台 mangaengine.cn
+        </div>
+    </footer>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script src="js/app.js?v=2"></script>
+    <script>
+        // 登录检测：我的工作台 & 开始创作
+        $(function () {
+            function checkLogin(btn, url) {
+                $.get("/api/auth/me", function () {
+                    window.location.href = url;
+                }).fail(function () {
+                    if (confirm("请先登录后再进入工作台\n\n点击「确定」前往登录页面")) {
+                        window.location.href = "pages/login.html";
+                    }
+                });
+            }
+            $("#btnWorkspace, .btn-start").on("click", function (e) {
+                e.preventDefault();
+                checkLogin($(this), $(this).attr("href"));
+            });
+        });
+    </script>
+    <script>
+        // ========== 粒子动效 ==========
+        (function () {
+            var canvas = document.getElementById("particleCanvas");
+            canvas.style.top = "0";
+            canvas.style.width = "100%";
+            canvas.style.pointerEvents = "none";
+            if (!canvas) return;
+            var ctx = canvas.getContext("2d");
+            var W, H;
+            function resize() {
+                W = canvas.width = canvas.parentElement.parentElement.offsetWidth;
+                H = canvas.height = canvas.parentElement.parentElement.offsetHeight;
+            }
+            resize();
+            window.addEventListener("resize", resize);
+
+            var particles = [];
+            var COUNT = 70;
+            var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+
+            for (var i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * W,
+                    y: Math.random() * H,
+                    r: Math.random() * 2 + 1.2,
+                    dx: (Math.random() - 0.5) * 0.4,
+                    dy: (Math.random() - 0.5) * 0.4 - 0.15,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: Math.random() * 0.4 + 0.15
+                });
+            }
+
+            var CONNECT_DIST = 130;
+
+            function anim() {
+                ctx.clearRect(0, 0, W, H);
+
+                for (var i = 0; i < COUNT; i++) {
+                    var p = particles[i];
+                    p.x += p.dx;
+                    p.y += p.dy;
+
+                    if (p.x < 0 || p.x > W) p.dx *= -1;
+                    if (p.y < 0 || p.y > H) p.dy *= -1;
+
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color + p.alpha + ")";
+                    ctx.fill();
+
+                    for (var j = i + 1; j < COUNT; j++) {
+                        var q = particles[j];
+                        var dx = p.x - q.x;
+                        var dy = p.y - q.y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < CONNECT_DIST) {
+                            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(q.x, q.y);
+                            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+                            ctx.lineWidth = 0.6;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(anim);
+            }
+            anim();
+        })();
+    </script>
+</body>
+</html>
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

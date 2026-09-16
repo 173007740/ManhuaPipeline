@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>作品展示 - 漫创引擎</title>
+  <link rel="stylesheet" href="/lib/material-icons/material-icons.css">
+  <link rel="stylesheet" href="../css/style.css">
+  <style>
+    .work-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;margin-top:8px;}
+    .work-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:all 0.2s;position:relative;display:flex;flex-direction:column;}
+    .work-card:hover{border-color:var(--primary);background:var(--bg-card-hover);}
+    .work-card .cover{width:100%;height:180px;object-fit:cover;display:block;background:#1e293b;cursor:pointer;}
+    .work-card .body{padding:14px 16px;flex:1;display:flex;flex-direction:column;}
+    .work-card .title{color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 6px 0;}
+    .work-card .desc{color:#94a3b8;font-size:13px;line-height:1.6;margin:0 0 10px 0;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    .work-card .ops{display:flex;gap:8px;align-items:center;}
+    .work-card .ops .btn{height:34px;font-size:12px;padding:0 12px;}
+    .work-card .del-btn{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(239,68,68,0.85);color:#fff;border:none;font-size:15px;line-height:26px;text-align:center;cursor:pointer;display:block;z-index:2;}
+    
+    .work-card .del-btn:hover{background:#ef4444;}
+    .page-title{font-size:24px;font-weight:700;margin-bottom:24px;} .action-bar{display:flex;gap:12px;flex-wrap:wrap;}
+    .btn{height:40px;box-sizing:border-box;}
+    .container{max-width:100%;padding:32px 24px;}
+    .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;}
+    .modal-box{background:#1e293b;border-radius:12px;padding:24px;width:460px;max-width:92%;}
+    .modal-box h3{color:#e2e8f0;margin:0 0 16px 0;font-size:15px;}
+    .modal-box label{color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;}
+    .modal-box input[type=text],.modal-box textarea{width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:9px 10px;font-size:13px;box-sizing:border-box;font-family:inherit;}
+    .modal-box textarea{resize:vertical;min-height:80px;}
+    .modal-box .row{margin-bottom:12px;}
+    .modal-box input[type=file]{color:#e2e8f0;font-size:13px;}
+  </style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <a href="works.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
+        <a href="config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+        <span id="navUser" style="display:none;">
+          <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest" style="display:none;">
+          <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+      <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示<span class="work-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+      <div class="action-bar" style="margin-bottom:0;">
+        <button class="btn btn-primary" onclick="showUpload()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 上传作品</button>
+      </div>
+    </div>
+
+    <div id="workGrid" class="work-grid">
+      <p style="color:#94a3b8;text-align:center;grid-column:1/-1;">加载中...</p>
+    </div>
+    <div id="workEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无作品，请先上传<br><a href="#" onclick="showUpload()" style="color:var(--primary-light);font-size:13px;margin-top:12px;display:inline-block;">上传第一个作品</a></div>
+  </div>
+
+  <!-- Upload Modal -->
+  <div id="uploadModal" class="modal">
+    <div class="modal-box">
+      <h3>上传作品</h3>
+      <div class="row">
+        <label>作品标题 *</label>
+        <input type="text" id="upTitle" placeholder="如：冥河与黑潮——最终决战">
+      </div>
+      <div class="row">
+        <label>作品描述</label>
+        <textarea id="upDesc" placeholder="简单介绍一下你的作品..."></textarea>
+      </div>
+      <div class="row">
+        <label>作品视频（MP4，可选）</label>
+        <input type="file" id="upVideo" accept="video/mp4,video/webm">
+      </div>
+      <div class="row">
+        <label>封面图片</label>
+        <input type="file" id="upCover" accept="image/*">
+        <div id="upPreviewWrap" style="margin-top:8px;display:none;"><img id="upPreviewImg" style="max-width:100%;max-height:200px;border-radius:6px;"></div>
+      </div>
+      <div id="upProgressWrap" style="display:none;margin-bottom:12px;">
+        <div style="height:6px;background:#0f172a;border-radius:3px;overflow:hidden;border:1px solid #334155;">
+          <div id="upProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width 0.25s;"></div>
+        </div>
+        <div id="upProgressText" style="color:#94a3b8;font-size:12px;margin-top:6px;text-align:center;">上传中 0%</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" onclick="closeUpload()">取消</button>
+        <button class="btn btn-primary" id="upSubmitBtn" onclick="doUpload()">上传</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Edit Modal -->
+  <div id="editModal" class="modal">
+    <div class="modal-box">
+      <h3>编辑作品</h3>
+      <div class="row">
+        <label>作品标题 *</label>
+        <input type="text" id="edTitle">
+      </div>
+      <div class="row">
+        <label>作品描述</label>
+        <textarea id="edDesc"></textarea>
+      </div>
+      <div class="row">
+        <label>更换作品视频（不选则保留原视频）</label>
+        <input type="file" id="edVideo" accept="video/mp4,video/webm">
+      </div>
+      <div class="row">
+        <label>更换封面（不选则保留原图）</label>
+        <input type="file" id="edCover" accept="image/*">
+        <div id="edPreviewWrap" style="margin-top:8px;display:none;"><img id="edPreviewImg" style="max-width:100%;max-height:200px;border-radius:6px;"></div>
+      </div>
+      <div id="edProgressWrap" style="display:none;margin-bottom:12px;">
+        <div style="height:6px;background:#0f172a;border-radius:3px;overflow:hidden;border:1px solid #334155;">
+          <div id="edProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width 0.25s;"></div>
+        </div>
+        <div id="edProgressText" style="color:#94a3b8;font-size:12px;margin-top:6px;text-align:center;">上传中 0%</div>
+      </div>
+      <div style="display:flex;gap:8px;justify-content:flex-end;">
+        <button class="btn" onclick="closeEdit()">取消</button>
+        <button class="btn btn-primary" id="edSubmitBtn" onclick="doEdit()">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Preview overlay -->
+  <div id="previewOverlay" style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:3000;display:none;align-items:center;justify-content:center;" onclick="this.style.display='none';">
+    <img id="previewBig" style="max-width:85%;max-height:85%;border-radius:12px;">
+  </div>
+
+
+  <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+  <script>
+    function escHtml(s){if(!s)return"";return String(s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");}
+
+    var _editingId = 0;
+
+    function loadWorks(){
+      $.get('/api/works/list', function(d){
+        if(!d || d.length === 0){ $('#workGrid').empty(); $('#workEmpty').show(); $('.work-count').text(''); return; }
+        $('#workEmpty').hide();
+        var h = '';
+        for(var i=0;i<d.length;i++){
+          var w = d[i];
+          var cover = w.coverImage || '';
+          h += '<div class="work-card" style="cursor:pointer;" onclick="goDetail('+w.workId+')">';
+          if(cover){ h += '<img class="cover" src="'+cover+'" loading="lazy" onclick="event.stopPropagation();goDetail('+w.workId+')" onerror="this.style.display=\'none\'">'; }
+          else { h += '<div style="width:100%;height:180px;background:linear-gradient(135deg,#1e293b,#0f172a);display:flex;align-items:center;justify-content:center;color:#475569;font-size:13px;">暂无封面</div>'; }
+          h += '<button class="del-btn" onclick="event.stopPropagation();deleteWork('+w.workId+')">&times;</button>';
+          h += '<div class="body">';
+          h += '<h3 class="title">'+escHtml(w.title)+'</h3>';
+          if(w.description){ h += '<p class="desc">'+escHtml(w.description)+'</p>'; }
+          h += '<div class="ops">';
+          h += '<button class="btn btn-primary" onclick="event.stopPropagation();goDetailTab('+w.workId+')" style="flex:1;cursor:pointer;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">play_circle</span> 查看作品</button>';
+          h += '<button class="btn btn-outline" onclick="event.stopPropagation();showEdit('+w.workId+')"><span class="material-icons" style="font-size:inherit;vertical-align:middle">edit</span> 编辑</button>';
+          h += '<button class="btn btn-danger" onclick="event.stopPropagation();deleteWork('+w.workId+')"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button>';
+          h += '</div></div></div>';
+        }
+        $('#workGrid').html(h);
+        $('.work-count').text('共 ' + d.length + ' 个作品');
+      }).fail(function(){ $('#workGrid').html('<p style="color:#ef4444;text-align:center;grid-column:1/-1;">加载失败</p>'); });
+    }
+
+    function showUpload(){
+      $('#upTitle').val(''); $('#upDesc').val(''); $('#upVideo').val(''); $('#upCover').val('');
+      $('#upPreviewWrap').hide();
+      $('#uploadModal').css('display','flex');
+    }
+    function closeUpload(){ $('#uploadModal').hide(); }
+
+    function doUpload(){
+      var title = $('#upTitle').val().trim();
+      if(!title){ alert('请填写作品标题'); return; }
+      var fd = new FormData();
+      fd.append('title', title);
+      fd.append('description', $('#upDesc').val());
+      var f = $('#upCover')[0].files[0];
+      if(f) fd.append('cover', f);
+      var vf = $('#upVideo')[0].files[0];
+      if(vf) fd.append('video', vf);
+      submitWithProgress('up', '/api/works/create', fd, function(){ closeUpload(); loadWorks(); });
+    }
+
+    function submitWithProgress(pfx, url, fd, onSuccess, method){
+      $('#'+pfx+'ProgressWrap').show();
+      $('#'+pfx+'ProgressBar').css('width','0%');
+      $('#'+pfx+'ProgressText').text('上传中 0%');
+      var btn = $('#'+pfx+'SubmitBtn');
+      btn.prop('disabled', true);
+      $.ajax({
+        url: url, method: method || 'POST', data: fd, processData: false, contentType: false,
+        xhr: function(){
+          var xhr = new XMLHttpRequest();
+          xhr.upload.addEventListener('progress', function(e){
+            if(e.lengthComputable){
+              var pct = Math.round(e.loaded / e.total * 100);
+              $('#'+pfx+'ProgressBar').css('width', pct+'%');
+              $('#'+pfx+'ProgressText').text('上传中 '+pct+'%');
+            }
+          });
+          return xhr;
+        },
+        success: function(){ onSuccess(); },
+        error: function(x){ alert('上传失败: '+(x.responseJSON?.message||x.statusText)); },
+        complete: function(){ btn.prop('disabled', false); $('#'+pfx+'ProgressWrap').hide(); }
+      });
+    }
+
+    function showEdit(id){
+      $.get('/api/works/list', {}, function(d){
+        var w = null;
+        for(var i=0;i<d.length;i++){ if(d[i].workId === id){ w = d[i]; break; } }
+        if(!w){ alert('未找到作品'); return; }
+        _editingId = id;
+        $('#edTitle').val(w.title);
+        $('#edDesc').val(w.description || '');
+        
+        $('#edVideo').val(''); $('#edCover').val('');
+        $('#edPreviewWrap').hide();
+        $('#editModal').css('display','flex');
+      });
+    }
+    function closeEdit(){ $('#editModal').hide(); }
+
+    function doEdit(){
+      var title = $('#edTitle').val().trim();
+      if(!title){ alert('请填写作品标题'); return; }
+      var fd = new FormData();
+      fd.append('title', title);
+      fd.append('description', $('#edDesc').val());
+      var f = $('#edCover')[0].files[0];
+      if(f) fd.append('cover', f);
+      var vf = $('#edVideo')[0].files[0];
+      if(vf) fd.append('video', vf);
+      submitWithProgress('ed', '/api/works/'+_editingId, fd, function(){ closeEdit(); loadWorks(); }, 'PUT');
+    }
+
+    function deleteWork(id){
+      if(!confirm('确定删除该作品？')) return;
+      $.ajax({url:'/api/works/'+id, method:'DELETE',
+        success:function(){ loadWorks(); },
+        error:function(x){ alert('删除失败: '+(x.responseJSON?.message||x.statusText)); }
+      });
+    }
+
+    function previewCover(src){ $('#previewBig').attr('src', src); $('#previewOverlay').css('display','flex'); }
+
+    function goDetail(id){ window.location.href = 'work-detail.html?id=' + id; }
+
+    function goDetailTab(id){ window.open('work-detail.html?id=' + id, '_blank'); }
+
+    $(document).on('change','#upCover',function(){
+      var f = this.files[0];
+      if(f){ var r = new FileReader(); r.onload = function(e){ $('#upPreviewImg').attr('src',e.target.result); $('#upPreviewWrap').show(); }; r.readAsDataURL(f); }
+    });
+    $(document).on('change','#edCover',function(){
+      var f = this.files[0];
+      if(f){ var r = new FileReader(); r.onload = function(e){ $('#edPreviewImg').attr('src',e.target.result); $('#edPreviewWrap').show(); }; r.readAsDataURL(f); }
+    });
+
+    $(function(){
+      $.get('/api/auth/me', function(u){ if(u && u.userId>0){ if(typeof API !== 'undefined' && API.updateUI) API.updateUI(u); loadWorks(); } else { window.location.href='login.html'; } }).fail(function(){ window.location.href='login.html'; });
+    });
+  </script>
+
+  </div>
+
+<script>
+  (function() {
+    var canvas = document.getElementById("particleCanvas");
+    if (!canvas) return;
+    canvas.style.top = "0";
+    canvas.style.width = "100%";
+    canvas.style.pointerEvents = "none";
+    var ctx = canvas.getContext("2d");
+    var W, H;
+    function resize() {
+      W = canvas.width = window.innerWidth;
+      H = canvas.height = window.innerHeight;
+    }
+    resize();
+    window.addEventListener("resize", resize);
+    var particles = [];
+    var COUNT = 70;
+    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    for (var i = 0; i < COUNT; i++) {
+      particles.push({
+        x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
+        dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        alpha: Math.random() * 0.4 + 0.15
+      });
+    }
+    var CONNECT_DIST = 130;
+    function anim() {
+      ctx.clearRect(0, 0, W, H);
+      for (var i = 0; i < COUNT; i++) {
+        var p = particles[i];
+        p.x += p.dx; p.y += p.dy;
+        if (p.x < 0 || p.x > W) p.dx *= -1;
+        if (p.y < 0 || p.y > H) p.dy *= -1;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+        ctx.fillStyle = p.color + p.alpha + ")";
+        ctx.fill();
+        for (var j = i + 1; j < COUNT; j++) {
+          var q = particles[j];
+          var dx = p.x - q.x;
+          var dy = p.y - q.y;
+          var dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < CONNECT_DIST) {
+            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
+            ctx.beginPath();
+            ctx.moveTo(p.x, p.y);
+            ctx.lineTo(q.x, q.y);
+            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+            ctx.lineWidth = 0.6;
+            ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(anim);
+    }
+    anim();
+  })();
+
+  function showBatchUpload(){ $('#batchFiles').val(''); $('#batchTags').val(''); $('#batchPreview').hide(); $('#batchProgress').hide(); $('#batchResult').hide(); $('#batchUploadModal').css('display','flex'); }
+  function closeBatchUpload(){ $('#batchUploadModal').hide(); }
+  $('#batchFiles').on('change',function(){
+    var count = this.files.length;
+    if(count>0){ $('#batchCount').text(count); $('#batchPreview').show(); }
+    else{ $('#batchPreview').hide(); }
+  });
+  function doBatchUpload(){
+    var files = $('#batchFiles')[0].files;
+    if(!files||files.length===0){ alert('请选择图片'); return; }
+    var cat = $('#batchCategory').val();
+    var sub = $('#batchSubCategory').val();
+    var fd = new FormData();
+    for(var i=0;i<files.length;i++) fd.append('files', files[i]);
+    fd.append('category', cat);
+    fd.append('subCategory', sub);
+    fd.append('tags', $('#batchTags').val());
+    $('#batchProgress').show();
+    $('#batchResult').hide();
+    var total = files.length;
+    $('#batchProgressText').text('0 / '+total);
+    $('#batchProgressBar').css('width','0%');
+    $('.btn-primary:contains(开始上传)').prop('disabled',true).text('上传中...');
+    $.ajax({url:'/api/reference/upload-batch', method:'POST', data:fd, processData:false, contentType:false,
+      xhr:function(){
+        var xhr = new XMLHttpRequest();
+        xhr.upload.addEventListener('progress',function(e){
+          if(e.lengthComputable){ var pct=Math.round(e.loaded/e.total*100); $('#batchProgressBar').css('width',pct+'%'); $('#batchProgressText').text(Math.round(e.loaded/total/1024)+'KB / '+Math.round(e.total/1024)+'KB'); }
+        },false);
+        return xhr;
+      },
+      success:function(r){
+        var msg='上传完成：成功 '+r.success+' 张';
+        if(r.failed>0) msg+=', 失败 '+r.failed+' 张';
+        $('#batchProgressBar').css('width','100%');
+        $('#batchResult').html('<span style="color:#22c55e;">'+msg+'</span>').show();
+        $('.btn-primary:contains(上传中...)').prop('disabled',false).text('开始上传');
+        closeBatchUpload(); loadAssets();
+      },
+      error:function(x){
+        $('#batchResult').html('<span style="color:#ef4444;">上传失败: '+(x.responseJSON?.message||x.statusText)+'</span>').show();
+        $('.btn-primary:contains(上传中...)').prop('disabled',false).text('开始上传');
+      }
+    });
+  }
+
+</script>
+</body>
+</html>

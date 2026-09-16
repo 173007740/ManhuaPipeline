@@ -1,0 +1,6 @@
+@ManhuaPipeline_HostAddress = http://localhost:5133
+
+GET {{ManhuaPipeline_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

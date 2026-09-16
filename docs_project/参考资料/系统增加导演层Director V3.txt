@@ -1,0 +1,519 @@
+OK V2 修订版 已经修改，那下一步呢？升级V3 ？
+
+对，下一步可以进 Director V3。但 V3 我建议不要继续单纯加字段，而是升级成真正的 跨 Unit / 跨 Episode 的导演记忆与全局节奏控制。
+
+你现在 V2 修订版已经能做到：
+
+DirectorPlan 决定意图
+Combat Grammar 决定怎么打
+ActionChain / ShotPacker 决定 5 秒里塞多少信息
+ShotTimeline 决定 5 秒内部节奏
+Validator 能检查分镜有没有跑偏
+
+那 V3 就应该解决一个更高层的问题：
+
+这一集、这一整个故事，镜头和打斗怎么避免“每段都很炸，但整体没层次”。
+
+也就是从“单元导演”升级成“整集导演”。
+
+我建议 V3 直接叫：
+
+Director V3 — Global Directing
+
+核心新增 4 个东西：
+
+Director V3
+
+
+├─ EpisodeDirectorState
+├─ IntensityCurve
+├─ VisualRepetitionGuard
+└─ PayoffScheduler
+1. EpisodeDirectorState
+
+它记录整集已经发生过什么。
+
+比如：
+
+本集已使用：
+慢动作 × 2
+低机位重拳 × 3
+大远景 × 4
+气血爆发 × 2
+角色暴怒特写 × 1
+
+
+本集最大高潮：
+Unit 08
+
+
+当前 Unit：
+Unit 05
+
+
+当前允许强度：
+6/10
+
+这样 Unit05 就不会提前把 Unit08 的高潮抢了。
+
+2. IntensityCurve
+
+这个很关键。
+
+每个 Unit 都要有一个导演强度值：
+
+Unit01  2
+Unit02  3
+Unit03  4
+Unit04  6
+Unit05  5
+Unit06  7
+Unit07  8
+Unit08  10
+Unit09  4
+
+于是 DirectorPlan 生成时必须服从：
+
+当前 Unit 只能在它允许的强度区间内设计动作、运镜、VFX、表演。
+
+这能直接控制“越拍越炸”的问题。
+
+3. VisualRepetitionGuard
+
+专门防重复。
+
+比如系统检测到最近 3 个 Unit 连续用了：
+
+低机位 + 推镜 + 重拳 + 震镜
+
+那下一个 Unit 就应该避免再这么拍。
+
+它可以记录：
+
+CameraPattern
+ActionPattern
+VfxPattern
+ClimaxPattern
+EntrancePattern
+FinisherPattern
+
+然后给 Director 一个“禁用近期重复套路”的约束。
+
+4. PayoffScheduler
+
+这个是 V3 最值得做的东西之一。
+
+它负责安排“爽点释放”。
+
+例如：
+
+小爽点：
+Unit02
+
+
+第一次压制：
+Unit04
+
+
+第一次真正反杀：
+Unit05
+
+
+阶段高潮：
+Unit08
+
+
+最终爆点：
+Unit12
+
+然后 VFX、动作密度、表演强度、镜头规模都围绕这个节奏走。
+
+最终 V3 主链应该变成：
+
+Episode Blueprint
+↓
+Global Director
+↓
+EpisodeDirectorState
+↓
+IntensityCurve
+↓
+PayoffScheduler
+↓
+Unit
+↓
+DirectorPlan
+↓
+CombatGrammar
+↓
+ActionChain
+↓
+ShotPacker
+↓
+Storyboard
+↓
+Validator
+
+我建议 V3 暂时不要做“六个独立导演模型”，也不要做复杂多 Agent。先把 全局节奏控制 做起来。
+
+因为你现在已经不是缺“怎么生成好镜头”，而是缺：
+
+怎么让整集有起伏，而不是每个 5 秒都像终极大战。
+
+所以 V3 的验收标准可以非常简单：
+
+同一集连续生成多个 Unit 时，动作、镜头、VFX、高潮强度会自动形成层次，而且不会频繁重复同一种爽点套路。
+
+如果这一步做成，你这个 Director 才真正开始像“总导演”，而不是只会管单个 Unit 的执行导演。
+
+OK 怎么做，加在那个阶段？
+
+要加，而且我建议 V3 不要塞进“分镜之后”。它应该加在你现在的 “全局蓝图 → 分集细化”之间，再把结果一路传给 Unit Director。
+
+最合适的位置是：
+
+剧本
+↓
+创意构思
+↓
+故事分析
+↓
+全局蓝图（分集）
+↓
+【Director V3：全局导演层】   ← 加这里
+↓
+分集细化（每集拆 Unit）
+↓
+DirectorPlan V2（Unit 导演）
+↓
+CombatGrammar / ActionChain / ShotPacker
+↓
+分镜脚本
+↓
+Validator
+↓
+资产 / 提示词生成
+
+原因很简单：V3 管的是“整集怎么起伏”，它必须在 Unit 真正被细化、分镜真正被生成之前先定调。
+
+你可以把 V3 理解成两层。
+
+第一层是 EpisodeDirectorPlan，每一集先生成一份“整集导演计划”。比如 EP01：
+
+EpisodeDirectorPlan
+
+
+EpisodeGoal:
+林烬第一次正式踏入赤焰宗复仇
+
+
+EpisodeEmotionCurve:
+压抑 → 挑衅 → 冲突 → 碾压 → 更强敌人出现
+
+
+EpisodeIntensityCurve:
+Unit01 = 2
+Unit02 = 3
+Unit03 = 5
+Unit04 = 6
+Unit05 = 8
+Unit06 = 4
+Unit07 = 10
+
+
+MainPayoff:
+Unit05：六人围攻反被碾压
+
+
+EpisodeClimax:
+Unit07：长老出手
+
+
+ReservedVisuals:
+- 法相天地：禁止使用
+- 全屏赤金爆发：仅 Unit07 可用
+- 大规模地形破坏：仅 Unit07 可用
+
+
+RepetitionLimits:
+- 低机位重拳最多2次
+- 慢动作最多2次
+- 群体震飞最多1次
+
+这一步的作用是：先把预算分掉。
+
+不是钱的预算，而是：
+
+爽点预算、特效预算、高潮预算、镜头套路预算。
+
+这样后面的 Unit Director 才不会每一段都自己觉得“我是本集高潮”。
+
+第二层是你原来的 DirectorPlan V2。它现在不再只读 Unit，而是多读一个：
+
+EpisodeDirectorPlan
+
+也就是说，Unit04 的导演拿到的上下文是：
+
+当前 Unit：
+六名弟子围攻林烬
+
+
+当前 Unit 强度上限：
+6/10
+
+
+本集真正高潮：
+Unit07
+
+
+当前爽点任务：
+展示林烬身法和压迫感，但不能完全爆发
+
+
+禁止：
+全屏气血爆发
+大范围地裂
+法相
+
+
+允许：
+高速闪避
+近身反击
+少量气血
+
+这样 Unit Director 才会真正服从全局。
+
+所以 V3 的关键不是再加一个 Prompt，而是新增几个持久化对象。我建议至少有：
+
+public class EpisodeDirectorPlan
+{
+    public long EpisodeId { get; set; }
+
+
+    public string EpisodeGoal { get; set; }
+
+
+    public string EmotionCurve { get; set; }
+
+
+    public List<UnitIntensityPlan> IntensityCurve { get; set; }
+
+
+    public List<PayoffPoint> PayoffSchedule { get; set; }
+
+
+    public List<string> ReservedVisuals { get; set; }
+
+
+    public List<string> ForbiddenEarlyPayoffs { get; set; }
+
+
+    public RepetitionPolicy RepetitionPolicy { get; set; }
+}
+
+然后再新增一个很重要的运行时状态：
+
+public class EpisodeDirectorState
+{
+    public long EpisodeId { get; set; }
+
+
+    public List<string> UsedCameraPatterns { get; set; }
+
+
+    public List<string> UsedCombatPatterns { get; set; }
+
+
+    public List<string> UsedVfxPatterns { get; set; }
+
+
+    public int SlowMotionCount { get; set; }
+
+
+    public int MajorExplosionCount { get; set; }
+
+
+    public int CurrentPeakIntensity { get; set; }
+}
+
+注意这两个东西不一样。
+
+EpisodeDirectorPlan 是：
+
+拍之前计划怎么拍。
+
+EpisodeDirectorState 是：
+
+已经拍过什么。
+
+这两个一起用，V3 才有意义。
+
+举个很实际的例子。
+
+Unit03 已经用了：
+
+低机位 + 推镜 + 重拳 + 震镜
+
+Unit04 又准备这么生成。
+
+这时候 V3 不一定直接禁止，而是给 Unit Director 一个约束：
+
+RecentPatternDetected:
+LOW_ANGLE + PUSH_IN + HEAVY_PUNCH + CAMERA_SHAKE
+
+
+RepetitionRisk:
+HIGH
+
+
+Recommendation:
+本 Unit 避免再次使用同一高潮组合，
+优先考虑横向跟拍 / 环绕 / 一镜连续闪避。
+
+这就是 VisualRepetitionGuard。
+
+而且你现在 V2 已经有 Validator，所以 V3 甚至可以直接接进去，不需要重新造一套校验。
+
+以后 Validator 多检查几条：
+
+UNIT_INTENSITY_EXCEEDED
+RESERVED_PAYOFF_USED_EARLY
+CAMERA_PATTERN_OVERUSED
+VFX_PATTERN_OVERUSED
+CLIMAX_STOLEN
+
+比如 Unit04 强度上限是 6，但生成出来：
+
+万剑齐发 + 天地异象 + 大范围地裂 + 法相
+
+直接：
+
+UNIT_INTENSITY_EXCEEDED
+Expected <= 6
+Actual = 9
+
+
+RESERVED_PAYOFF_USED_EARLY
+"法相天地" reserved for Unit07
+
+然后 RepairPlanner 负责降级。
+
+所以如果按你现在的 Stage 来放，我会建议：
+
+Stage 1  剧本
+Stage 2  创意构思
+Stage 3  故事分析
+Stage 4  全局蓝图
+
+
+Stage 4.5  【Episode Director V3】
+             ↓
+        EpisodeDirectorPlan
+
+
+Stage 5  分集细化
+             ↓
+        Unit
+
+
+Stage 5.5  【DirectorPlan V2】
+             ↓
+        ActionPlan
+        CombatGrammar
+        ActionChain
+        ShotPacker
+
+
+Stage 6  分镜脚本
+
+
+Stage 6.5  DirectorValidator
+
+
+Stage 7+  角色 / 道具 / 环境 / 特效 / 提示词
+
+V3 最适合放在 Stage 4.5。
+
+因为它要在“整集已经知道讲什么”之后，又必须在“Unit 开始真正细化”之前介入。
+
+你可以直接把下面这个开发要求交给 DeepSeek：
+
+Director V3 — Global Directing
+
+
+目标：
+在现有 Director V2 基础上新增“整集导演控制层”，不重构现有 Unit Director。
+
+
+插入位置：
+全局蓝图完成之后、分集细化之前。
+
+
+新增 EpisodeDirectorPlan：
+- EpisodeGoal
+- EpisodeEmotionCurve
+- IntensityCurve
+- PayoffSchedule
+- ReservedVisuals
+- ForbiddenEarlyPayoffs
+- RepetitionPolicy
+
+
+新增 EpisodeDirectorState：
+- 已使用 CameraPattern
+- 已使用 CombatPattern
+- 已使用 VfxPattern
+- 慢动作次数
+- 高潮型特效次数
+- 当前已达到最高强度
+
+
+分集细化后的每个 Unit DirectorPlan 必须读取：
+EpisodeDirectorPlan
++
+EpisodeDirectorState
+
+
+Unit Director 不允许：
+- 超过该 Unit 的 IntensityLimit
+- 提前使用 ReservedVisual
+- 提前释放后续 Unit 的核心 Payoff
+- 高频重复近期 Camera / Combat / VFX Pattern
+
+
+DirectorValidator 新增：
+UNIT_INTENSITY_EXCEEDED
+RESERVED_PAYOFF_USED_EARLY
+PAYOFF_ORDER_VIOLATION
+CAMERA_PATTERN_OVERUSED
+COMBAT_PATTERN_OVERUSED
+VFX_PATTERN_OVERUSED
+
+
+每个 Unit 分镜通过 Validator 后，
+更新 EpisodeDirectorState。
+
+
+要求：
+保留现有 Director V2、CombatGrammar、ActionChain、ShotPacker、RepairPlanner；
+V3 只增加全局导演控制，不重写现有流程。
+
+这一步做完以后，你的导演系统就会形成真正的两级结构：
+
+总导演
+Episode Director V3
+↓
+决定整集节奏、高潮、预算
+
+
+执行导演
+Unit Director V2
+↓
+决定这一段具体怎么演、怎么打、怎么拍
+
+
+武指 / 摄影 / 分镜系统
+↓
+把它执行成5秒高密度镜头
+
+我认为这是你现在最合理的 V3。因为再往后 V4 才值得做真正的跨集导演记忆：整个故事几十集里，角色能力什么时候首次展示、某个终极招式什么时候解锁、某种视觉奇观多久才能重复一次。现在先把“整集导演”做稳。

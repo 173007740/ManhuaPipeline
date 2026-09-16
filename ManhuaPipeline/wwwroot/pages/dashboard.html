@@ -1,0 +1,554 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>工作台 - 漫创引擎</title>
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box
+        }
+
+        body {
+            font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;
+            min-height: 100vh
+        }
+
+        .container {
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 32px 24px
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            margin-bottom: 24px;
+            flex-wrap: wrap
+        }
+
+        .btn {
+            padding: 10px 20px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 500;
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.2s;
+            height: 40px !important;
+            box-sizing: border-box
+        }
+
+        .btn-outline {
+            background: transparent;
+            color: var(--text);
+            border: 1px solid var(--border)
+        }
+
+            .btn-outline:hover {
+                background: var(--card-hover)
+            }
+
+        .btn-sm {
+            padding: 6px 12px;
+            font-size: 12px
+        }
+
+        .btn-danger {
+            background: var(--danger);
+            color: #fff
+        }
+
+        .drama-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s
+        }
+
+            .drama-card:hover {
+                border-color: var(--primary);
+                background: var(--card-hover)
+            }
+
+        .drama-cover {
+            width: 100%;
+            height: 160px;
+            background: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
+            background-size: cover;
+            background-position: center
+        }
+
+        .drama-info {
+            padding: 16px
+        }
+
+        .drama-title {
+            font-size: 16px;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px
+        }
+
+        .drama-desc {
+            font-size: 13px;
+            color: var(--text-muted);
+            margin-top: 4px;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden
+        }
+
+        .drama-meta {
+            font-size: 12px;
+            color: var(--text-muted);
+            margin-top: 6px
+        }
+
+        .drama-actions {
+            padding: 8px 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            gap: 8px
+        }
+
+        .drama-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill,minmax(280px,1fr));
+            gap: 16px;
+            margin-top: 8px
+        }
+
+        .project-card {
+            background: var(--card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            padding: 20px;
+            transition: all 0.2s
+        }
+
+            .project-card:hover {
+                border-color: var(--primary);
+                background: var(--card-hover)
+            }
+
+            .project-card h4 {
+                font-size: 15px;
+                font-weight: 600;
+                margin-bottom: 4px
+            }
+
+            .project-card p {
+                font-size: 13px;
+                color: var(--text-muted)
+            }
+
+        .project-actions {
+            display: flex;
+            gap: 8px;
+            margin-top: 12px
+        }
+
+        .empty-state {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            min-height: 200px;
+            padding: 40px;
+            color: var(--text-muted)
+        }
+
+            .empty-state .icon {
+                font-size: 48px;
+                margin-bottom: 16px;
+                opacity: 0.5
+            }
+
+        .breadcrumb {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            color: var(--text-muted)
+        }
+
+            .breadcrumb a {
+                color: var(--primary-light);
+                cursor: pointer;
+                text-decoration: none
+            }
+
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.6);
+            z-index: 2000;
+            justify-content: center;
+            align-items: center
+        }
+
+        .modal {
+            background: #1e293b;
+            border-radius: 12px;
+            padding: 24px;
+            width: 90%;
+            max-width: 480px;
+            border: 1px solid var(--border)
+        }
+
+            .modal h3 {
+                font-size: 18px;
+                margin-bottom: 16px
+            }
+
+            .modal label {
+                display: block;
+                font-size: 13px;
+                color: var(--text-muted);
+                margin-bottom: 4px
+            }
+
+            .modal input, .modal textarea {
+                width: 100%;
+                padding: 10px 12px;
+                background: #0f172a;
+                border: 1px solid var(--border);
+                border-radius: 6px;
+                color: var(--text);
+                font-size: 14px;
+                margin-bottom: 12px
+            }
+
+        .modal-actions {
+            display: flex;
+            gap: 8px;
+            justify-content: flex-end;
+            margin-top: 16px
+        }
+    </style>
+</head>
+<body>
+    <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+    <div style="position:relative;z-index:1;">
+        <nav class="navbar">
+            <div class="nav-inner">
+                <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                    <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                    <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+                </a>
+                <div class="nav-links" id="navLinks">
+                    <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                    <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                <a href="skill-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
+                <a href="camera-atom-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
+                    <span id="navUser" style="display:none;">
+                        <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+                        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;;font-size:14px"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                        <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+                        <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                    </span>
+                    <span id="navGuest">
+                        <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                        <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                    </span>
+                </div>
+            </div>
+        </nav>
+        <div class="container">
+            <div id="breadcrumb" style="display:none;" class="breadcrumb">
+                <a onclick="showDramas()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回漫剧列表</a>
+            </div>
+            <div id="dramaView">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                    <div class="page-title" style="margin-bottom:0;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> 我的漫剧<span class="drama-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+                    <div class="action-bar" style="margin-bottom:0;">
+                        <button class="btn btn-primary" onclick="showCreateDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建漫剧</button>
+                        <a href="asset-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 资产库</a>
+                        <a href="skill-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
+                        <a href="fight-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
+<a href="camera-atom-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
+                        <a href="token-report.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bar_chart</span> Token统计</a>
+                        <a href="works.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
+                        <button class="btn btn-outline" id="btnDramaSort" onclick="toggleDramaSort()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="dramaSortLabel">最新优先</span></button>
+                    </div>
+                </div>
+                <div id="dramaList" class="drama-grid"></div>
+                <div id="dramaEmpty" class="empty-state" style="display:none;">
+                    <div class="icon">🎬</div>
+                    <p>还没有漫剧</p>
+                    <p style="margin-top:8px;"><a href="#" onclick="showCreateDrama()" style="color:var(--primary-light);">创建你的第一个漫剧</a></p>
+                </div>
+            </div>
+            <div id="projectView" style="display:none;">
+                <div class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_tree</span> <span id="currentDramaTitle"></span></div>
+                <div class="action-bar">
+                    <button class="btn btn-primary" onclick="showCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</button>
+                </div>
+                <div id="projectList" class="project-grid"></div>
+                <div id="projectEmpty" class="empty-state" style="display:none;">
+                    <div class="icon">📂</div>
+                    <p>还没有项目</p>
+                </div>
+            </div>
+        </div>
+        <div id="createDramaModal" class="modal-overlay" style="display:none;">
+            <div class="modal">
+                <h3>新建漫剧</h3>
+                <label>漫剧名称</label>
+                <input id="dramaTitleInput" placeholder="输入漫剧名称">
+                <label>描述（选填）</label>
+                <textarea id="dramaDescInput" placeholder="输入描述" rows="3"></textarea>
+                <label>封面（选填）</label>
+                <input type="file" id="dramaCoverInput" accept="image/*" onchange="previewCover(this)">
+                <div id="coverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:200px;max-height:120px;border-radius:8px;object-fit:cover;"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-outline" onclick="$('#createDramaModal').hide()">取消</button>
+                    <button class="btn btn-primary" onclick="createDrama()">创建</button>
+                </div>
+            </div>
+        </div>
+        <div id="createProjectModal" class="modal-overlay" style="display:none;">
+            <div class="modal">
+                <h3>新建项目</h3>
+                <label>项目名称</label>
+                <input id="projectTitleInput" placeholder="输入项目名称">
+                <label>描述（选填）</label>
+                <textarea id="projectDescInput" placeholder="输入描述" rows="3"></textarea>
+                <div class="modal-actions">
+                    <button class="btn btn-outline" onclick="$('#createProjectModal').hide()">取消</button>
+                    <button class="btn btn-primary" onclick="createProject()">创建</button>
+                </div>
+            </div>
+        </div>
+        <div id="editDramaModal" class="modal-overlay" style="display:none;">
+            <div class="modal">
+                <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:var(--primary-light)">edit</span> 编辑漫剧</h3>
+                <input type="hidden" id="editDramaId">
+                <label>漫剧名称</label>
+                <input id="editDramaTitleInput" placeholder="输入漫剧名称">
+                <label>描述（选填）</label>
+                <textarea id="editDramaDescInput" placeholder="输入描述" rows="3"></textarea>
+                <label>封面（选填）</label>
+                <div class="cover-upload-area" style="position:relative;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px;">
+                    <span class="material-icons" style="font-size:24px;color:var(--text-muted);display:block;margin-bottom:8px;">cloud_upload</span>
+                    <span style="font-size:13px;color:var(--text-muted);">点击上传封面图片</span>
+                    <input type="file" id="editDramaCoverInput" accept="image/*" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;">
+                </div>
+                <div id="editDramaCoverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;"></div>
+                <div class="modal-actions">
+                    <button class="btn btn-outline" onclick="$('#editDramaModal').hide()">取消</button>
+                    <button class="btn btn-primary" onclick="saveEditDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check</span> 保存</button>
+                </div>
+            </div>
+        </div>
+        <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+        <script src="../js/app.js?v=2"></script>
+        <script>
+            var currentDramaId = 0;
+            $(function () { $.get("/api/auth/me", function (u) { if (u && u.userId) loadDramas(); else window.location.href = "login.html" }).fail(function () { window.location.href = "login.html" }) });
+            var dramaSortOrder = "desc";
+            function toggleDramaSort() {
+                dramaSortOrder = dramaSortOrder === "desc" ? "asc" : "desc";
+                $("#dramaSortLabel").text(dramaSortOrder === "desc" ? "最新优先" : "最早优先");
+                loadDramas();
+            }
+            function loadDramas() {
+                $.get("/api/drama", function (d) {
+                    if (!d || d.length === 0) { $("#dramaList").empty(); $("#dramaEmpty").show(); return }
+                    $("#dramaEmpty").hide();
+                    d.sort(function (a, b) {
+                        var da = a.createdAt || a.updatedAt || "";
+                        var db = b.createdAt || b.updatedAt || "";
+                        if (dramaSortOrder === "desc") return da < db ? 1 : da > db ? -1 : 0;
+                        return da < db ? -1 : da > db ? 1 : 0;
+                    });
+                    var h = "";
+                    for (var i = 0; i < d.length; i++) {
+                        var dr = d[i];
+                        h += "<div class='drama-card' onclick=\"openDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">";
+                        h += "<div class='drama-cover' style='" + (dr.coverImage ? "background-image:url(" + dr.coverImage + ");background-size:cover;background-position:center;" : "") + "'>" + (dr.coverImage ? "" : "🎬") + "</div>";
+                        h += "<div class='drama-info'><div class='drama-title'><span class='material-icons' style='font-size:inherit;vertical-align:middle;color:var(--primary-light)'>movie</span> " + escHtml(dr.title) + "</div>";
+                        if (dr.description) h += "<div class='drama-desc'>" + escHtml(dr.description) + "</div>";
+                        h += "<div class='drama-meta' id='dramaMeta" + dr.dramaId + "'>加载中...</div></div>" +
+                            "<div class='drama-actions'><button class='btn btn-outline btn-sm' onclick=\"event.stopPropagation();showEditDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\"><span class='material-icons' style='font-size:inherit;vertical-align:middle'>edit</span> 编辑</button></div></div>";
+                    }
+                    $("#dramaList").html(h);
+                    $(".drama-count").text("共 " + d.length + " 个漫剧");
+                    for (var i = 0; i < d.length; i++) { (function (id) { $.get("/api/drama/" + id + "/projects", function (ps) { $("#dramaMeta" + id).text("项目数: " + (ps || []).length) }) })(d[i].dramaId) }
+                });
+            }
+            function openDrama(id, title) { window.location.href = "project-manage.html?dramaId=" + id + "&title=" + encodeURIComponent(title) }
+            function showDramas() { $("#projectView").hide(); $("#breadcrumb").hide(); $("#dramaView").show(); loadDramas() }
+            function loadProjects() {
+                $.get("/api/drama/" + currentDramaId + "/projects", function (d) {
+                    if (!d || d.length === 0) { $("#projectList").empty(); $("#projectEmpty").show(); return }
+                    $("#projectEmpty").hide();
+                    var h = "";
+                    for (var i = 0; i < d.length; i++) {
+                        var p = d[i];
+                        var st = ["草稿", "创意构思", "故事分析", "全局蓝图", "分集细化", "分镜脚本", "角色资产", "道具资产", "环境资产", "提示词生成", "衔接检查", "已完成"];
+                        var label = st[p.currentStage] || "草稿";
+                        h += "<div class='project-card'><h4>" + escHtml(p.title) + "</h4>";
+                        if (p.description) h += "<p>" + escHtml(p.description) + "</p>";
+                        h += "<p style='margin-top:8px;font-size:12px;'><span style='color:var(--primary-light);'>状态: " + label + "</span></p>";
+                        h += "<div class='project-actions'><a href='project.html?id=" + p.projectId + "' class='btn btn-primary btn-sm'><span class='material-icons' style='font-size:inherit;vertical-align:middle'>arrow_forward</span> 进入</a>";
+                        h += "<button class='btn btn-outline btn-sm' onclick=\"editProject('" + p.projectId + "','" + escAttr(p.title) + "')\"><span class='material-icons' style='font-size:inherit;vertical-align:middle'>edit</span> 编辑</button>";
+                        h += "<button class='btn btn-danger btn-sm' onclick='deleteProject(" + p.projectId + ")'><span class='material-icons' style='font-size:inherit;vertical-align:middle'>trash</span></button></div></div>"
+                    }
+                    $("#projectList").html(h);
+                });
+            }
+            function showCreateDrama() { $("#dramaTitleInput").val(""); $("#dramaDescInput").val(""); $("#dramaCoverInput").val(""); $("#coverPreview").hide(); $("#createDramaModal").css("display", "flex") }
+            function createDrama() {
+                var t = $("#dramaTitleInput").val().trim(); if (!t) { alert("请输入名称"); return }
+                $.ajax({
+                    url: "/api/drama", method: "POST", contentType: "application/json", data: JSON.stringify({ title: t, description: $("#dramaDescInput").val() }), success: function (r) {
+                        var did = r.dramaId;
+                        var file = $("#dramaCoverInput")[0].files[0];
+                        if (file) { var fd = new FormData(); fd.append("file", file); $.ajax({ url: "/api/drama/" + did + "/cover", method: "POST", data: fd, processData: false, contentType: false, success: function () { $("#createDramaModal").hide(); loadDramas() } }) } else { $("#createDramaModal").hide(); loadDramas() }
+                    }
+                });
+            }
+            function showCreateProject() { $("#projectTitleInput").val(""); $("#projectDescInput").val(""); $("#createProjectModal").css("display", "flex") }
+            function createProject() {
+                var t = $("#projectTitleInput").val().trim(); if (!t) { alert("请输入项目名称"); return }
+                $.ajax({ url: "/api/project", method: "POST", contentType: "application/json", data: JSON.stringify({ dramaId: currentDramaId, title: t, description: $("#projectDescInput").val(), scriptContent: "" }), success: function () { $("#createProjectModal").hide(); loadProjects() }, error: function (x) { alert("失败: " + (x.responseJSON?.message || x.statusText)) } });
+            }
+            function editProject(id, title) { var nt = prompt("项目名称", title); if (!nt || !nt.trim()) return; $.ajax({ url: "/api/project/" + id, method: "PUT", contentType: "application/json", data: JSON.stringify({ title: nt }), success: function () { loadProjects() } }) }
+            function deleteProject(id) { if (!confirm("确定删除？")) return; $.ajax({ url: "/api/project/" + id, method: "DELETE", success: function () { loadProjects() } }) }
+
+            var editDramaCoverFile = null;
+            function showEditDrama(id, title) {
+                $("#editDramaId").val(id);
+                $("#editDramaTitleInput").val(title);
+                $("#editDramaCoverInput").val("");
+                $("#editDramaCoverPreview").hide();
+                editDramaCoverFile = null;
+                $.get("/api/drama/" + id, function (dr) {
+                    $("#editDramaDescInput").val(dr.description || "");
+                    if (dr.coverImage) $("#editDramaCoverPreview").html('<img src="' + dr.coverImage + '" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">').show();
+                });
+                $("#editDramaModal").css("display", "flex");
+            }
+            $(document).on("change", "#editDramaCoverInput", function () {
+                var file = this.files[0];
+                if (file) {
+                    editDramaCoverFile = file;
+                    var reader = new FileReader();
+                    reader.onload = function (e) { $("#editDramaCoverPreview").html('<img src="' + e.target.result + '" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">').show() };
+                    reader.readAsDataURL(file);
+                }
+            });
+            function saveEditDrama() {
+                var id = $("#editDramaId").val();
+                var title = $("#editDramaTitleInput").val().trim();
+                if (!title) { alert("请输入名称"); return }
+                var desc = $("#editDramaDescInput").val().trim();
+                $.ajax({
+                    url: "/api/drama/" + id, method: "PUT", contentType: "application/json", data: JSON.stringify({ title: title, description: desc }), success: function () {
+                        if (editDramaCoverFile) {
+                            var fd = new FormData();
+                            fd.append("file", editDramaCoverFile);
+                            $.ajax({ url: "/api/drama/" + id + "/cover", method: "POST", data: fd, processData: false, contentType: false, success: function () { $("#editDramaModal").hide(); loadDramas() } });
+                        } else { $("#editDramaModal").hide(); loadDramas() }
+                    }
+                });
+            }
+            function escHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") }
+            function escAttr(s) { return String(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;") }
+
+            function previewCover(input) { if (input.files && input.files[0]) { var reader = new FileReader(); reader.onload = function (e) { $("#coverPreview").show().find("img").attr("src", e.target.result) }; reader.readAsDataURL(input.files[0]) } }
+        </script>
+
+    </div>
+
+    <script>
+        (function () {
+            var canvas = document.getElementById("particleCanvas");
+            if (!canvas) return;
+            canvas.style.top = "0";
+            canvas.style.width = "100%";
+            canvas.style.pointerEvents = "none";
+            var ctx = canvas.getContext("2d");
+            var W, H;
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener("resize", resize);
+            var particles = [];
+            var COUNT = 70;
+            var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+            for (var i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
+                    dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: Math.random() * 0.4 + 0.15
+                });
+            }
+            var CONNECT_DIST = 130;
+            function anim() {
+                ctx.clearRect(0, 0, W, H);
+                for (var i = 0; i < COUNT; i++) {
+                    var p = particles[i];
+                    p.x += p.dx; p.y += p.dy;
+                    if (p.x < 0 || p.x > W) p.dx *= -1;
+                    if (p.y < 0 || p.y > H) p.dy *= -1;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color + p.alpha + ")";
+                    ctx.fill();
+                    for (var j = i + 1; j < COUNT; j++) {
+                        var q = particles[j];
+                        var dx = p.x - q.x;
+                        var dy = p.y - q.y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < CONNECT_DIST) {
+                            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(q.x, q.y);
+                            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+                            ctx.lineWidth = 0.6;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(anim);
+            }
+            anim();
+        })();
+    </script>
+</body>
+</html>

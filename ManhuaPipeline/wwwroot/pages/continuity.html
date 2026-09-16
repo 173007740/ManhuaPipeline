@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>连续性表 - 漫创引擎</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+    <style>
+        .page-title { color: #f1f5f9; margin-bottom: 6px; }
+        .page-sub { color: #64748b; font-size: 13px; margin-bottom: 20px; line-height: 1.7; }
+        .back-link { color: #a78bfa; text-decoration: none; font-size: 13px; display: inline-block; margin-bottom: 12px; }
+        .back-link:hover { color: #c4b5fd; }
+
+        .summary-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
+        .summary-item { background: #1e293b; border-radius: 8px; padding: 10px 18px; text-align: center; min-width: 96px; }
+        .summary-item .num { font-size: 20px; font-weight: 700; color: #a78bfa; display: block; }
+        .summary-item .label { font-size: 11px; color: #64748b; }
+
+        .section-title { color: #e2e8f0; font-size: 15px; font-weight: 600; margin: 26px 0 12px; display: flex; align-items: center; gap: 8px; }
+        .section-title .tools { margin-left: auto; display: flex; gap: 8px; }
+        .mini-btn { background: #334155; color: #cbd5e1; border: none; border-radius: 6px; padding: 5px 12px; font-size: 12px; cursor: pointer; }
+        .mini-btn:hover { background: #475569; color: #fff; }
+
+        .hint { background: rgba(234,179,8,0.10); border-left: 3px solid #facc15; color: #facc15; padding: 12px 16px; border-radius: 6px; font-size: 13px; line-height: 1.8; margin-bottom: 16px; }
+        .hint.err { background: rgba(239,68,68,0.10); border-left-color: #ef4444; color: #f87171; }
+
+        .cont-card { background: #1e293b; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+        .cont-head { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); user-select: none; }
+        .cont-head:hover { background: rgba(255,255,255,0.08); }
+        .cont-head .name { font-weight: 600; color: #e2e8f0; font-size: 14px; }
+        .cont-head .desc { color: #64748b; font-size: 12px; flex: 1; }
+        .cont-head .arrow { color: #94a3b8; transition: transform 0.2s; font-size: 12px; }
+        .cont-body { padding: 14px 16px; display: none; }
+
+        .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
+        .tag-ok { background: rgba(34,197,94,0.2); color: #22c55e; }
+        .tag-empty { background: rgba(148,163,184,0.2); color: #94a3b8; }
+        .tag-manual { background: rgba(234,179,8,0.2); color: #facc15; }
+
+        .ep-label { color: #a78bfa; font-size: 12px; font-weight: 600; margin: 10px 0 6px; }
+        .ep-label:first-child { margin-top: 0; }
+        .cont-text { background: #0f172a; border-radius: 6px; padding: 12px; margin: 0; color: #cbd5e1; font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; font-family: inherit; }
+        .meta { color: #475569; font-size: 11px; margin-top: 6px; }
+
+        .unit-block { background: #1e293b; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+        .bind-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+        .bind-table th { text-align: left; color: #94a3b8; font-size: 11px; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #334155; }
+        .bind-table td { color: #e2e8f0; font-size: 13px; padding: 6px 8px; border-bottom: 1px solid rgba(51,65,85,0.5); }
+        .bind-table tr:last-child td { border-bottom: none; }
+        .cat-Character { color: #60a5fa; }
+        .cat-Environment { color: #34d399; }
+        .cat-Prop { color: #fbbf24; }
+        .cat-Effect { color: #f472b6; }
+        .no-img { color: #ef4444; font-size: 11px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="/" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="project.html?id=" id="backLink" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回项目</a>
+                <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+            </div>
+        </div>
+    </nav>
+    <div class="container" style="max-width:100%;">
+        <a class="back-link" id="backLinkTop" href="project.html"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回项目</a>
+        <h2 class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sitemap</span> 连续性表 · L2 层</h2>
+        <div class="page-sub">
+            这是阶段 4（分集细化）的<b style="color:#a78bfa;">强输入</b>：抽取结果会被渲染成硬约束注入拆分提示词。
+            抽错了不会报错，只会静默地让分镜、提示词跟着错——所以需要这个视图做归因。<br>
+            数据来源：<code style="color:#64748b;">ProjectContinuityTables</code>（六类表）+ <code style="color:#64748b;">UnitAssetBindings</code>（单元资产绑定）。<b>只读</b>。
+        </div>
+
+        <div class="summary-bar" id="summaryBar"></div>
+        <div id="hintBar"></div>
+
+        <div class="section-title">
+            <span class="material-icons" style="font-size:18px;">table_chart</span> 六类连续性表
+            <span class="tools"><button class="mini-btn" onclick="copyAll()"><i class="fas fa-copy"></i> 复制全部文本</button></span>
+        </div>
+        <div id="tableSection"><p style="color:#94a3b8;padding:16px;">加载中...</p></div>
+
+        <div class="section-title">
+            <span class="material-icons" style="font-size:18px;">link</span> 单元资产绑定
+        </div>
+        <div id="bindingSection"><p style="color:#94a3b8;padding:16px;">加载中...</p></div>
+
+        <div class="section-title">
+            <span class="material-icons" style="font-size:18px;">layers</span> 后期叠加清单 · L5 层
+            <span class="tools"><button class="mini-btn" onclick="copyOverlay()"><i class="fas fa-copy"></i> 复制清单</button></span>
+        </div>
+        <div class="page-sub" style="margin-bottom:12px;">
+            手机短信、新闻推送、文件、告示、地图、监控画面、时间码这类<b style="color:#facc15;">文字类画面元素</b>，
+            交给视频模型生成必然出现乱码或错字。因此阶段 9 只让模型画「洁净留白的屏幕/纸面」，
+            文字由后期叠加——下面就是需要人工叠加的镜头清单。<br>
+            数据来源：阶段 9 提示词（<code style="color:#64748b;">SeedancePrompts</code>）；提示词未生成时回退到阶段 5 分镜。<b>只读</b>。
+        </div>
+        <div class="summary-bar" id="overlayBar"></div>
+        <div id="overlaySection"><p style="color:#94a3b8;padding:16px;">加载中...</p></div>
+    </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script>
+        $.get("/api/auth/me", function (u) { if (!u || !u.userId) window.location.href = "login.html"; }).fail(function () { window.location.href = "login.html"; });
+    </script>
+    <script>
+        var TABLE_ORDER = ["SceneSpace", "CharacterContinuity", "PropState", "ClueReveal", "ActionCausality", "TransitionMotive"];
+        var TABLE_NAME = {
+            SceneSpace: "场景空间表", CharacterContinuity: "角色连续性表", PropState: "道具状态表",
+            ClueReveal: "线索揭示表", ActionCausality: "动作因果表", TransitionMotive: "转场动机表"
+        };
+        var TABLE_DESC = {
+            SceneSpace: "左/右/中后/前景、入口出口、危险与逃生方向、动作轴线",
+            CharacterContinuity: "外貌锚定、服装、随身物、伤势、禁止变化",
+            PropState: "何时出现、何时消失、禁止状态倒退",
+            ClueReveal: "揭示顺序、观众必须注意到什么、禁止提前揭示",
+            ActionCausality: "单元级因果、每单元观众获得的新信息",
+            TransitionMotive: "每个衔接点的动机类型与说明"
+        };
+        var CAT_NAME = { Character: "角色", Environment: "环境", Prop: "道具", Effect: "特效" };
+
+        var projectId = new URLSearchParams(location.search).get("id");
+        if (!projectId) {
+            $("#backLink, #backLinkTop").attr("href", "dashboard.html");
+            $("#tableSection").html("<p style='color:#ef4444;padding:16px;'>请指定项目 ID（?id=项目ID）</p>");
+            $("#bindingSection").empty();
+        } else {
+            $("#backLink, #backLinkTop").attr("href", "project.html?id=" + projectId);
+        }
+
+        function esc(s) { return $("<span>").text(s == null ? "" : s).html(); }
+        function timeStr(dt) {
+            if (!dt) return "-";
+            var d = new Date(dt);
+            return d.getFullYear() + "-" + String(d.getMonth() + 1).padStart(2, "0") + "-" + String(d.getDate()).padStart(2, "0") + " " + String(d.getHours()).padStart(2, "0") + ":" + String(d.getMinutes()).padStart(2, "0");
+        }
+        function epLabel(n) { return n > 0 ? ("第 " + n + " 集") : "全片级（EpisodeNumber = 0）"; }
+
+        function renderSummary(s) {
+            var h = "";
+            h += "<div class='summary-item'><span class='num'>" + (s.tableCount || 0) + "</span><span class='label'>已有表数</span></div>";
+            h += "<div class='summary-item'><span class='num' style='color:#22c55e;'>" + (s.filledTableCount || 0) + "</span><span class='label'>有内容</span></div>";
+            h += "<div class='summary-item'><span class='num' style='color:#64748b;'>" + ((s.tableCount || 0) - (s.filledTableCount || 0)) + "</span><span class='label'>空表</span></div>";
+            h += "<div class='summary-item'><span class='num' style='color:#60a5fa;'>" + (s.bindingCount || 0) + "</span><span class='label'>绑定条数</span></div>";
+            h += "<div class='summary-item'><span class='num' style='color:#60a5fa;'>" + (s.unitCount || 0) + "</span><span class='label'>涉及单元</span></div>";
+            $("#summaryBar").html(h);
+        }
+
+        function renderHint(s) {
+            if ((s.tableCount || 0) === 0) {
+                $("#hintBar").html("<div class='hint'>尚未抽取任何连续性表。请先到项目页运行<b>阶段 4（分集细化）</b>——抽取会在拆分之前自动执行，六类表落库后即出现在此页。</div>");
+            } else if ((s.filledTableCount || 0) === 0) {
+                $("#hintBar").html("<div class='hint err'>已写入 " + s.tableCount + " 行连续性表，但内容全为空。可能是模型返回了空结构，或渲染结果为空——建议重跑阶段 4，并检查抽取提示词。</div>");
+            } else {
+                $("#hintBar").empty();
+            }
+        }
+
+        function renderTables(rows) {
+            var byType = {};
+            for (var i = 0; i < rows.length; i++) {
+                var r = rows[i];
+                if (!byType[r.tableType]) byType[r.tableType] = [];
+                byType[r.tableType].push(r);
+            }
+            var h = "";
+            for (var t = 0; t < TABLE_ORDER.length; t++) {
+                var type = TABLE_ORDER[t];
+                var list = byType[type] || [];
+                list.sort(function (a, b) { return (a.episodeNumber || 0) - (b.episodeNumber || 0); });
+
+                var filled = 0;
+                for (var k = 0; k < list.length; k++) { if (list[k].hasContent) filled++; }
+                var hasAny = filled > 0;
+                var badge = list.length === 0
+                    ? "<span class='tag tag-empty'>未抽取</span>"
+                    : (hasAny ? "<span class='tag tag-ok'>有内容 ×" + filled + "</span>" : "<span class='tag tag-empty'>空</span>");
+
+                h += "<div class='cont-card'>";
+                h += "<div class='cont-head' onclick='toggleCard(this)'>" + badge +
+                     "<span class='name'>" + esc(TABLE_NAME[type] || type) + "</span>" +
+                     "<span class='desc'>" + esc(TABLE_DESC[type] || "") + "</span>" +
+                     "<span class='arrow'>▼</span></div>";
+                h += "<div class='cont-body'" + (hasAny ? " style='display:block;'" : "") + ">";
+
+                if (list.length === 0) {
+                    h += "<div style='color:#64748b;font-size:13px;'>该表没有数据行。若阶段 4 已跑过，说明模型这次没抽出这一类，或抽取整体失败未落库。</div>";
+                } else {
+                    for (var j = 0; j < list.length; j++) {
+                        var r = list[j];
+                        h += "<div class='ep-label'>" + esc(epLabel(r.episodeNumber)) + "</div>";
+                        if (r.hasContent) {
+                            h += "<pre class='cont-text'>" + esc(r.contentText) + "</pre>";
+                        } else {
+                            h += "<div style='color:#ef4444;font-size:13px;'>该行存在但渲染文本为空。</div>";
+                        }
+                        var srcTag = r.source === "manual" ? "<span class='tag tag-manual'>人工</span>" : "<span class='tag tag-ok'>LLM</span>";
+                        h += "<div class='meta'>来源 " + srcTag + " · 更新于 " + timeStr(r.updatedAt) + "</div>";
+                    }
+                }
+                h += "</div></div>";
+            }
+            $("#tableSection").html(h);
+        }
+
+        function toggleCard(head) {
+            var body = head.nextElementSibling;
+            var arrow = head.querySelector(".arrow");
+            if (body.style.display === "block") {
+                body.style.display = "none";
+                arrow.style.transform = "rotate(0deg)";
+            } else {
+                body.style.display = "block";
+                arrow.style.transform = "rotate(180deg)";
+            }
+        }
+
+        function renderBindings(rows) {
+            if (!rows || rows.length === 0) {
+                $("#bindingSection").html("<p style='color:#94a3b8;padding:16px;'>暂无单元资产绑定。阶段 4 拆分完成后会自动解析单元 ↔ 项目资产的引用关系并写入。</p>");
+                return;
+            }
+            var groups = [];
+            var index = {};
+            for (var i = 0; i < rows.length; i++) {
+                var r = rows[i];
+                var key = (r.episodeNumber || 0) + "|" + (r.unitNumber || "");
+                if (index[key] === undefined) {
+                    index[key] = groups.length;
+                    groups.push({ episodeNumber: r.episodeNumber, unitNumber: r.unitNumber, items: [] });
+                }
+                groups[index[key]].items.push(r);
+            }
+            var h = "";
+            for (var g = 0; g < groups.length; g++) {
+                var grp = groups[g];
+                h += "<div class='unit-block'>";
+                h += "<div class='ep-label'>" + esc(epLabel(grp.episodeNumber)) + " · 单元 " + esc(grp.unitNumber) +
+                     " <span style='color:#475569;font-weight:400;'>（" + grp.items.length + " 项引用）</span></div>";
+                h += "<table class='bind-table'><thead><tr><th style='width:60px;'>分类</th><th>资产名</th><th style='width:80px;'>AssetId</th><th style='width:90px;'>参考图</th><th style='width:90px;'>参考顺序</th></tr></thead><tbody>";
+                for (var m = 0; m < grp.items.length; m++) {
+                    var it = grp.items[m];
+                    h += "<tr><td class='cat-" + esc(it.category || "") + "'>" + esc(CAT_NAME[it.category] || it.category || "-") + "</td>" +
+                         "<td>" + esc(it.name || "-") + "</td>" +
+                         "<td style='color:#64748b;'>" + (it.assetId || 0) + "</td>" +
+                         "<td>" + (it.hasImage ? "<span style='color:#22c55e;'>有</span>" : "<span class='no-img'>无</span>") + "</td>" +
+                         "<td style='color:#64748b;'>" + (it.sortOrder || 0) + "</td></tr>";
+                }
+                h += "</tbody></table></div>";
+            }
+            $("#bindingSection").html(h);
+        }
+
+        function renderOverlay(d) {
+            var items = (d && d.items) || [];
+            var total = (d && d.itemCount) || 0;
+            var unguarded = (d && d.unguardedCount) || 0;
+            var cats = (d && d.categoryCounts) || [];
+
+            var bar = "";
+            bar += "<div class='summary-item'><span class='num'>" + ((d && d.shotCount) || 0) + "</span><span class='label'>镜头总数</span></div>";
+            bar += "<div class='summary-item'><span class='num' style='color:#facc15;'>" + total + "</span><span class='label'>需叠加镜头</span></div>";
+            for (var c = 0; c < cats.length; c++) {
+                bar += "<div class='summary-item'><span class='num' style='font-size:15px;color:#60a5fa;'>" + (cats[c].count || 0) + "</span><span class='label'>" + esc(cats[c].category || "-") + "</span></div>";
+            }
+            $("#overlayBar").html(bar);
+
+            if (items.length === 0) {
+                $("#overlaySection").html("<p style='color:#94a3b8;padding:16px;'>当前镜头里没有检测到需要后期叠加的文字类元素。" +
+                    "若阶段 9 还没跑，本清单会回退到阶段 5 分镜；两边都为空说明确实没有这类画面。</p>");
+                return;
+            }
+
+            var h = "";
+            if (unguarded > 0) {
+                h += "<div class='hint'>有 " + unguarded + " 个镜头涉及文字类元素但提示词里还没有留白约束——说明提示词是在本功能上线前生成的。到项目页<b>重跑阶段 9</b>（或该单元的修复）即可自动补上。</div>";
+            }
+            h += "<div class='hint' style='background:rgba(96,165,250,0.10);border-left-color:#60a5fa;color:#93c5fd;'>";
+            h += "统一规则：<b>" + esc((d && d.ruleText) || "") + "</b>。以下每条对应一个镜头，后期按「分类 + 上下文摘录」补字。";
+            h += "</div>";
+
+            h += "<div class='unit-block'><table class='bind-table'><thead><tr>" +
+                 "<th style='width:64px;'>集</th><th style='width:70px;'>单元</th><th style='width:110px;'>镜头</th>" +
+                 "<th style='width:150px;'>叠加分类</th><th style='width:150px;'>触发词</th><th>上下文摘录</th><th style='width:70px;'>留白约束</th>" +
+                 "</tr></thead><tbody>";
+            for (var i = 0; i < items.length; i++) {
+                var it = items[i];
+                h += "<tr>" +
+                     "<td style='color:#a78bfa;'>" + (it.episodeNumber || 0) + "</td>" +
+                     "<td>" + esc(it.unitName || "-") + "</td>" +
+                     "<td>" + esc(it.shotLabel || "-") + "</td>" +
+                     "<td style='color:#facc15;'>" + esc(it.categories || "-") + "</td>" +
+                     "<td style='color:#94a3b8;font-size:12px;'>" + esc(it.cues || "-") + "</td>" +
+                     "<td style='color:#cbd5e1;font-size:12px;'>" + esc(it.excerpt || "-") + "</td>" +
+                     "<td>" + (it.guarded ? "<span style='color:#22c55e;'>已写入</span>" : "<span class='no-img'>未写入</span>") + "</td>" +
+                     "</tr>";
+            }
+            h += "</tbody></table></div>";
+            $("#overlaySection").html(h);
+        }
+
+        var _overlayCache = null;
+        function copyOverlay() {
+            if (!_overlayCache || !_overlayCache.items || _overlayCache.items.length === 0) { alert("没有可复制的清单"); return; }
+            var parts = ["后期叠加清单（规则：" + (_overlayCache.ruleText || "") + "）"];
+            for (var i = 0; i < _overlayCache.items.length; i++) {
+                var it = _overlayCache.items[i];
+                parts.push("第" + (it.episodeNumber || 0) + "集 单元" + (it.unitName || "-") + " 镜头" + (it.shotLabel || "-") +
+                    " ｜ 分类：" + (it.categories || "-") + " ｜ 依据：" + (it.excerpt || "-"));
+            }
+            fallbackCopy(parts.join("\n"));
+        }
+
+        function copyAll() {
+            var parts = [];
+            $(".cont-card").each(function () {
+                var name = $(this).find(".name").text();
+                parts.push("=== " + name + " ===");
+                $(this).find(".cont-text").each(function () { parts.push($(this).text()); });
+            });
+            var text = parts.join("\n\n");
+            if (!text) { alert("没有可复制的文本"); return; }
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(function () { alert("已复制 " + text.length + " 个字符"); },
+                    function () { fallbackCopy(text); });
+            } else { fallbackCopy(text); }
+        }
+        function fallbackCopy(text) {
+            var ta = document.createElement("textarea");
+            ta.value = text; document.body.appendChild(ta); ta.select();
+            try { document.execCommand("copy"); alert("已复制 " + text.length + " 个字符"); }
+            catch (e) { alert("复制失败，请手动选择文本"); }
+            document.body.removeChild(ta);
+        }
+
+        if (projectId) {
+            $.get("/api/project/" + projectId + "/continuity", function (d) {
+                var s = (d && d.summary) || {};
+                renderSummary(s);
+                renderHint(s);
+                renderTables((d && d.continuity) || []);
+                renderBindings((d && d.unitBindings) || []);
+            }).fail(function (x) {
+                var msg = (x.responseJSON && x.responseJSON.message) || x.statusText || "加载失败";
+                $("#summaryBar").empty();
+                $("#hintBar").html("<div class='hint err'>加载失败：" + esc(msg) + "</div>");
+                $("#tableSection").empty();
+                $("#bindingSection").empty();
+            });
+
+            $.get("/api/project/" + projectId + "/post-overlay", function (d) {
+                _overlayCache = d;
+                renderOverlay(d);
+            }).fail(function (x) {
+                var msg = (x.responseJSON && x.responseJSON.message) || x.statusText || "加载失败";
+                $("#overlayBar").empty();
+                $("#overlaySection").html("<div class='hint err'>后期叠加清单加载失败：" + esc(msg) + "</div>");
+            });
+        }
+    </script>
+</body>
+</html>

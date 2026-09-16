@@ -1,0 +1,759 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>我的资产 - 漫创引擎</title>
+    <link rel="stylesheet" href="/lib/material-icons/material-icons.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .asset-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill,minmax(220px,1fr));
+            gap: 16px;
+            margin-top: 8px;
+        }
+
+        .asset-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            cursor: pointer;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+            .asset-card:hover {
+                border-color: var(--primary);
+                background: var(--bg-card-hover);
+            }
+
+            .asset-card img {
+                width: 100%;
+                height: 160px;
+                object-fit: cover;
+                display: block;
+                background: #1e293b;
+            }
+
+            .asset-card .info {
+                padding: 12px 14px;
+            }
+
+                .asset-card .info .name {
+                    color: #e2e8f0;
+                    font-size: 14px;
+                    font-weight: 500;
+                    overflow: hidden;
+                    text-overflow: ellipsis;
+                    white-space: nowrap;
+                }
+
+                .asset-card .info .tags {
+                    display: flex;
+                    gap: 6px;
+                    margin-top: 6px;
+                }
+
+                    .asset-card .info .tags span {
+                        font-size: 11px;
+                        padding: 2px 8px;
+                        border-radius: 4px;
+                        font-weight: 500;
+                    }
+
+        .tag-anime {
+            background: rgba(239,68,68,0.15);
+            color: #ef4444;
+        }
+
+        .tag-real {
+            background: rgba(59,130,246,0.15);
+            color: #60a5fa;
+        }
+
+        .tag-game {
+            background: rgba(139,92,246,0.15);
+            color: #a78bfa;
+        }
+
+        .tag-xianxia {
+            background: rgba(245,158,11,0.15);
+            color: #f59e0b;
+        }
+
+        .tag-char {
+            background: rgba(16,185,129,0.15);
+            color: #34d399;
+        }
+
+        .tag-prop {
+            background: rgba(245,158,11,0.15);
+            color: #fbbf24;
+        }
+
+        .tag-env {
+            background: rgba(168,85,247,0.15);
+            color: #c084fc;
+        }
+
+        .tag-fx {
+            background: rgba(236,72,153,0.15);
+            color: #f472b6;
+        }
+
+        .tag-pet {
+            background: rgba(34,211,238,0.15);
+            color: #22d3ee;
+        }
+
+        .asset-card .del-btn {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(239,68,68,0.85);
+            color: #fff;
+            border: none;
+            font-size: 16px;
+            line-height: 24px;
+            text-align: center;
+            cursor: pointer;
+            display: none;
+            z-index: 2;
+        }
+
+        .asset-card:hover .del-btn {
+            display: block;
+        }
+
+        .asset-card .del-btn:hover {
+            background: #ef4444;
+        }
+
+        .asset-card .dl-btn {
+            position: absolute;
+            top: 6px;
+            right: 36px;
+            width: 24px;
+            height: 24px;
+            border-radius: 50%;
+            background: rgba(59,130,246,0.85);
+            color: #fff;
+            border: none;
+            padding: 0;
+            cursor: pointer;
+            /* 常显：触屏/触控板没有 hover，隐藏式入口会导致「看不到按钮、点不到」 */
+            display: block;
+            opacity: 0.85;
+            z-index: 2;
+        }
+
+        .asset-card .dl-btn:hover {
+            background: #3b82f6;
+            opacity: 1;
+        }
+
+        .asset-card .dl-btn .material-icons {
+            font-size: 15px;
+            line-height: 24px;
+        }
+
+        .page-title {
+            font-size: 24px;
+            font-weight: 700;
+            margin-bottom: 24px;
+        }
+
+        .action-bar {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+        }
+
+        .action-bar-select {
+            background: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 0 24px;
+            font-size: 14px;
+            height: 40px;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+            font-weight: 600;
+            font-family: inherit;
+        }
+
+        .btn {
+            height: 40px;
+            box-sizing: border-box;
+        }
+
+        .container {
+            max-width: 100%;
+            padding: 32px 24px;
+        }
+
+        .preview-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.85);
+            z-index: 2000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+        }
+
+            .preview-overlay img {
+                max-width: 85%;
+                max-height: 85%;
+                border-radius: 12px;
+            }
+    </style>
+</head>
+<body>
+    <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+    <div style="position:relative;z-index:1;">
+        <nav class="navbar">
+            <div class="nav-inner">
+                <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                    <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                    <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+                </a>
+                <div class="nav-links" id="navLinks">
+                    <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                    <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                    <a href="config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+                    <a href="skill-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
+                    <a href="fight-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
+                <a href="camera-atom-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
+                    <span id="navUser" style="display:none;">
+                        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                        <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+                        <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                    </span>
+                    <span id="navGuest" style="display:none;">
+                        <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                        <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+                <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 我的资产<span class="asset-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+                <div class="action-bar" style="margin-bottom:0;">
+                    <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索文件名称..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:160px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAssets()"></div><div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchTagInput" placeholder="搜索标签..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:160px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAssets()"></div><button class="btn btn-primary" onclick="showUpload()" style="margin-right:6px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 上传资产</button><button class="btn btn-primary" onclick="showBatchUpload()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add_photo_alternate</span> 批量上传</button>
+                    <div style="display:flex;align-items:center;">
+                        <select id="filterCategory" onchange="loadAssets()" class="action-bar-select">
+                            <option value="">全部类型</option>
+                            <option value="动漫">动漫</option>
+                            <option value="写实">写实</option>
+                            <option value="游戏">游戏</option>
+                            <option value="仙侠">仙侠</option>
+                        </select>
+                    </div>
+                    <div style="display:flex;align-items:center;">
+                        <select id="filterSubCategory" onchange="loadAssets()" class="action-bar-select">
+                            <option value="">全部子类型</option>
+                            <option value="角色">角色</option>
+                            <option value="道具">道具</option>
+                            <option value="环境">环境</option>
+                            <option value="特效">特效</option>
+                            <option value="灵宠">灵宠</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-ghost" id="btnSort" onclick="toggleSort()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="sortLabel">最新优先</span></button>
+                </div>
+            </div>
+
+            <div id="assetGrid" class="asset-grid">
+                <p style="color:#94a3b8;text-align:center;grid-column:1/-1;">加载中...</p>
+            </div>
+            <div id="assetEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无资产，请先上传<br><a href="#" onclick="showUpload()" style="color:var(--primary-light);font-size:13px;margin-top:12px;display:inline-block;">上传第一个资产</a></div>
+        </div>
+
+        <!-- Upload Modal -->
+        <div id="uploadModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
+            <div style="background:#1e293b;border-radius:12px;padding:24px;width:420px;max-width:90%;">
+                <h3 style="color:#e2e8f0;margin:0 0 16px 0;">上传资产</h3>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">类型</label>
+                    <select id="uploadCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="动漫">动漫</option>
+                        <option value="写实">写实</option>
+                        <option value="游戏">游戏</option>
+                        <option value="仙侠">仙侠</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
+                    <select id="uploadSubCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="角色">角色</option>
+                        <option value="道具">道具</option>
+                        <option value="环境">环境</option>
+                        <option value="特效">特效</option>
+                        <option value="灵宠">灵宠</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
+                    <input type="text" id="uploadTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">图片</label>
+                    <input type="file" id="uploadFile" accept="image/*" style="color:#e2e8f0;font-size:13px;">
+                </div>
+                <div style="margin-bottom:12px;display:none;" id="previewWrap">
+                    <img id="previewImg" style="max-width:100%;max-height:200px;border-radius:4px;">
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn btn-outline" onclick="closeUpload()" style="font-size:13px;">取消</button>
+                    <button class="btn btn-primary" onclick="doUpload()" style="font-size:13px;">上传</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Batch Upload Modal -->
+        <div id="batchUploadModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
+            <div style="background:#1e293b;border-radius:12px;padding:24px;width:520px;max-width:90%;">
+                <h3 style="color:#e2e8f0;margin:0 0 16px 0;">批量上传资产</h3>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">类型</label>
+                    <select id="batchCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="动漫">动漫</option>
+                        <option value="写实">写实</option>
+                        <option value="游戏">游戏</option>
+                        <option value="仙侠">仙侠</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
+                    <select id="batchSubCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="角色">角色</option>
+                        <option value="道具">道具</option>
+                        <option value="环境">环境</option>
+                        <option value="特效">特效</option>
+                        <option value="灵宠">灵宠</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
+                    <input type="text" id="batchTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">选择图片（可多选）</label>
+                    <input type="file" id="batchFiles" accept="image/*" multiple style="color:#e2e8f0;font-size:13px;">
+                </div>
+                <div id="batchPreview" style="margin-bottom:12px;display:none;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">已选择 <span id="batchCount">0</span> 张图片</label>
+                </div>
+                <div id="batchProgress" style="margin-bottom:12px;display:none;">
+                    <div style="background:#0f172a;border-radius:4px;height:8px;overflow:hidden;">
+                        <div id="batchProgressBar" style="background:#7c3aed;height:100%;width:0%;transition:width 0.3s;"></div>
+                    </div>
+                    <span id="batchProgressText" style="color:#94a3b8;font-size:12px;margin-top:4px;display:block;">0 / 0</span>
+                </div>
+                <div id="batchResult" style="margin-bottom:12px;display:none;font-size:13px;"></div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn btn-outline" onclick="closeBatchUpload()" style="font-size:13px;">取消</button>
+                    <button class="btn btn-primary" onclick="doBatchUpload()" style="font-size:13px;">开始上传</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Edit Modal -->
+        <div id="editModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
+            <div style="background:#1e293b;border-radius:12px;padding:24px;width:440px;max-width:90%;">
+                <h3 style="color:#e2e8f0;margin:0 0 16px 0;">编辑资产</h3>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">图片</label>
+                    <div style="display:flex;align-items:center;gap:10px;">
+                        <img id="editPreviewImg" src="" alt="当前图片" style="width:76px;height:76px;object-fit:cover;border-radius:6px;background:#0f172a;border:1px solid #334155;flex-shrink:0;">
+                        <div style="flex:1;">
+                            <input type="file" id="editFile" accept="image/*" style="color:#e2e8f0;font-size:13px;max-width:100%;">
+                            <div style="font-size:12px;color:#64748b;margin-top:6px;">如需替换图片，请选择新文件（jpg/png/webp/gif），保存后原图将被替换。</div>
+                        </div>
+                    </div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">文件名称</label>
+                    <input type="text" id="editFileName" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">图片访问路径（相对网站根目录，可直接在浏览器打开或被接口引用）</label>
+                    <div style="display:flex;gap:6px;">
+                        <input type="text" id="editFilePath" readonly onclick="this.select()" style="flex:1;min-width:0;background:#0f172a;color:#a5b4fc;border:1px solid #475569;border-radius:4px;padding:8px;font-size:12px;box-sizing:border-box;">
+                        <button type="button" class="btn btn-outline" onclick="copyEditPath(this)" style="font-size:12px;white-space:nowrap;">复制</button>
+                        <a id="editFileOpen" href="#" target="_blank" rel="noopener" class="btn btn-outline" style="font-size:12px;white-space:nowrap;text-decoration:none;">打开</a>
+                    </div>
+                    <div id="editFileRelPath" style="font-size:11px;color:#64748b;margin-top:6px;word-break:break-all;"></div>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">类型</label>
+                    <select id="editCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="动漫">动漫</option>
+                        <option value="写实">写实</option>
+                        <option value="游戏">游戏</option>
+                        <option value="仙侠">仙侠</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
+                    <select id="editSubCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="角色">角色</option>
+                        <option value="道具">道具</option>
+                        <option value="环境">环境</option>
+                        <option value="特效">特效</option>
+                        <option value="灵宠">灵宠</option>
+                    </select>
+                </div>
+                <div style="margin-bottom:12px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
+                    <input type="text" id="editTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <div style="display:flex;gap:8px;justify-content:flex-end;">
+                    <button class="btn btn-outline" onclick="$('#editModal').hide()" style="font-size:13px;">取消</button>
+                    <button class="btn btn-primary" onclick="doEdit()" style="font-size:13px;">保存</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Preview Overlay -->
+        <div class="preview-overlay" id="previewOverlay" onclick="this.style.display='none'">
+            <img id="previewLarge" src="">
+        </div>
+
+        <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+        <script src="../js/app.js?v=2"></script>
+        <script>
+            function escHtml(s) { if (!s) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+            function escAttr(s) { return String(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;"); }
+            function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + ' B'; if (b < 1024 * 1024) return (b / 1024).toFixed(1) + ' KB'; if (b < 1024 * 1024 * 1024) return (b / 1024 / 1024).toFixed(2) + ' MB'; return (b / 1024 / 1024 / 1024).toFixed(2) + ' GB'; }
+
+            var _sortOrder = 'desc';
+            function toggleSort() {
+                _sortOrder = _sortOrder === 'desc' ? 'asc' : 'desc';
+                $('#sortLabel').text(_sortOrder === 'desc' ? '最新优先' : '最早优先');
+                loadAssets();
+            }
+            function loadAssets() {
+                var cat = $('#filterCategory').val();
+                var sub = $('#filterSubCategory').val();
+                var search = $('#searchInput').val();
+                var tag = $('#searchTagInput').val();
+                $.get('/api/reference/list', { category: cat, subCategory: sub, search: search, tag: tag }, function (d) {
+                    if (!d || d.length === 0) { $('#assetGrid').empty(); $('#assetEmpty').show(); $('.asset-count').text(''); return; }
+                    $('#assetEmpty').hide();
+                    d.sort(function (a, b) {
+                        var da = a.createdAt || '';
+                        var db = b.createdAt || '';
+                        return _sortOrder === 'desc' ? (da < db ? 1 : da > db ? -1 : 0) : (da < db ? -1 : da > db ? 1 : 0);
+                    });
+                    var h = '';
+                    for (var i = 0; i < d.length; i++) {
+                        var a = d[i];
+                        var catTag = '';
+                        if (a.category === '动漫') catTag = 'tag-anime';
+                        else if (a.category === '写实') catTag = 'tag-real';
+                        else if (a.category === '游戏') catTag = 'tag-game';
+                        else if (a.category === '仙侠') catTag = 'tag-xianxia';
+                        var subTag = '';
+                        if (a.subCategory === '角色') subTag = 'tag-char';
+                        else if (a.subCategory === '道具') subTag = 'tag-prop';
+                        else if (a.subCategory === '环境') subTag = 'tag-env';
+                        else if (a.subCategory === '特效') subTag = 'tag-fx';
+                        else if (a.subCategory === '灵宠') subTag = 'tag-pet';
+                        h += '<div class="asset-card">';
+                        var _lp = a.localPath || ''; h += '<img src="' + _lp + '" loading="lazy" decoding="async" onclick="previewImg(\'' + _lp + '\')" onerror="this.style.display=\'none\'">';
+                        h += '<button class="del-btn" onclick="deleteAsset(' + a.assetId + ',event)">&times;</button>';
+                        h += '<button type="button" class="dl-btn" title="下载图片" onclick="event.stopPropagation();downloadAsset(this.getAttribute(\'data-url\'),this.getAttribute(\'data-name\'))" data-url="' + escAttr(_lp) + '" data-name="' + escAttr(a.fileName || '') + '"><span class="material-icons">download</span></button>';
+                        h += '<div class="info"><div class="name" ondblclick="renameAsset(' + a.assetId + ',this)" title="双击编辑 · 访问路径\n' + escAttr(a.localPath || a.diskPath || '') + '">' + escHtml(a.fileName) + '</div>';
+                        h += '<div class="tags"><span class="' + catTag + '">' + escHtml(a.category) + '</span><span class="' + subTag + '">' + escHtml(a.subCategory) + '</span></div>';
+                        if (a.tags) { var tagArr = String(a.tags).split(',').map(function (t) { return t.trim() }).filter(Boolean); if (tagArr.length > 0) { h += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">'; for (var ti = 0; ti < tagArr.length; ti++) { h += '<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(236,72,153,0.15);color:#f472b6;">#' + escHtml(tagArr[ti]) + '</span>'; } h += '</div>'; } }
+                        if (a.fileSize) { h += '<div style="font-size:11px;color:#64748b;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">photo_size_select_small</span> ' + formatSize(a.fileSize) + '</div>'; }
+                        h += '</div></div>';
+                    }
+                    $('#assetGrid').html(h);
+                    $('.asset-count').text('共 ' + d.length + ' 个资产');
+                }).fail(function () { $('#assetGrid').html('<p style="color:#ef4444;text-align:center;grid-column:1/-1;">加载失败</p>'); });
+            }
+
+            var _editingAssetId = 0;
+            function renameAsset(id, el) {
+                $.get('/api/reference/list', {}, function (d) {
+                    var a = null;
+                    for (var i = 0; i < d.length; i++) { if (d[i].assetId === id) { a = d[i]; break; } }
+                    if (!a) { alert('未找到资产'); return; }
+                    _editingAssetId = id;
+                    $('#editFileName').val(a.fileName);
+                    var _vp = a.localPath || '';
+                    $('#editFilePath').val(_vp || a.diskPath || '');
+                    $('#editFileRelPath').text(a.diskPath ? '服务器磁盘：' + a.diskPath : '');
+                    $('#editFileOpen').attr('href', _vp || '#');
+                    $('#editCategory').val(a.category);
+                    $('#editSubCategory').val(a.subCategory);
+                    $('#editTags').val(a.tags || '');
+                    $('#editPreviewImg').attr('src', a.localPath + '?t=' + Date.now());
+                    $('#editFile').val('');
+                    $('#editModal').css('display', 'flex');
+                });
+            }
+            function copyEditPath(btn) {
+                var v = $('#editFilePath').val();
+                if (!v) return;
+                var done = function () {
+                    if (!btn) return;
+                    var old = btn.textContent; btn.textContent = '已复制';
+                    setTimeout(function () { btn.textContent = old; }, 1500);
+                };
+                if (navigator.clipboard && navigator.clipboard.writeText) navigator.clipboard.writeText(v).then(done, function () { window.prompt('复制下面的路径：', v); });
+                else window.prompt('复制下面的路径：', v);
+            }
+
+            function doEdit() {
+                var id = _editingAssetId;
+                var fn = $('#editFileName').val().trim();
+                var cat = $('#editCategory').val();
+                var sub = $('#editSubCategory').val();
+                if (!fn) { alert('文件名不能为空'); return; }
+                var fd = new FormData();
+                fd.append('fileName', fn);
+                fd.append('category', cat);
+                fd.append('subCategory', sub);
+                fd.append('tags', $('#editTags').val());
+                var file = $('#editFile')[0].files[0];
+                if (file) fd.append('file', file);
+                $.ajax({
+                    url: '/api/reference/' + id + '/edit', method: 'PUT', data: fd, processData: false, contentType: false,
+                    success: function () { $('#editModal').hide(); loadAssets(); },
+                    error: function (x) { alert('保存失败: ' + (x.responseJSON?.message || x.statusText)); }
+                });
+            }
+
+
+            function previewImg(src) { $('#previewLarge').attr('src', src); $('#previewOverlay').css('display', 'flex'); }
+
+            // ======== 下载图片 ========
+            // 图片与页面同源（/uploads/**），同步触发 a[download] 即以下载方式保存，不会跳转打开图片。
+            // 文件名用资产显示名，自动补上真实扩展名（遐蝶 -> 遐蝶.png）。
+            function buildDownloadName(name, url) {
+                var base = String(name || '').trim().replace(/[\\/:*?"<>|\r\n\t]/g, '_').replace(/^\.+/, '');
+                var m = /\.([A-Za-z0-9]{2,5})(?:[?#]|$)/.exec(url || '');
+                var ext = m ? '.' + m[1].toLowerCase() : '';
+                if (!base) base = 'asset';
+                if (ext && base.slice(-ext.length).toLowerCase() !== ext) base += ext;
+                return base;
+            }
+            function dlToast(msg) {
+                var el = document.createElement('div');
+                el.textContent = msg;
+                el.style.cssText = 'position:fixed;right:24px;bottom:24px;z-index:9999;background:rgba(30,41,59,.97);color:#e2e8f0;' +
+                    'border:1px solid #475569;border-left:3px solid #3b82f6;border-radius:8px;padding:10px 16px;font-size:13px;' +
+                    'box-shadow:0 8px 24px rgba(0,0,0,.45);max-width:60vw;word-break:break-all;';
+                document.body.appendChild(el);
+                setTimeout(function () {
+                    el.style.transition = 'opacity .3s';
+                    el.style.opacity = '0';
+                    setTimeout(function () { if (el.parentNode) el.parentNode.removeChild(el); }, 320);
+                }, 1800);
+            }
+            function downloadAsset(url, name) {
+                if (!url) { dlToast('该资产没有可下载的图片文件'); return; }
+                var fn = buildDownloadName(name, url);
+                // 同步触发：不能放进 fetch/then 回调，异步链已丢失「用户手势」，浏览器会静默拦截下载。
+                var a = document.createElement('a');
+                a.href = url;
+                a.download = fn;
+                a.rel = 'noopener';
+                // 移出视口而不是 display:none —— 个别浏览器不处理隐藏节点的 click
+                a.style.cssText = 'position:fixed;left:-9999px;top:0;';
+                document.body.appendChild(a);
+                a.click();
+                setTimeout(function () { if (a.parentNode) a.parentNode.removeChild(a); }, 1000);
+                dlToast('已开始下载：' + fn);
+                if (window.console) console.log('[下载] ' + url + '  ->  ' + fn);
+            }
+
+            function showUpload() {
+                $('#uploadFile').val('');
+                $('#uploadTags').val('');
+                $('#previewWrap').hide();
+                $('#uploadModal').css('display', 'flex');
+            }
+            function closeUpload() { $('#uploadModal').hide(); }
+
+            function doUpload() {
+                var file = $('#uploadFile')[0].files[0];
+                if (!file) { alert('请选择图片'); return; }
+                var cat = $('#uploadCategory').val();
+                var sub = $('#uploadSubCategory').val();
+                var fd = new FormData();
+                fd.append('file', file);
+                fd.append('category', cat);
+                fd.append('subCategory', sub);
+                fd.append('tags', $('#uploadTags').val());
+                $.ajax({
+                    url: '/api/reference/upload', method: 'POST', data: fd, processData: false, contentType: false,
+                    success: function () { closeUpload(); loadAssets(); },
+                    error: function (x) { alert('上传失败: ' + (x.responseJSON?.message || x.statusText)); }
+                });
+            }
+
+            function deleteAsset(id, ev) {
+                ev.stopPropagation();
+                if (!confirm('确定删除此资产？')) return;
+                $.ajax({
+                    url: '/api/reference/' + id, method: 'DELETE',
+                    success: function () { loadAssets(); },
+                    error: function (x) { alert('删除失败: ' + (x.responseJSON?.message || x.statusText)); }
+                });
+            }
+
+            // Preview on file select
+            $(document).on('change', '#uploadFile', function () {
+                var file = this.files[0];
+                if (file) {
+                    var r = new FileReader();
+                    r.onload = function (e) { $('#previewImg').attr('src', e.target.result); $('#previewWrap').show(); };
+                    r.readAsDataURL(file);
+                }
+            });
+
+            // Preview new image when replacing in edit modal
+            $(document).on('change', '#editFile', function () {
+                var file = this.files[0];
+                if (file) {
+                    var r = new FileReader();
+                    r.onload = function (e) { $('#editPreviewImg').attr('src', e.target.result); };
+                    r.readAsDataURL(file);
+                }
+            });
+
+            $(function () {
+                // Auth check
+                $.get('/api/auth/me', function (u) { if (u && u.userId > 0) { if (typeof API !== 'undefined' && API.updateUI) API.updateUI(u); loadAssets(); } else { window.location.href = 'login.html'; } }).fail(function () { window.location.href = 'login.html'; });
+            });
+        </script>
+
+    </div>
+
+    <script>
+        (function () {
+            var canvas = document.getElementById("particleCanvas");
+            if (!canvas) return;
+            canvas.style.top = "0";
+            canvas.style.width = "100%";
+            canvas.style.pointerEvents = "none";
+            var ctx = canvas.getContext("2d");
+            var W, H;
+            function resize() {
+                W = canvas.width = window.innerWidth;
+                H = canvas.height = window.innerHeight;
+            }
+            resize();
+            window.addEventListener("resize", resize);
+            var particles = [];
+            var COUNT = 70;
+            var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+            for (var i = 0; i < COUNT; i++) {
+                particles.push({
+                    x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
+                    dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
+                    color: colors[Math.floor(Math.random() * colors.length)],
+                    alpha: Math.random() * 0.4 + 0.15
+                });
+            }
+            var CONNECT_DIST = 130;
+            function anim() {
+                ctx.clearRect(0, 0, W, H);
+                for (var i = 0; i < COUNT; i++) {
+                    var p = particles[i];
+                    p.x += p.dx; p.y += p.dy;
+                    if (p.x < 0 || p.x > W) p.dx *= -1;
+                    if (p.y < 0 || p.y > H) p.dy *= -1;
+                    ctx.beginPath();
+                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+                    ctx.fillStyle = p.color + p.alpha + ")";
+                    ctx.fill();
+                    for (var j = i + 1; j < COUNT; j++) {
+                        var q = particles[j];
+                        var dx = p.x - q.x;
+                        var dy = p.y - q.y;
+                        var dist = Math.sqrt(dx * dx + dy * dy);
+                        if (dist < CONNECT_DIST) {
+                            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
+                            ctx.beginPath();
+                            ctx.moveTo(p.x, p.y);
+                            ctx.lineTo(q.x, q.y);
+                            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+                            ctx.lineWidth = 0.6;
+                            ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(anim);
+            }
+            anim();
+        })();
+
+        function showBatchUpload() { $('#batchFiles').val(''); $('#batchTags').val(''); $('#batchPreview').hide(); $('#batchProgress').hide(); $('#batchResult').hide(); $('#batchUploadModal').css('display', 'flex'); }
+        function closeBatchUpload() { $('#batchUploadModal').hide(); }
+        $('#batchFiles').on('change', function () {
+            var count = this.files.length;
+            if (count > 0) { $('#batchCount').text(count); $('#batchPreview').show(); }
+            else { $('#batchPreview').hide(); }
+        });
+        function doBatchUpload() {
+            var files = $('#batchFiles')[0].files;
+            if (!files || files.length === 0) { alert('请选择图片'); return; }
+            var cat = $('#batchCategory').val();
+            var sub = $('#batchSubCategory').val();
+            var fd = new FormData();
+            for (var i = 0; i < files.length; i++) fd.append('files', files[i]);
+            fd.append('category', cat);
+            fd.append('subCategory', sub);
+            fd.append('tags', $('#batchTags').val());
+            $('#batchProgress').show();
+            $('#batchResult').hide();
+            var total = files.length;
+            $('#batchProgressText').text('0 / ' + total);
+            $('#batchProgressBar').css('width', '0%');
+            $('.btn-primary:contains(开始上传)').prop('disabled', true).text('上传中...');
+            $.ajax({
+                url: '/api/reference/upload-batch', method: 'POST', data: fd, processData: false, contentType: false,
+                xhr: function () {
+                    var xhr = new XMLHttpRequest();
+                    xhr.upload.addEventListener('progress', function (e) {
+                        if (e.lengthComputable) { var pct = Math.round(e.loaded / e.total * 100); $('#batchProgressBar').css('width', pct + '%'); $('#batchProgressText').text(Math.round(e.loaded / total / 1024) + 'KB / ' + Math.round(e.total / 1024) + 'KB'); }
+                    }, false);
+                    return xhr;
+                },
+                success: function (r) {
+                    var msg = '上传完成：成功 ' + r.success + ' 张';
+                    if (r.failed > 0) msg += ', 失败 ' + r.failed + ' 张';
+                    $('#batchProgressBar').css('width', '100%');
+                    $('#batchResult').html('<span style="color:#22c55e;">' + msg + '</span>').show();
+                    $('.btn-primary:contains(上传中...)').prop('disabled', false).text('开始上传');
+                    closeBatchUpload(); loadAssets();
+                },
+                error: function (x) {
+                    $('#batchResult').html('<span style="color:#ef4444;">上传失败: ' + (x.responseJSON?.message || x.statusText) + '</span>').show();
+                    $('.btn-primary:contains(上传中...)').prop('disabled', false).text('开始上传');
+                }
+            });
+        }
+    </script>
+</body>
+</html>

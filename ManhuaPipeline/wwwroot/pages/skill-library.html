@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>技能库 - 漫创引擎</title>
+    <link rel="stylesheet" href="/lib/material-icons/material-icons.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+    .container { max-width: 100%; padding: 32px 24px; }
+    
+        .skill-list { margin-top: 8px; display: flex; flex-direction: column; gap: 12px; }
+        .skill-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; display: flex; gap: 14px; }
+        .skill-card:hover { border-color: var(--primary); background: var(--bg-card-hover); }
+        .skill-thumb { width: 110px; height: 110px; border-radius: 8px; background: #0f172a; flex-shrink: 0; overflow: hidden; display: flex; align-items: center; justify-content: center; cursor: pointer; }
+        .skill-thumb img { width: 100%; height: 100%; object-fit: cover; }
+        .skill-thumb .no-img { color: #475569; font-size: 12px; text-align: center; padding: 8px; }
+        .skill-body { flex: 1; min-width: 0; }
+        .skill-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 8px; }
+        .skill-title .name { font-size: 15px; font-weight: 700; color: #e2e8f0; }
+        .prompt-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 10px; margin-top: 6px; font-size: 12px; color: #94a3b8; line-height: 1.6; max-height: 96px; overflow: auto; white-space: pre-wrap; }
+        .prompt-head { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+        .prompt-head label { font-size: 12px; color: #64748b; font-weight: 600; }
+        .btn-xs { font-size: 11px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer; color: #fff; background: #475569; }
+        .btn-xs.primary { background: #7c3aed; }
+        .btn-xs.green { background: #10b981; }
+        .btn-xs.red { background: #ef4444; }
+        .tier-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+        .tier-1 { background: rgba(249,115,22,0.15); color: #fb923c; }
+        .tier-2 { background: rgba(239,68,68,0.15); color: #f87171; }
+        .tier-3 { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .tier-4 { background: rgba(168,85,247,0.15); color: #c084fc; }
+        .tier-5 { background: rgba(245,158,11,0.15); color: #fbbf24; }
+        .el-tag { font-size: 11px; padding: 2px 8px; border-radius: 10px; }
+        .el-fire { background: rgba(239,68,68,0.15); color: #f87171; }
+        .el-ice { background: rgba(56,189,248,0.15); color: #38bdf8; }
+        .el-thunder { background: rgba(168,85,247,0.2); color: #c084fc; }
+        .el-sword { background: rgba(52,211,153,0.15); color: #34d399; }
+        .el-wind { background: rgba(74,222,128,0.15); color: #4ade80; }
+        .el-dark { background: rgba(148,163,184,0.2); color: #94a3b8; }
+        .el-holy { background: rgba(251,191,36,0.15); color: #fbbf24; }
+        .tag-mini { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: rgba(236,72,153,0.15); color: #f472b6; }
+        .skill-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+        .el-manage-table { width: 100%; border-collapse: collapse; }
+        .el-manage-table th, .el-manage-table td { padding: 8px 10px; text-align: left; border-bottom: 1px solid #334155; color: #cbd5e1; font-size: 13px; }
+        .el-manage-table th { color: #94a3b8; font-weight: 600; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                <a href="asset-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 图片资产库</a>
+                <a href="skill-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
+                <a href="fight-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
+                <a href="camera-atom-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
+                <span id="navUser" style="display:none;">
+                    <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                    <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+                    <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                </span>
+                <span id="navGuest" style="display:none;">
+                    <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                    <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
+            <div class="page-title" style="margin-bottom:0;font-size:24px;font-weight:700;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库<span class="skill-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+            <div class="action-bar" style="margin-bottom:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索技能名/提示词..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:180px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadSkills()"></div>
+                <div style="display:flex;align-items:center;margin-right:8px;">
+                    <input type="text" id="filterTags" placeholder="按标签过滤，如：镇世武圣" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;width:180px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadSkills()">
+                </div>
+                <div style="display:flex;align-items:center;margin-right:8px;">
+                    <input type="text" id="filterOwner" placeholder="按归属角色过滤，如：岳沉罡" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;width:180px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadSkills()">
+                </div>
+                <div style="display:flex;align-items:center;margin-right:8px;">
+                    <select id="filterElement" onchange="loadSkills()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                        <option value="">全部系别</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;margin-right:8px;">
+                    <select id="filterTier" onchange="loadSkills()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                        <option value="">全部层级</option>
+                        <option value="1">T1 拳拳到肉</option>
+                        <option value="2">T2 刀兵对砍</option>
+                        <option value="3">T3 技能拉满</option>
+                        <option value="4">T4 特效拉满</option>
+                        <option value="5">T5 大招释放</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="showAdd()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新增技能</button>
+                <button class="btn btn-outline" onclick="showElementManager()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系别管理</button>
+            </div>
+        </div>
+
+        <div id="skillList" class="skill-list">
+            <p style="color:#94a3b8;text-align:center;">加载中...</p>
+        </div>
+        <div id="skillEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无技能，点击右上角「新增技能」创建<br><a href="#" onclick="showAdd()" style="color:var(--primary-light);font-size:13px;margin-top:12px;display:inline-block;">新增第一个技能</a></div>
+    </div>
+
+    <!-- 新增/编辑 Modal -->
+    <div id="editModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
+        <div style="background:#1e293b;border-radius:12px;padding:24px;width:640px;max-width:94%;max-height:92vh;overflow:auto;">
+            <h3 style="color:#e2e8f0;margin:0 0 16px 0;" id="modalTitle">新增技能</h3>
+            <div style="margin-bottom:12px;">
+                <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">技能名</label>
+                <input type="text" id="fName" placeholder="如：赤炎天坠" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div style="display:flex;gap:10px;margin-bottom:12px;">
+                <div style="flex:1;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">归属角色</label>
+                    <input type="text" id="fOwner" placeholder="如：岳沉罡（空=通用）" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <div style="flex:1;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">系别</label>
+                    <select id="fElement" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="">暂无系别</option>
+                    </select>
+                </div>
+                <div style="width:150px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">层级</label>
+                    <select id="fTier" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                        <option value="1">T1 拳拳到肉</option>
+                        <option value="2">T2 刀兵对砍</option>
+                        <option value="3">T3 技能拉满</option>
+                        <option value="4" selected>T4 特效拉满</option>
+                        <option value="5">T5 大招释放</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">出图版提示词（16:9 空镜参考图）</label>
+                <textarea id="fPromptImage" rows="4" placeholder="直接粘贴出图用提示词..." style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;font-family:inherit;"></textarea>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">视频版提示词（动态特效描述）</label>
+                <textarea id="fPromptVideo" rows="4" placeholder="直接粘贴视频用提示词..." style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;font-family:inherit;"></textarea>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
+                <input type="text" id="fTags" placeholder="如：镇世武圣,大招" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="$('#editModal').hide()" style="font-size:13px;">取消</button>
+                <button class="btn btn-primary" onclick="doSave()" style="font-size:13px;">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 系别管理 Modal -->
+    <div id="elementModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2050;align-items:center;justify-content:center;">
+        <div style="background:#1e293b;border-radius:12px;padding:24px;width:720px;max-width:94%;max-height:92vh;overflow:auto;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:16px;">
+                <h3 style="color:#e2e8f0;margin:0;">系别管理</h3>
+                <button class="btn btn-outline" onclick="$('#elementModal').hide()" style="font-size:13px;">关闭</button>
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:16px;align-items:flex-end;flex-wrap:wrap;">
+                <div style="flex:1;min-width:180px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">系别名</label>
+                    <input type="text" id="elName" placeholder="如：火、冰、雷" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <div style="width:110px;">
+                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">排序</label>
+                    <input type="number" id="elSort" value="0" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                </div>
+                <button class="btn btn-primary" id="btnElementSave" onclick="saveElement()" style="font-size:13px;">新增</button>
+                <button class="btn btn-outline" id="btnElementCancel" onclick="cancelElementEdit()" style="font-size:13px;display:none;">取消编辑</button>
+            </div>
+            <table class="el-manage-table">
+                <thead>
+                    <tr><th>系别名</th><th>排序</th><th>使用技能数</th><th>操作</th></tr>
+                </thead>
+                <tbody id="elementList"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- 上传参考图 Modal -->
+    <div id="imgModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2100;align-items:center;justify-content:center;">
+        <div style="background:#1e293b;border-radius:12px;padding:24px;width:420px;max-width:90%;">
+            <h3 style="color:#e2e8f0;margin:0 0 16px 0;">上传技能参考图</h3>
+            <div style="margin-bottom:12px;display:none;" id="imgPreviewWrap">
+                <img id="imgPreview" style="width:100%;border-radius:8px;margin-bottom:8px;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <input type="file" id="imgFile" accept="image/*" style="color:#e2e8f0;font-size:13px;">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn btn-outline" onclick="$('#imgModal').hide()" style="font-size:13px;">取消</button>
+                <button class="btn btn-primary" onclick="doUploadImg()" style="font-size:13px;">上传</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 预览大图 -->
+    <div style="position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.85);z-index:2200;display:none;align-items:center;justify-content:center;cursor:zoom-out;" id="previewOverlay" onclick="this.style.display='none'">
+        <img id="previewLarge" src="" style="max-width:90%;max-height:90%;border-radius:8px;">
+    </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script src="../js/app.js?v=2"></script>
+    <script>
+        function escHtml(s) { if (!s) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+        var _editId = 0;
+        var _editingElementId = 0;
+        var elements = [];
+
+        var tierNames = { 1: "T1 拳拳到肉", 2: "T2 刀兵对砍", 3: "T3 技能拉满", 4: "T4 特效拉满", 5: "T5 大招释放" };
+        var elClasses = { 火: "el-fire", 冰: "el-ice", 雷: "el-thunder", 剑阵: "el-sword", 风: "el-wind", 暗: "el-dark", 圣: "el-holy" };
+
+        function elStyle(name) {
+            if (elClasses[name]) return '';
+            var palette = [
+                ['rgba(239,68,68,0.15)', '#f87171'],
+                ['rgba(56,189,248,0.15)', '#38bdf8'],
+                ['rgba(168,85,247,0.18)', '#c084fc'],
+                ['rgba(52,211,153,0.15)', '#34d399'],
+                ['rgba(251,191,36,0.15)', '#fbbf24'],
+                ['rgba(236,72,153,0.15)', '#f472b6'],
+                ['rgba(14,165,233,0.15)', '#38bdf8']
+            ];
+            var h = 0;
+            for (var i = 0; i < name.length; i++) h = ((h << 5) - h + name.charCodeAt(i)) >>> 0;
+            var c = palette[h % palette.length];
+            return 'background:' + c[0] + ';color:' + c[1] + ';';
+        }
+
+
+        function skillQueryParams() {
+            var q = { element: $('#filterElement').val(), tier: $('#filterTier').val() || undefined, search: $('#searchInput').val() };
+            var tag = $('#filterTags').val().trim();
+            if (tag) q.tags = tag;
+            var owner = $('#filterOwner').val().trim();
+            if (owner) q.owner = owner;
+            return q;
+        }
+
+
+        function loadElements() {
+            return $.get('/api/skill/elements', function (d) {
+                elements = d || [];
+                refreshElementSelects();
+                if ($('#elementModal').is(':visible')) renderElementList();
+            });
+        }
+
+        function refreshElementSelects() {
+            var curFilter = $('#filterElement').val();
+            var curForm = $('#fElement').val();
+            var fh = '<option value="">全部系别</option>';
+            var mh = '';
+            for (var i = 0; i < elements.length; i++) {
+                var n = elements[i].name;
+                var v = escHtml(n);
+                fh += '<option value="' + v + '">' + escHtml(n) + '系</option>';
+                mh += '<option value="' + v + '">' + escHtml(n) + '系</option>';
+            }
+            if (!elements.length) mh = '<option value="">暂无系别</option>';
+            $('#filterElement').html(fh).val(curFilter);
+            $('#fElement').html(mh).val(curForm);
+        }
+
+        function loadSkills() {
+            $.get('/api/skill/list', skillQueryParams(), function (d) {
+                if (!d || d.length === 0) { $('#skillList').empty(); $('#skillEmpty').show(); $('.skill-count').text(''); return; }
+                $('#skillEmpty').hide();
+                var h = '';
+                for (var i = 0; i < d.length; i++) {
+                    var s = d[i];
+                    var elCls = elClasses[s.element] || '';
+                    var elExtra = elStyle(s.element);
+                    var tierCls = 'tier-' + (s.tier || 4);
+                    h += '<div class="skill-card">';
+                    h += '<div class="skill-thumb" onclick="' + (s.imageUrl ? "previewImg('" + s.imageUrl + "')" : 'void(0)') + '">';
+                    if (s.imageUrl) { h += '<img src="' + s.imageUrl + '" loading="lazy" decoding="async" onerror="this.style.display=&#39;none&#39;">'; }
+                    else { h += '<div class="no-img">暂无参考图<br>出图后上传</div>'; }
+                    h += '</div>';
+                    h += '<div class="skill-body">';
+                    h += '<div class="skill-title"><span class="name">' + escHtml(s.name) + '</span>';
+                    if (s.element) { h += '<span class="el-tag ' + elCls + '" style="' + elExtra + '">' + escHtml(s.element) + '系</span>'; }
+                    if (s.ownerCharacter) { h += '<span class="owner-badge" style="background:rgba(59,130,246,0.15);color:#93c5fd;">' + escHtml(s.ownerCharacter) + '</span>'; }
+                    h += '<span class="tier-badge ' + tierCls + '">' + (tierNames[s.tier] || 'T' + s.tier) + '</span></div>';
+                    h += '<div class="prompt-head"><label>出图版</label></div>';
+                    h += '<div class="prompt-box">' + escHtml(s.promptImage || '（空）') + '</div>';
+                    h += '<div class="prompt-head"><label>视频版</label></div>';
+                    h += '<div class="prompt-box">' + escHtml(s.promptVideo || '（空）') + '</div>';
+                    if (s.tags) { var tagArr = String(s.tags).split(',').map(function (t) { return t.trim(); }).filter(Boolean); if (tagArr.length > 0) { h += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">'; for (var ti = 0; ti < tagArr.length; ti++) { h += '<span class="tag-mini">#' + escHtml(tagArr[ti]) + '</span>'; } h += '</div>'; } }
+                    h += '<div class="skill-actions">';
+                    h += '<button class="btn-xs primary" onclick="copyText(this,' + s.skillId + ',\'image\')">复制出图</button>';
+                    h += '<button class="btn-xs green" onclick="copyText(this,' + s.skillId + ',\'video\')">复制视频</button>';
+                    h += '<button class="btn-xs" onclick="showEdit(' + s.skillId + ')">编辑</button>';
+                    h += '<button class="btn-xs" onclick="showUploadImg(' + s.skillId + ')">' + (s.imageUrl ? '换图' : '传图') + '</button>';
+                    h += '<button class="btn-xs red" onclick="delSkill(' + s.skillId + ')">删除</button>';
+                    h += '</div>';
+                    h += '</div></div>';
+                }
+                $('#skillList').html(h);
+                $('.skill-count').text('共 ' + d.length + ' 个技能');
+            }).fail(function () { $('#skillList').html('<p style="color:#ef4444;text-align:center;">加载失败</p>'); });
+        }
+
+        function showAdd() {
+            _editId = 0;
+            $('#modalTitle').text('新增技能');
+            $('#fName').val('');
+            $('#fElement').val(elements.length ? elements[0].name : '');
+            $('#fTier').val('4');
+            $('#fOwner').val('');
+            $('#fPromptImage').val(''); $('#fPromptVideo').val(''); $('#fTags').val('');
+            $('#editModal').css('display', 'flex');
+        }
+
+        function showEdit(id) {
+            $.get('/api/skill/list', skillQueryParams(), function (d) {
+                var s = null;
+                for (var i = 0; i < d.length; i++) { if (d[i].skillId === id) { s = d[i]; break; } }
+                if (!s) { alert('未找到技能'); return; }
+                _editId = id;
+                $('#modalTitle').text('编辑技能');
+                $('#fName').val(s.name);
+                $('#fElement').val(s.element || '');
+                $('#fTier').val(String(s.tier || 4));
+                $('#fOwner').val(s.ownerCharacter || '');
+                $('#fPromptImage').val(s.promptImage || '');
+                $('#fPromptVideo').val(s.promptVideo || '');
+                $('#fTags').val(s.tags || '');
+                $('#editModal').css('display', 'flex');
+            });
+        }
+
+        function doSave() {
+            var name = $('#fName').val().trim();
+            if (!name) { alert('技能名不能为空'); return; }
+            var payload = {
+                name: name,
+                element: $('#fElement').val(),
+                tier: parseInt($('#fTier').val()) || 4,
+                promptImage: $('#fPromptImage').val(),
+                promptVideo: $('#fPromptVideo').val(),
+                tags: $('#fTags').val()
+            };
+            var owner = $('#fOwner').val().trim();
+            if (owner) payload.ownerCharacter = owner;
+            var url = _editId ? '/api/skill/' + _editId : '/api/skill';
+            var method = _editId ? 'PUT' : 'POST';
+            $.ajax({
+                url: url, method: method, contentType: 'application/json', data: JSON.stringify(payload),
+                success: function () { $('#editModal').hide(); loadSkills(); loadElements(); },
+                error: function (x) { alert('保存失败: ' + (x.responseJSON?.message || x.statusText)); }
+            });
+        }
+
+        function showElementManager() {
+            $('#elementModal').css('display', 'flex');
+            resetElementForm();
+            renderElementList();
+        }
+
+        function resetElementForm() {
+            _editingElementId = 0;
+            $('#elName').val('');
+            $('#elSort').val('0');
+            $('#btnElementSave').text('新增');
+            $('#btnElementCancel').hide();
+        }
+
+        function renderElementList() {
+            if (!elements.length) { $('#elementList').html('<tr><td colspan="4" style="text-align:center;color:#94a3b8;">暂无系别</td></tr>'); return; }
+            var h = '';
+            for (var i = 0; i < elements.length; i++) {
+                var e = elements[i];
+                h += '<tr>';
+                h += '<td>' + escHtml(e.name) + '</td>';
+                h += '<td>' + e.sortOrder + '</td>';
+                h += '<td>' + e.usageCount + '</td>';
+                h += '<td><button class="btn-xs" onclick="editElement(' + e.elementId + ')">编辑</button> <button class="btn-xs red" onclick="delElement(' + e.elementId + ')">删除</button></td>';
+                h += '</tr>';
+            }
+            $('#elementList').html(h);
+        }
+
+        function editElement(id) {
+            for (var i = 0; i < elements.length; i++) {
+                if (elements[i].elementId === id) {
+                    _editingElementId = id;
+                    $('#elName').val(elements[i].name);
+                    $('#elSort').val(elements[i].sortOrder);
+                    $('#btnElementSave').text('更新');
+                    $('#btnElementCancel').show();
+                    return;
+                }
+            }
+        }
+
+        function cancelElementEdit() { resetElementForm(); }
+
+        function saveElement() {
+            var name = $('#elName').val().trim();
+            if (!name) { alert('系别名不能为空'); return; }
+            var payload = { name: name, sortOrder: parseInt($('#elSort').val()) || 0 };
+            var url = _editingElementId ? '/api/skill/elements/' + _editingElementId : '/api/skill/elements';
+            var method = _editingElementId ? 'PUT' : 'POST';
+            $.ajax({
+                url: url, method: method, contentType: 'application/json', data: JSON.stringify(payload),
+                success: function () { resetElementForm(); loadElements(); loadSkills(); },
+                error: function (x) { alert('保存失败: ' + (x.responseJSON?.message || x.statusText)); }
+            });
+        }
+
+        function delElement(id) {
+            if (!confirm('确定删除该系别？')) return;
+            $.ajax({
+                url: '/api/skill/elements/' + id, method: 'DELETE',
+                success: function () { loadElements(); loadSkills(); },
+                error: function (x) { alert('删除失败: ' + (x.responseJSON?.message || x.statusText)); }
+            });
+        }
+
+        var _imgSkillId = 0;
+        function showUploadImg(id) {
+            _imgSkillId = id;
+            $('#imgFile').val(''); $('#imgPreviewWrap').hide();
+            $('#imgModal').css('display', 'flex');
+        }
+        $('#imgFile').on('change', function () {
+            var file = this.files[0];
+            if (!file) return;
+            var r = new FileReader();
+            r.onload = function (e) { $('#imgPreview').attr('src', e.target.result); $('#imgPreviewWrap').show(); };
+            r.readAsDataURL(file);
+        });
+        function doUploadImg() {
+            var file = $('#imgFile')[0].files[0];
+            if (!file) { alert('请选择图片'); return; }
+            var fd = new FormData();
+            fd.append('file', file);
+            $.ajax({
+                url: '/api/skill/' + _imgSkillId + '/image', method: 'POST', data: fd, processData: false, contentType: false,
+                success: function () { $('#imgModal').hide(); loadSkills(); },
+                error: function (x) { alert('上传失败: ' + (x.responseJSON?.message || x.statusText)); }
+            });
+        }
+
+        function delSkill(id) {
+            if (!confirm('确定删除该技能？')) return;
+            $.ajax({
+                url: '/api/skill/' + id, method: 'DELETE',
+                success: function () { loadSkills(); loadElements(); },
+                error: function (x) { alert('删除失败: ' + (x.responseJSON?.message || x.statusText)); }
+            });
+        }
+
+        function copyText(btn, id, kind) {
+            $.get('/api/skill/list', skillQueryParams(), function (d) {
+                var s = null;
+                for (var i = 0; i < d.length; i++) { if (d[i].skillId === parseInt(id)) { s = d[i]; break; } }
+                if (!s) { alert('未找到技能'); return; }
+                var txt = kind === 'image' ? (s.promptImage || '') : (s.promptVideo || '');
+                if (!txt) { alert('该版本提示词为空'); return; }
+                if (kind === 'image') {
+                    var head = '【' + s.name + '】';
+                    if (s.element) head += s.element + '系';
+                    if (s.tier) head += ' · ' + (tierNames[s.tier] || 'T' + s.tier);
+                    txt = head + '\n' + txt;
+                }
+                function done() { btn.innerHTML = '已复制'; setTimeout(function () { btn.innerHTML = kind === 'image' ? '复制出图' : '复制视频'; }, 1200); }
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    navigator.clipboard.writeText(txt).then(done).catch(function () { fallbackCopy(txt); done(); });
+                } else { fallbackCopy(txt); done(); }
+            });
+        }
+        function fallbackCopy(txt) {
+            var ta = document.createElement('textarea');
+            ta.value = txt; document.body.appendChild(ta); ta.select();
+            try { document.execCommand('copy'); } catch (e) { }
+            document.body.removeChild(ta);
+        }
+
+        function previewImg(src) { $('#previewLarge').attr('src', src); $('#previewOverlay').css('display', 'flex'); }
+
+        $(function () {
+            $.get('/api/auth/me', function (u) { if (u && u.userId > 0) { if (typeof API !== 'undefined' && API.updateUI) API.updateUI(u); loadElements().done(function () { loadSkills(); }); } else { window.location.href = 'login.html'; } }).fail(function () { window.location.href = 'login.html'; });
+            $('#btnLogout').click(function () { $.post('/api/auth/logout').done(function () { window.location.href = '/'; }); });
+        });
+    </script>
+</body>
+</html>

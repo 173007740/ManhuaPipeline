@@ -1,0 +1,2 @@
+SET NOCOUNT ON;
+SELECT '=====ROW ' + CAST(PromptId AS VARCHAR(10)) + '=====' AS SEP, PromptTextH3 FROM SeedancePrompts WHERE PromptId IN (5411,5412,5413,5414,5415,5416,5417,5418) ORDER BY PromptId;

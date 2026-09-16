@@ -1,0 +1,395 @@
+﻿<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>API 配置 - 漫创引擎</title>
+    <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+</head>
+<body>
+    <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+    <div style="position:relative;z-index:1;">
+        <nav class="navbar">
+            <div class="nav-inner">
+                <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                    <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                    <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+                </a>
+                <div class="nav-links" id="navLinks">
+                    <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                    <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                    <span id="navUser" style="display:none;">
+                        <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+                        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                        <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:13px;"></span>
+                        <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                    </span>
+                    <span id="navGuest">
+                        <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                        <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                    </span>
+                </div>
+            </div>
+        </nav>
+        <div class="container config-card">
+            <h2 class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</h2>
+
+                        <div class="config-section">
+                <h3 class="config-section-title"><span class="material-icons">smart_toy</span> 大语言模型配置</h3>
+                <div class="config-grid">
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#2563eb">smart_toy</span> DeepSeek 配置</h3>
+                        <div class="form-group"><label>API Key</label><input type="password" id="dsKey" placeholder="sk-..."></div>
+                        <div class="form-group"><label>API 地址（可选）</label><input type="text" id="dsUrl" placeholder="https://api.deepseek.com/v1/chat/completions"></div>
+                        <div class="form-group"><label>模型名称（可选）</label><input type="text" id="dsModel" placeholder="deepseek-chat"></div>
+                        <div class="form-group"><label>思考模式（DeepSeek 计费相关）</label><select id="dsThinking" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,.3);background:#f8fafc;color:#111827;">
+                            <option value="high">高推理（默认，最贵）</option>
+                            <option value="low">低推理（省钱，推荐）</option>
+                            <option value="disabled">关闭思考链（最省钱，效果可能下降）</option>
+                        </select></div>
+                        <button class="btn btn-small btn-primary" id="saveDS">保存 DeepSeek 配置</button>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#7c3aed">cloud</span> 千问 (Qwen) 配置</h3>
+                        <div class="form-group"><label>API Key</label><input type="password" id="qwKey" placeholder="sk-..."></div>
+                        <div class="form-group"><label>API 地址（可选）</label><input type="text" id="qwUrl" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"></div>
+                        <div class="form-group"><label>模型名称（可选）</label><input type="text" id="qwModel" placeholder="qwen-max"></div>
+                        <div class="form-group"><label>思考模式（千问 enable_thinking + thinking_budget）</label><select id="qwThinking" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,.3);background:#f8fafc;color:#111827;">
+                            <option value="high">高推理（思考预算 8192）</option>
+                            <option value="low">低推理（思考预算 1024，推荐）</option>
+                            <option value="disabled">关闭思考链（最快，效果可能下降）</option>
+                        </select></div>
+                        <button class="btn btn-small btn-primary" id="saveQW">保存千问配置</button>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#10a37f">chat</span> Chat-GPT 配置</h3>
+                        <div class="form-group"><label>API Key</label><input type="password" id="gptKey" placeholder="sk-..."></div>
+                        <div class="form-group"><label>API 地址（可选）</label><input type="text" id="gptUrl" placeholder="https://api.openai.com/v1/chat/completions"></div>
+                        <div class="form-group"><label>模型名称（可选）</label><input type="text" id="gptModel" placeholder="gpt-4o-mini"></div>
+                        <button class="btn btn-small btn-primary" id="saveGPT">保存 Chat-GPT 配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3 class="config-section-title"><span class="material-icons">videocam</span> 视频模型配置</h3>
+                <div class="config-grid">
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#ef4444">videocam</span> 火山方舟（云端 API）</h3>
+                        <div class="form-group"><label>火山方舟 API Key</label><input type="password" id="vvKey" placeholder="输入火山方舟 API Key"></div>
+                        <div class="form-group"><label>火山方舟 API 地址（可选）</label><input type="text" id="vvUrl" placeholder="https://ark.cn-beijing.volces.com/api/v3"></div>
+                        <div class="form-group"><label>火山方舟 模型名称（可选）</label><input type="text" id="vvModel" placeholder="doubao-seedance-2-0-mini-260615"></div>
+                        <button class="btn btn-small btn-primary" id="saveVV">保存火山方舟配置</button>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#3b82f6">dns</span> 本地 ComfyUI</h3>
+                        <div class="form-group"><label>ComfyUI 地址（本地引擎用）</label><input type="text" id="cfUrl" placeholder="http://127.0.0.1:8188"></div>
+                        <div class="form-group"><label>ComfyUI 工作流（API 格式 JSON）</label><textarea id="cfWorkflow" rows="6" placeholder="在 ComfyUI 里搭好 Wan 图生视频工作流后，点「导出(API)」把 JSON 粘贴到这里"></textarea></div>
+                        <button class="btn btn-small btn-primary" id="saveCF">保存 ComfyUI 配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3 class="config-section-title"><span class="material-icons">image</span> 图片模型配置（资产卡出图）</h3>
+                <div class="config-grid">
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#0891b2">image</span> 文生图（中转 API）</h3>
+                        <div class="form-group"><label>API Key</label><input type="password" id="imgKey" placeholder="sk-..."></div>
+                        <div class="form-group"><label>API 地址</label><input type="text" id="imgUrl" placeholder="https://your-relay.com/v1"></div>
+                        <div class="form-group"><label>模型名称</label><input type="text" id="imgModel" placeholder="gpt-image-1 / seedream-3.0 / gemini-2.5-flash-image"></div>
+                        <p style="font-size:11px;color:#64748b;margin-top:8px;">
+                            用于「项目 → 资产库」中给角色/道具/环境/特效卡片点「出图」。填中转站的 base 地址即可（如 <code>https://xxx.com/v1</code>），
+                            只填域名会自动补 <code>/v1</code>；先走 <code>/images/generations</code>，不通会自动回退 <code>/chat/completions</code>。
+                            出图结果会回填资产卡图片，并同步一份进「我的资产」图库（文件名=资产名，可被「自动绑定参考图」直接命中）。
+                        </p>
+                        <button class="btn btn-small btn-primary" id="saveIMG">保存文生图配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3 class="config-section-title"><span class="material-icons">auto_awesome</span> 资产提示词模版（账号默认 · 每部剧可覆盖）</h3>
+                <p style="font-size:12px;color:#64748b;margin:0 0 12px;line-height:1.7;">
+                    跑 <b>Stage 6 角色 / 7 道具 / 8 环境 / 11 特效</b> 提取资产时，系统会把下面这个分类的「<b>类别规则</b>」注入提示词，
+                    让大模型为每个资产直接产出一条「<b>出图提示词</b>」并写进资产卡；点「出图」时再把「<b>统一视觉风格</b> + <b>统一负面提示词</b>」自动拼在提示词后面。<br>
+                    这里是<b>账号默认模版</b>，所有剧共用；<b>每部剧风格不一样时，请到「项目页 → 本剧提示词模版」按剧覆盖</b>
+                    （可一键带入该剧的项目画风），生效顺序是 <b>本剧模版 → 账号默认 → 出厂默认</b>。<br>
+                    改动<b>对已有资产立即生效</b>，不用重新跑提取；老项目可以在资产库里点「按模版重生成提示词 / 补齐缺失提示词」。
+                </p>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
+                    <button class="btn btn-small apt-tab btn-primary" data-cat="characters">角色</button>
+                    <button class="btn btn-small apt-tab" data-cat="props">道具</button>
+                    <button class="btn btn-small apt-tab" data-cat="environments">环境</button>
+                    <button class="btn btn-small apt-tab" data-cat="effects">特效</button>
+                </div>
+                <div class="card">
+                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
+                        <h3 id="aptTitle" style="margin:0;">角色提示词模版</h3>
+                        <label style="font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;">
+                            <input type="checkbox" id="aptEnabled" checked> 启用模版化提取
+                        </label>
+                    </div>
+                    <div class="form-group">
+                        <label>统一视觉风格（硬锁定，出图时自动追加）</label>
+                        <textarea id="aptStyle" rows="3" placeholder="账号默认风格，例如：电影级日系动画电影质感，厚涂插画与精致渲染结合……（每部剧的画风建议在项目页覆盖）"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>类别规则（提取时指导大模型怎么写「出图提示词」正文）</label>
+                        <textarea id="aptRule" rows="9" placeholder="例如：角色卡规范：浅暖灰纯色背景，单人出镜；只写外貌、发型、瞳色、服装层次、材质、饰件……禁止写剧情、动作过程、运镜、景别。"></textarea>
+                    </div>
+                    <div class="form-group">
+                        <label>统一负面提示词（出图时自动追加）</label>
+                        <textarea id="aptNegative" rows="3" placeholder="例如：真人、cosplay、低幼Q版、廉价3D、角色换脸、肢体畸形、文字、水印、logo。"></textarea>
+                    </div>
+                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
+                        <button class="btn btn-small btn-primary" id="aptSave">保存该分类模版</button>
+                        <button class="btn btn-small" id="aptReset">恢复出厂默认</button>
+                        <span id="aptHint" style="font-size:12px;color:#64748b;"></span>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3 class="config-section-title"><span class="material-icons">auto_awesome</span> 画质增强配置</h3>
+                <div class="config-grid">
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#f59e0b">auto_awesome</span> AI MediaKit 画质增强（可选）</h3>
+                        <div class="form-group"><label>MediaKit API Key</label><input type="password" id="mkKey" placeholder="火山引擎控制台 → AI MediaKit → API Key 管理"></div>
+                        <div class="form-group"><label>默认增强分辨率</label><select id="mkRes" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,.3);background:#f8fafc;color:#111827;">
+                            <option value="1080p">1080p（推荐）</option>
+                            <option value="720p">720p</option>
+                            <option value="2k">2k</option>
+                        </select></div>
+                        <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="mkAuto" style="width:16px;height:16px;"> 生成完成后自动画质增强</label></div>
+                        <p style="font-size:11px;color:#64748b;margin-top:8px;">填 Key 后可在视频任务页对已生成的视频一键「画质增强」（480p/720p → 1080p/2k），处理约需几分钟到十几分钟。</p>
+                        <button class="btn btn-small btn-primary" id="saveMK">保存 MediaKit 配置</button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="config-section">
+                <h3 class="config-section-title"><span class="material-icons">toggle_on</span> 启用配置</h3>
+                <div class="config-grid">
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#059669">bolt</span> 启用的大模型（后台实际调用）</h3>
+                        <div class="form-group"><label>选择大模型</label><select id="activeProvider" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,.3);background:#f8fafc;color:#111827;">
+                            <option value="deepseek">DeepSeek（deepseek-chat）</option>
+                            <option value="qwen">千问 Qwen（qwen-max）</option>
+                            <option value="gpt">Chat-GPT（gpt-4o-mini）</option>
+                        </select></div>
+                        <p id="activeLabel" style="margin-top:8px;font-size:13px;color:#9ca3af;"></p>
+                        <button class="btn btn-small btn-primary" id="saveActive">保存启用的大模型</button>
+                    </div>
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#f59e0b">power_settings_new</span> 视频生成引擎</h3>
+                        <div class="form-group"><label>选择引擎</label><select id="videoEngine" style="width:100%;padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,.3);background:#f8fafc;color:#111827;">
+                            <option value="volcano">火山方舟（云端 API）</option>
+                            <option value="comfyui">本地 ComfyUI</option>
+                        </select></div>
+                        <p id="engineLabel" style="margin-top:8px;font-size:13px;color:#9ca3af;"></p>
+                        <button class="btn btn-small btn-primary" id="saveVEngine">保存视频生成引擎</button>
+                    </div>
+                </div>
+            </div>
+
+
+                        <p id="configMsg" style="margin-top:12px;color:#27ae60;display:none;"></p>
+        </div>
+
+        <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+        <script src="../js/app.js?v=2"></script>
+        <script>
+            $(function () {
+                function setSecretField(selector, cfg) {
+                    $(selector).val("").attr("placeholder", cfg && cfg.hasApiKey
+                        ? "已配置；留空保持不变"
+                        : "未配置，请输入 API Key");
+                }
+
+                $.get("/api/config/llm", function (cfg) {
+                    setSecretField("#dsKey", cfg.deepseek);
+                    setSecretField("#qwKey", cfg.qwen);
+                    setSecretField("#gptKey", cfg.gpt);
+                    if (cfg.deepseek) { $("#dsUrl").val(cfg.deepseek.apiUrl || ""); $("#dsModel").val(cfg.deepseek.modelName || ""); }
+                    if (cfg.deepseek) { $("#dsUrl").val(cfg.deepseek.apiUrl || ""); $("#dsModel").val(cfg.deepseek.modelName || ""); $("#dsThinking").val(cfg.deepseek.thinkingMode || "high"); }
+                    if (cfg.qwen) { $("#qwUrl").val(cfg.qwen.apiUrl || ""); $("#qwModel").val(cfg.qwen.modelName || ""); $("#qwThinking").val(cfg.qwen.thinkingMode || "low"); }
+                    if (cfg.gpt) { $("#gptUrl").val(cfg.gpt.apiUrl || ""); $("#gptModel").val(cfg.gpt.modelName || ""); }
+                    if (cfg.activeProvider) $("#activeProvider").val(cfg.activeProvider);
+                    updateActiveLabel(cfg);
+                });
+
+                function saveLLM(provider, key, url, model, autoEnhance, keySelector, thinkingMode) {
+                    $.ajax({ url: "/api/config/llm", method: "POST", contentType: "application/json", data: JSON.stringify({ provider: provider, apiKey: key, apiUrl: url, modelName: model, thinkingMode: thinkingMode, isActive: true, autoEnhance: !!autoEnhance }) })
+                        .done(function (response) {
+                            if (keySelector) setSecretField(keySelector, response.config);
+                            $("#configMsg").text("\u2714 \u914d\u7f6e\u5df2\u4fdd\u5b58").show().fadeOut(3000);
+                        });
+                }
+
+                $("#saveDS").click(function () { saveLLM("deepseek", $("#dsKey").val(), $("#dsUrl").val(), $("#dsModel").val(), false, "#dsKey", $("#dsThinking").val()); });
+                $("#saveQW").click(function () { saveLLM("qwen", $("#qwKey").val(), $("#qwUrl").val(), $("#qwModel").val(), false, "#qwKey", $("#qwThinking").val()); });
+                $("#saveGPT").click(function () { saveLLM("gpt", $("#gptKey").val(), $("#gptUrl").val(), $("#gptModel").val(), false, "#gptKey"); });
+
+                function updateActiveLabel(cfg) {
+                    var p = cfg.activeProvider || "deepseek";
+                    var name = p === "qwen" ? "千问 Qwen" : p === "gpt" ? "Chat-GPT" : "DeepSeek";
+                    var model = p === "qwen"
+                        ? (cfg.qwen && cfg.qwen.modelName ? cfg.qwen.modelName : "qwen-max")
+                        : p === "gpt"
+                            ? (cfg.gpt && cfg.gpt.modelName ? cfg.gpt.modelName : "gpt-4o-mini")
+                            : (cfg.deepseek && cfg.deepseek.modelName ? cfg.deepseek.modelName : "deepseek-chat");
+                    $("#activeLabel").text("后台当前实际调用：" + name + "（" + model + "）");
+                }
+                $("#saveActive").click(function () {
+                    $.ajax({ url: "/api/config/llm/active", method: "POST", contentType: "application/json", data: JSON.stringify({ provider: $("#activeProvider").val() }) })
+                        .done(function () {
+                            $("#configMsg").text("\u2714 \u5df2\u5207\u6362\u5927\u6a21\u578b").show().fadeOut(3000);
+                            $.get("/api/config/llm", function (cfg) {
+                                if (cfg.activeProvider) $("#activeProvider").val(cfg.activeProvider);
+                                updateActiveLabel(cfg);
+                            });
+                        });
+                });
+
+                function updateEngineLabel(engine) {
+                    var label = engine === "comfyui" ? "本地 ComfyUI" : "火山方舟（云端 API）";
+                    $("#engineLabel").text("后台当前实际使用：" + label);
+                }
+                $.get("/api/config/llm/volcano_video", function (cfg) {
+                    setSecretField("#vvKey", cfg);
+                    if (cfg) { $("#vvUrl").val(cfg.apiUrl || ""); $("#vvModel").val(cfg.modelName || ""); }
+                });
+                $.get("/api/config/video", function (cfg) {
+                    if (cfg.engine) $("#videoEngine").val(cfg.engine);
+                    if (cfg.comfyui && cfg.comfyui.apiUrl) $("#cfUrl").val(cfg.comfyui.apiUrl);
+                    if (cfg.workflow) $("#cfWorkflow").val(cfg.workflow);
+                    updateEngineLabel(cfg.engine);
+                });
+                $("#saveVV").click(function () { saveLLM("volcano_video", $("#vvKey").val(), $("#vvUrl").val(), $("#vvModel").val(), false, "#vvKey"); });
+                $.get("/api/config/llm/mediakit", function (cfg) {
+                    setSecretField("#mkKey", cfg);
+                    if (cfg) { $("#mkRes").val(cfg.modelName || "1080p"); $("#mkAuto").prop("checked", !!cfg.autoEnhance); }
+                });
+                $("#saveMK").click(function () { saveLLM("mediakit", $("#mkKey").val(), "https://mediakit.cn-beijing.volces.com", $("#mkRes").val(), $("#mkAuto").is(":checked"), "#mkKey"); });
+                $("#saveVEngine").click(function () {
+                    $.ajax({ url: "/api/config/video-engine", method: "POST", contentType: "application/json", data: JSON.stringify({ engine: $("#videoEngine").val() }) })
+                        .done(function () { $("#configMsg").text("\u2714 \u89c6\u9891\u751f\u6210\u5f15\u64ce\u5df2\u4fdd\u5b58").show().fadeOut(3000); updateEngineLabel($("#videoEngine").val()); });
+                });
+
+                // ===== 文生图（中转 API，用于资产卡出图）=====
+                $.get("/api/config/llm/image", function (cfg) {
+                    setSecretField("#imgKey", cfg);
+                    if (cfg) { $("#imgUrl").val(cfg.apiUrl || ""); $("#imgModel").val(cfg.modelName || ""); }
+                });
+                $("#saveIMG").click(function () {
+                    if (!$.trim($("#imgUrl").val())) { $("#configMsg").text("请填写文生图 API 地址（中转 base，如 https://xxx.com/v1）").show().fadeOut(4000); return; }
+                    if (!$.trim($("#imgModel").val())) { $("#configMsg").text("请填写文生图模型名称").show().fadeOut(4000); return; }
+                    saveLLM("image", $("#imgKey").val(), $("#imgUrl").val(), $("#imgModel").val(), false, "#imgKey");
+                });
+                // ===== 资产提示词模版（角色/道具/环境/特效） =====
+                var aptCache = {}, aptCurrent = "characters";
+                function aptFill() {
+                    var t = aptCache[aptCurrent] || {};
+                    $("#aptTitle").text((t.categoryName || "资产") + "提示词模版 · 账号默认");
+                    $("#aptHint").text(t.isDefault ? "当前使用出厂默认值（未按 IP 定制），保存后即成为你的账号默认模版" : "账号默认模版已保存（修改后记得再保存一次）");
+                    $("#aptStyle").val(t.styleLock || "");
+                    $("#aptRule").val(t.ruleText || "");
+                    $("#aptNegative").val(t.negativePrompt || "");
+                    $("#aptEnabled").prop("checked", t.enabled !== false);
+                    $(".apt-tab").removeClass("btn-primary").filter('[data-cat="' + aptCurrent + '"]').addClass("btn-primary");
+                }
+                function aptLoad() {
+                    $.get("/api/config/asset-prompt-templates", function (list) {
+                        aptCache = {};
+                        (list || []).forEach(function (t) { aptCache[t.category] = t; });
+                        aptFill();
+                    });
+                }
+                $(".apt-tab").click(function () { aptCurrent = $(this).data("cat"); aptFill(); });
+                $("#aptSave").click(function () {
+                    $.ajax({
+                        url: "/api/config/asset-prompt-templates", method: "POST", contentType: "application/json",
+                        data: JSON.stringify({
+                            category: aptCurrent,
+                            styleLock: $("#aptStyle").val(),
+                            ruleText: $("#aptRule").val(),
+                            negativePrompt: $("#aptNegative").val(),
+                            enabled: $("#aptEnabled").is(":checked")
+                        })
+                    }).done(function (r) {
+                        $("#configMsg").text("\u2714 " + (r.message || "模版已保存")).show().fadeOut(3000);
+                        aptLoad();
+                    }).fail(function (x) {
+                        $("#configMsg").text(x.responseJSON && x.responseJSON.message ? x.responseJSON.message : "模版保存失败").show().fadeOut(4000);
+                    });
+                });
+                $("#aptReset").click(function () {
+                    var name = (aptCache[aptCurrent] || {}).categoryName || "该分类";
+                    if (!confirm("恢复出厂默认会覆盖当前「" + name + "」模版，继续？")) return;
+                    $.post("/api/config/asset-prompt-templates/" + aptCurrent + "/reset", function (r) {
+                        $("#configMsg").text("\u2714 " + (r.message || "已恢复出厂默认")).show().fadeOut(3000);
+                        aptLoad();
+                    }).fail(function (x) {
+                        $("#configMsg").text(x.responseJSON && x.responseJSON.message ? x.responseJSON.message : "恢复默认失败").show().fadeOut(4000);
+                    });
+                });
+                aptLoad();
+
+                $("#saveCF").click(function () {
+                    var url = $("#cfUrl").val() || "http://127.0.0.1:8188";
+                    $.ajax({ url: "/api/config/llm", method: "POST", contentType: "application/json", data: JSON.stringify({ provider: "comfyui", apiKey: "", apiUrl: url, modelName: "", isActive: true }) })
+                        .done(function () {
+                            $.ajax({ url: "/api/config/comfyui/workflow", method: "POST", contentType: "application/json", data: JSON.stringify({ workflow: $("#cfWorkflow").val() }) })
+                                .done(function () { $("#configMsg").text("\u2714 ComfyUI \u914d\u7f6e\u5df2\u4fdd\u5b58").show().fadeOut(3000); })
+                                .fail(function (x) { $("#configMsg").text(x.responseJSON && x.responseJSON.message ? x.responseJSON.message : "\u5de5\u4f5c\u6d41\u4fdd\u5b58\u5931\u8d25").show().fadeOut(4000); });
+                        });
+                });
+            });
+        </script>
+
+    </div>
+
+    <script>
+        (function () {
+            var c = document.getElementById("particleCanvas");
+            if (!c) return;
+            c.style.top = "0"; c.style.width = "100%"; c.style.pointerEvents = "none";
+            var ctx = c.getContext("2d");
+            var W, H;
+            function resize() { W = c.width = window.innerWidth; H = c.height = window.innerHeight; }
+            resize(); window.addEventListener("resize", resize);
+            var p = [], COUNT = 70;
+            var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+            for (var i = 0; i < COUNT; i++) p.push({
+                x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
+                dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
+                color: colors[Math.floor(Math.random() * 3)], alpha: Math.random() * 0.4 + 0.15
+            });
+            var DIST = 130;
+            !function anim() {
+                ctx.clearRect(0, 0, W, H);
+                for (var i = 0; i < COUNT; i++) {
+                    var q = p[i]; q.x += q.dx; q.y += q.dy;
+                    if (q.x < 0 || q.x > W) q.dx *= -1;
+                    if (q.y < 0 || q.y > H) q.dy *= -1;
+                    ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI * 2);
+                    ctx.fillStyle = q.color + q.alpha + ")"; ctx.fill();
+                    for (var j = i + 1; j < COUNT; j++) {
+                        var r = p[j], dx = q.x - r.x, dy = q.y - r.y, d = Math.sqrt(dx * dx + dy * dy);
+                        if (d < DIST) {
+                            var a = (1 - d / DIST) * 0.2;
+                            ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
+                            ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+                        }
+                    }
+                }
+                requestAnimationFrame(anim);
+            }();
+        })();
+    </script>
+</body>
+</html>

@@ -1,0 +1,704 @@
+现在做了导演，每个单元会反复“生成 → 校验 → 返工 → 再校验”，  会非常的慢，如果只是打斗设计，这个逻辑还有别的方法吗
+
+有，而且如果目标只是“打斗设计”，我不建议继续走重型的：
+
+生成 → LLM校验 → LLM返工 → 再生成 → 再校验
+
+这套适合剧情、表演、导演意图这种主观内容，但对打斗来说太慢。
+
+更适合你的方式是：
+
+把“打斗设计”改成「先规划、后编译」，而不是「生成、再纠错」
+
+也就是：
+
+剧本/Unit
+↓
+Director只做一次判断
+↓
+BattleSpec
+↓
+CombatGrammarEngine
+↓
+ActionChainBuilder
+↓
+ShotPacker
+↓
+规则校验
+↓
+分镜
+
+核心区别是：
+
+尽量在生成之前就把错误空间锁死。
+
+一、你现在慢，是因为 LLM 权力太大
+
+现在大概像：
+
+Unit
+↓
+LLM导演
+↓
+LLM设计打斗
+↓
+LLM生成分镜
+↓
+Validator发现问题
+↓
+LLM返工
+↓
+Validator再检查
+
+每个 Unit 可能调用 3～6 次模型。
+
+如果一集 15 个 Unit，很快就爆了。
+
+但打斗其实大量东西是规则型问题：
+
+谁打谁
+1V1 / 1VN
+谁先手
+谁占优势
+几轮交锋
+什么时候反击
+谁赢
+哪个动作接哪个动作
+5 秒装多少动作
+
+这些完全没必要每次都让 LLM重新想。
+
+二、推荐改成 BattleSpec
+
+Director 对战斗 Unit 只调用一次 LLM。
+
+让它不要生成完整动作，而只生成一份战斗规格：
+
+{
+  "type": "1VN",
+  "primary": "林烬",
+  "enemies": 6,
+
+
+  "style": "压迫后碾压",
+  "duration": 15,
+
+
+  "rounds": 3,
+
+
+  "dominance": [
+    "ENEMY_PRESSURE",
+    "HERO_CONTROL",
+    "HERO_CRUSH"
+  ],
+
+
+  "pace": "FAST",
+
+
+  "actionDensity": "HIGH",
+
+
+  "ending": "AOE_KNOCKBACK",
+
+
+  "preferredGrammar": [
+    "SURROUND_ATTACK",
+    "DODGE_CHAIN",
+    "CLOSE_COUNTER",
+    "AOE_BREAK"
+  ]
+}
+
+到这里：
+
+LLM工作结束。
+
+剩下全部交给程序。
+
+三、CombatGrammarEngine 不再让 LLM生成动作
+
+比如：
+
+SURROUND_ATTACK
+
+你的库本身就定义：
+
+敌方展开
+→ 两翼包夹
+→ 正面施压
+→ 后方封锁
+
+DODGE_CHAIN：
+
+侧闪
+→ 后仰
+→ 转身避让
+→ 踏步换位
+
+CLOSE_COUNTER：
+
+切入
+→ 控腕
+→ 肘击
+→ 转身
+→ 重击
+
+系统直接组合：
+
+ROUND 1
+SURROUND_ATTACK
++
+DODGE_CHAIN
+
+
+ROUND 2
+CLOSE_PRESSURE
++
+CLOSE_COUNTER
+
+
+ROUND 3
+RE_SURROUND
++
+AOE_BREAK
+
+这一步零 LLM 调用。
+
+四、真正需要升级的是 Combat Grammar：从“素材库”变“可组合规则”
+
+你的 Grammar 最好不要只是：
+
+T1：快速连击
+T2：近战格斗
+T3：群战
+
+而要带约束：
+
+Grammar: CLOSE_COUNTER
+
+
+CanFollow:
+- DODGE
+- BLOCK
+- PARRY
+
+
+CannotFollow:
+- LONG_RANGE_ATTACK
+
+
+Requires:
+distance = CLOSE
+
+
+Result:
+enemy_balance = BROKEN
+
+
+Duration:
+0.8 - 1.8s
+
+
+Complexity:
+MEDIUM
+
+
+PreferredNext:
+- HEAVY_STRIKE
+- THROW
+- KNOCKBACK
+
+这样 CombatGrammarEngine 就能自己拼。
+
+其实这才是真正意义上的 Combat Grammar。
+
+五、再增加一个 CombatCompiler
+
+以后：
+
+BattleSpec
+↓
+Combat Planner
+↓
+Combat Grammar
+↓
+Combat Compiler
+
+Compiler 直接算出：
+
+Round01
+
+
+敌A/B/C正面和两翼压入
+→ 林烬连续侧闪
+→ 后仰避剑
+→ 横向换位
+
+
+Round02
+
+
+敌D追击
+→ 林烬突然切入
+→ 扣腕
+→ 肘击
+→ 回身重拳
+
+
+Round03
+
+
+六人再次合围
+→ 林烬踏地
+→ 赤金气血爆发
+→ 群体震退
+
+不需要再问 GPT：
+
+这样合理吗？
+
+因为每个 Grammar 本身就是合法的。
+
+六、校验也不要再用 LLM为主
+
+打斗部分可以做到 90%程序校验。
+
+例如：
+
+合法性检查
+攻击者存在？
+目标存在？
+空间检查
+距离 CLOSE
+才能：
+肘击 / 抓腕 / 摔投
+动作衔接
+倒地状态
+不能直接：
+高速冲锋
+
+除非中间有：
+
+起身
+人数检查
+1VN
+不能让第7个敌人突然出现
+能力检查
+角色没有雷系能力
+→ 禁止雷击
+时间检查
+5s Shot
+预计动作耗时 > 7s
+→ ShotPacker重新打包
+
+这些全部 C# 规则就能检查。
+
+快得非常多。
+
+七、甚至返工都可以取消大部分
+
+例如系统发现：
+
+Shot01
+预计时间 = 8.3s
+
+以前：
+
+发给 LLM
+↓
+“请缩短”
+
+现在：
+
+ShotPacker
+↓
+自动切分
+
+例如：
+
+A01-A07 → Shot01 5s
+A08-A12 → Shot02 4s
+
+或者动作密度允许时自动压缩。
+
+同样：
+
+如果：
+
+CLOSE_COUNTER
+
+前面距离是：
+
+LONG
+
+系统不要重新问 AI。
+
+自动插：
+
+APPROACH
+
+变成：
+
+APPROACH
+→
+CLOSE_COUNTER
+
+这就是规则引擎真正有价值的地方。
+
+八、你可以做一个很适合你的 Combat Recipe
+
+这个我非常推荐。
+
+例如：
+
+碾压型 1V1
+OPENING_PRESSURE
+→
+DODGE_CHAIN
+→
+FAILED_ENEMY_COMBO
+→
+CLOSE_ENTRY
+→
+HEAVY_COUNTER
+→
+KNOCKBACK
+苦战型 1V1
+TEST
+→
+EXCHANGE
+→
+HERO_HIT
+→
+COUNTER
+→
+ENEMY_SUPPRESS
+→
+REVERSAL
+→
+FINISHER
+1VN 群战碾压
+ENCIRCLE
+→
+MULTI_ATTACK
+→
+MOBILITY_DODGE
+→
+ISOLATE_TARGET
+→
+SHORT_COMBO
+→
+RE_ENCIRCLE
+→
+AOE_BREAK
+绝境反杀
+SUPPRESSION
+→
+INJURY
+→
+FAILED_ESCAPE
+→
+PAUSE
+→
+POWER_UP
+→
+COUNTER_CHAIN
+→
+FINISHER
+
+Director甚至只需要选：
+
+Recipe = 1VN_DOMINATION
+
+然后引擎自己展开。
+
+这个速度会非常快。
+
+九、LLM只保留在两个位置
+
+我建议打斗链最终变成：
+
+                     LLM
+                      ↓
+                BattleSpec
+                      ↓
+              Combat Recipe
+                      ↓
+            CombatGrammarEngine
+                      ↓
+               CombatCompiler
+                      ↓
+                ActionChain
+                      ↓
+                ShotPacker
+                      ↓
+               RuleValidator
+                      ↓
+                 Storyboard
+                      ↓
+                     LLM
+                      ↓
+             高质量视觉表达
+
+也就是说：
+
+第一次 LLM
+
+负责：
+
+理解剧情 + 做战斗战略。
+
+第二次 LLM
+
+负责：
+
+把已经确定的动作方案写成高质量分镜/提示词。
+
+中间所有战斗逻辑：
+
+程序完成。
+
+这样就从：
+
+4～6次 LLM / Unit
+
+降到：
+
+1～2次 LLM / 战斗 Unit
+
+十、而且 Director Validator 可以分级
+
+你没必要每个 Unit 都走完整语义校验。
+
+可以设计三个等级：
+
+FAST
+只跑代码规则
+
+
+NORMAL
+代码规则 + 一次轻量 LLM 检查
+
+
+STRICT
+代码规则 + Director语义校验 + Repair
+
+例如：
+
+普通小战：
+
+FAST
+
+重要战斗：
+
+NORMAL
+
+本集 Boss 战：
+
+STRICT
+
+这会非常适合你的生产系统。
+
+十一、我现在最建议你改的是这一层
+
+不是推翻 Director V4。
+
+而是在 Director 下建立一个：
+
+Combat Planning Pipeline
+Director
+↓
+BattleSpec               ← LLM一次
+↓
+CombatRecipeSelector     ← 程序
+↓
+CombatGrammarEngine      ← 程序
+↓
+CombatCompiler           ← 程序
+↓
+ActionChainBuilder       ← 程序
+↓
+ShotPacker               ← 程序
+↓
+CombatRuleValidator      ← 程序
+↓
+Storyboard LLM           ← LLM一次
+
+而原来的：
+
+DirectorValidator
+RepairPlanner
+SemanticValidator
+
+仍然保留。
+
+但是只用于：
+
+重要单元 / 异常情况 / 最终质量检查。
+
+不是每个打斗 Unit 都死循环。
+
+我甚至建议你把思想再往前推一步：
+
+打斗不要“生成”，打斗应该“编译”。
+
+剧本只是输入。
+
+Director 生成 BattleSpec。
+
+Combat Grammar 是你的“语言”。
+
+Combat Compiler 把它编译成 ActionChain。
+
+ShotPacker 再编译成 5 秒视频单元。
+
+最后 LLM 只负责把这些结构化结果翻译成你要的那种高密度仙侠提示词。
+
+这样速度、稳定性、可控性都会比“反复让 LLM 自己改自己”强很多。
+
+没听懂
+
+可以，我换成最简单的说法。
+
+你现在慢，是因为流程像这样：
+
+AI先写打斗
+↓
+AI检查
+↓
+发现不对
+↓
+AI重写
+↓
+再检查
+
+这就像：
+
+先让演员随便打一遍，导演看录像，再让他重打一遍。
+
+当然慢。
+
+如果只是“打斗设计”，可以换成：
+
+导演先选打斗套路
+↓
+系统按套路自动拼动作
+↓
+AI只负责把动作写成漂亮的5秒镜头提示词
+
+比如剧本是：
+
+林烬被6个人围攻，最后一拳震退所有人。
+
+导演只需要决定一次：
+
+战斗类型：1VN
+战斗风格：碾压
+节奏：快
+结局：主角范围爆发震退敌人
+
+然后系统直接从你的 Combat Grammar 里选：
+
+围攻
+→ 连续闪避
+→ 近身反击
+→ 再次包围
+→ 爆气震退
+
+再自动组成一个 5 秒镜头：
+
+0-1s：
+六人从四周同时压近，林烬侧身闪过第一剑。
+
+
+1-3s：
+林烬连续闪避两次攻击，切入其中一人身侧，
+肘击、转身、重拳连续反击。
+
+
+3-5s：
+其余五人再次合围，
+林烬赤金气血瞬间爆发，
+冲击波将六人同时震飞。
+
+然后 AI 最后只做一件事：
+
+把这段变成你想要的高质量视频提示词。
+
+所以以前是：
+
+AI负责：
+想怎么打
++
+写动作
++
+检查动作
++
+返工
++
+写分镜
+
+以后改成：
+
+导演：
+决定“这场是什么类型的战斗”
+
+
+Combat Grammar：
+自动决定“怎么打”
+
+
+ShotPacker：
+自动决定“5秒里塞哪些动作”
+
+
+AI：
+最后负责“怎么描述得漂亮”
+
+这样就不用每个单元反复：
+
+生成 → 校验 → 返工。
+
+最简单理解就是：
+
+普通打斗走模板化自动生成，Boss战、重要战斗才走完整导演校验。
+
+你可以直接分成三档：
+
+普通打斗
+→ 不校验
+→ Combat Grammar直接生成
+→ 快
+
+
+重要打斗
+→ 生成后检查一次
+→ 中等
+
+
+Boss战 / 高潮
+→ Director完整生成→校验→返工
+→ 慢，但质量最高
+
+这其实最适合你。
+
+因为你一集可能有 10 个 Unit，真正需要导演反复审的可能只有 2 个。
+
+其他 8 个不要浪费模型调用。
+
+所以我建议你现在不要删掉 V4 的“生成→校验→返工”，而是增加一个：
+
+DirectorMode
+FAST
+NORMAL
+STRICT
+
+FAST：普通打斗，Director只判断一次，Combat Grammar直接执行，不走LLM返工。
+
+NORMAL：重要打斗，生成后检查一次。
+
+STRICT：高潮/Boss战，走你现在完整的“生成→校验→返工→再校验”。
+
+这样最简单，也最容易在你现有系统上改。

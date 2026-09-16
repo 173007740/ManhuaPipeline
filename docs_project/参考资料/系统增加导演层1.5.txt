@@ -1,0 +1,525 @@
+DeepSeek 这次这个判断，我基本认同，而且它指出的核心问题非常准：
+
+你现在的 DirectorPlan 已经是“导演意图层”，但还不是“导演控制层”。
+
+也就是说，它现在会说：
+
+这场戏要 3 个回合。
+主体是林烬。
+特效前低后高。
+最后要收束。
+
+但它还没有真正做到：
+
+你必须给我 3 个回合。
+主角不能丢。
+高潮镜之前 VFX 不能超标。
+不符合就退回重做。
+
+这就是下一步的分水岭。
+
+我建议你现在不要急着把 Director 拆成六个 LLM，而是先把它升级成一个真正的闭环：
+
+Unit
+↓
+DirectorPlan
+↓
+CombatGrammarEngine
+↓
+Storyboard Generation
+↓
+Director Validator
+↓
+合格？
+├─ YES → Stage 继续
+└─ NO  → 带错误原因重新生成该 Unit
+
+真正优先级，我会这样排。
+
+第一优先是把 CombatGrammarIds 接实。因为这直接决定“怎么打”不再是纯自然语言。比如 DirectorPlan 决定：
+
+ConflictType = 1VN
+CombatGrammarIds =
+[
+  "T3_SURROUND",
+  "T1_DODGE_COUNTER",
+  "T2_HEAVY_COUNTER",
+  "T4_AOE_BREAK"
+]
+
+然后 CombatGrammarEngine 展开成真正的动作链：
+
+Beat01
+敌方三人正面压进
+→ 主角侧闪
+
+
+Beat02
+侧翼二人夹击
+→ 主角格挡 + 肘击
+
+
+Beat03
+后方偷袭
+→ 主角回身抓腕 + 摔投
+
+
+Beat04
+六人再次合围
+→ 主角气血爆发 + 范围震退
+
+这时候分镜 LLM 已经不是自己“编打斗”了。
+
+它的工作变成：
+
+把已确定的 Combat Beats 拍出来。
+
+这个变化非常大。
+
+第二优先是 DirectorValidator。
+
+建议第一版先不要做太智能，先校验几个最关键的硬规则：
+
+1. PrimarySubject 是否持续存在
+2. CombatBeat 是否全部被分镜覆盖
+3. 回合数是否达到 DirectorPlan 要求
+4. 核心爽点是否存在对应 Shot
+5. VFX 峰值是否出现在指定高潮段
+6. 开头 / 中段 / 结尾节奏是否符合 RhythmStrategy
+7. 关键对白是否被遗漏
+8. 是否出现角色/能力越权
+
+例如 DirectorPlan：
+
+CombatRoundCount = 3
+PrimarySubject = 林烬
+VfxPeakPhase = Final
+
+结果分镜只有：
+
+Round1
+林烬格挡
+
+
+Round2
+林烬一拳爆气震飞六人
+
+Validator 直接判：
+
+FAILED
+
+
+- Expected combat rounds: 3
+- Actual combat rounds: 2
+- VFX peak occurred too early
+- Missing CombatBeat: T2_HEAVY_COUNTER
+
+然后把这些错误重新送给 Storyboard LLM：
+
+保留已有正确镜头，仅修复以下导演违规……
+
+这时候 Director 就开始真正“管片子”了。
+
+第三优先才是把 Camera / Performance / VFX 进一步结构化。
+
+DeepSeek 说“还不是六导演系统”没错，但我反而建议你暂时别拆六个独立 LLM 调用。
+
+因为那很容易变成：
+
+剧情导演 LLM
+↓
+动作导演 LLM
+↓
+摄影导演 LLM
+↓
+表演导演 LLM
+↓
+特效导演 LLM
+↓
+对白导演 LLM
+
+成本增加、延迟增加，而且六个模型之间还可能互相打架。
+
+V1/V2 更好的方式应该是：
+
+DirectorPlan
+├─ NarrativePlan
+├─ ActionPlan
+├─ CameraPlan
+├─ PerformancePlan
+├─ DialoguePlan
+└─ VfxPlan
+
+仍然可以一次 LLM 推理生成，但数据结构上拆开。
+
+以后哪里需要真正专业化，再独立出去。
+
+例如 ActionPlan 可以逐步升级成：
+
+ActionPlan
+{
+    ConflictType
+    CombatStyle
+    RoundCount
+    DominanceCurve
+    CombatGrammarIds
+    CombatBeats
+}
+
+CameraPlan：
+
+CameraPlan
+{
+    VisualPriority
+    ShotRhythm
+    PreferredShotSizes
+    PreferredMovements
+    ClimaxCamera
+    ForbiddenPatterns
+}
+
+VfxPlan：
+
+VfxPlan
+{
+    BaseIntensity
+    PeakIntensity
+    PeakPhase
+    AllowedVfxAssets
+    EnvironmentReactionLevel
+}
+
+这才是真正“六导演系统”的正确演化路线。
+
+所以我会把你目前 Director 的成熟度大概定义成：
+
+Director V1
+导演意图生成
+✅ 你现在已经有了
+
+
+Director V1.5
+导演意图 → Combat Grammar
+← 现在应该做
+
+
+Director V2
+Storyboard Validator + 自动返工
+← 紧接着做
+
+
+Director V2.5
+Camera / Performance / VFX 结构化
+← 再做
+
+
+Director V3
+跨 Unit / 跨 Episode 全局导演状态
+← 后面做
+
+而 DeepSeek 提到的“空帧解析 bug”，当然先修，因为它属于基础数据污染问题。但从产品能力上，你现在真正最关键的一步就是：不要继续给 DirectorPlan 加更多漂亮字段，而是让现有字段开始产生硬约束。
+
+一句话概括：
+
+现在不要继续“让导演说得更专业”，而要开始“让剧组必须听导演的”。
+
+这一步做完，你的 Director 才会从 Prompt Enhancer 真正变成 Director Engine。
+
+补充如下：
+
+Ok 那接下来 ，我们升级 V1.5
+
+可以。Director V1.5 的目标非常单纯：把 DirectorPlan 的“动作意图”真正接到 CombatGrammarEngine，让打斗不再由分镜 LLM 临场编。
+
+V1.5 先不要碰六导演、不要碰复杂校验器，核心只做这一条链：
+
+Unit
+↓
+DirectorPlan
+↓
+ActionPlan
+↓
+CombatGrammarEngine
+↓
+CombatBeats
+↓
+Storyboard
+
+也就是说，DirectorPlan 继续负责“这一场该怎么打”，但真正的动作链由系统展开。
+
+第一件事：把 ActionStrategy 从一句话升级成结构化 ActionPlan
+
+建议先加这些字段：
+
+public class ActionPlan
+{
+    public string ConflictType { get; set; }      // 1V1 / 1VN / NVN
+    public string PrimaryFighterId { get; set; }
+    public List<string> EnemyIds { get; set; }
+
+
+    public string CombatStyle { get; set; }       // 碾压 / 苦战 / 反杀 / 追逃
+    public int RoundCount { get; set; }           // 期望回合数
+    public string DominanceCurve { get; set; }    // 敌强→均势→主角碾压
+
+
+    public List<string> CombatGrammarIds { get; set; }
+
+
+    public string EndingState { get; set; }       // 击退 / 击倒 / 击杀 / 中断
+}
+
+DirectorPlan 里不要再只存：
+
+public string ActionStrategy { get; set; }
+
+而改成：
+
+public ActionPlan ActionPlan { get; set; }
+
+原来的 ActionStrategy 可以暂时保留兼容旧数据。
+
+第二件事：Director 只负责“选 Grammar”，不要让它写完整动作
+
+比如 Unit：
+
+六名赤焰宗弟子围攻林烬，林烬先闪避，再近身反击，最后爆气震退六人。
+
+Director 输出：
+
+{
+  "conflictType": "1VN",
+  "primaryFighterId": "lin_jin",
+  "enemyIds": [
+    "disciple_01",
+    "disciple_02",
+    "disciple_03",
+    "disciple_04",
+    "disciple_05",
+    "disciple_06"
+  ],
+  "combatStyle": "压迫后碾压",
+  "roundCount": 3,
+  "dominanceCurve": "敌方人数压迫→主角掌控→主角碾压",
+  "combatGrammarIds": [
+    "T3_SURROUND_ATTACK",
+    "T1_DODGE_COUNTER",
+    "T2_CLOSE_COUNTER",
+    "T4_AOE_BREAK"
+  ],
+  "endingState": "敌方群体击退"
+}
+
+这里有个重要原则：
+
+LLM 只能从现有 Combat Grammar 库里选 ID。
+
+不能随便编：
+
+SUPER_COOL_DRAGON_ATTACK
+
+所以 Director Prompt 里必须把当前可用 Grammar 清单传进去。
+
+第三件事：CombatGrammarEngine 把 Grammar 展开成 CombatBeat
+
+这才是 V1.5 最核心的数据。
+
+建议新增：
+
+public class CombatBeat
+{
+    public int Index { get; set; }
+
+
+    public string GrammarId { get; set; }
+
+
+    public string AttackerId { get; set; }
+    public List<string> TargetIds { get; set; }
+
+
+    public string ActionType { get; set; }
+    public string ActionDescription { get; set; }
+
+
+    public string DefenseResponse { get; set; }
+
+
+    public string Result { get; set; }
+
+
+    public string SpatialRelation { get; set; }
+
+
+    public string Intensity { get; set; }
+
+
+    public bool IsClimaxBeat { get; set; }
+}
+
+例如系统展开成：
+
+Beat 01
+Grammar: T3_SURROUND_ATTACK
+敌方六人形成包围
+三人正面压进，两人侧翼夹击，一人后方封路
+林烬暂不反击
+
+
+Beat 02
+Grammar: T1_DODGE_COUNTER
+林烬侧身闪过正面攻击
+借位避开侧翼夹击
+保持核心站位
+
+
+Beat 03
+Grammar: T2_CLOSE_COUNTER
+林烬近身切入
+肘击最近敌人
+回身格挡第二人
+短促反击
+
+
+Beat 04
+Grammar: T4_AOE_BREAK
+六人再次逼近
+林烬爆发赤金气血
+范围冲击
+六人同时震退
+
+注意：
+
+Beat 才是分镜真正应该读取的东西。
+
+第四件事：分镜 LLM 不再拥有“编动作”的自由
+
+以前你的 Storyboard Prompt 可能是：
+
+根据剧本和 DirectorPlan 生成激烈打斗分镜。
+
+V1.5 应该改成：
+
+以下 CombatBeats 已由导演系统和 CombatGrammarEngine 确定。
+
+
+禁止：
+- 删除 CombatBeat
+- 改变 CombatBeat 顺序
+- 改变攻击主体
+- 改变胜负结果
+- 自行增加关键战斗事件
+
+
+你的任务：
+把每个 CombatBeat 转换成一个或多个 Shot。
+
+
+允许：
+- 拆镜头
+- 选择景别
+- 设计运镜
+- 补充表情
+- 补充动作过程细节
+- 配置音效/VFX表现
+
+这句话特别重要：
+
+Storyboard 负责“怎么拍”，不负责“怎么打”。
+
+这就是 V1.5 的本质。
+
+第五件事：一条 Beat 可以拆多个 Shot
+
+不要做成：
+
+1 CombatBeat = 1 Shot
+
+这会限制导演。
+
+正确关系应该是：
+
+CombatBeat 01
+↓
+Shot 01
+Shot 02
+Shot 03
+
+例如：
+
+Beat：
+敌人背后偷袭，林烬察觉并抓住手腕
+
+
+↓
+
+
+Shot 07
+中景：敌人从背后高速接近
+
+
+Shot 08
+特写：林烬眼神侧移
+
+
+Shot 09
+近景：林烬突然转身抓腕
+
+所以 Storyboard 数据里加：
+
+public string CombatBeatId { get; set; }
+
+或者：
+
+public int CombatBeatIndex { get; set; }
+
+这样以后 V2 Validator 才能检查：
+
+Beat 03 到底有没有拍出来。
+
+第六件事：V1.5 先加一个“轻量校验”，别等 V2
+
+虽然真正的 DirectorValidator 放 V2，但 V1.5 至少要做最基础的完整性检查：
+
+CombatBeat 数量 = 4
+
+
+Storyboard 中必须存在：
+Beat01
+Beat02
+Beat03
+Beat04
+
+如果少了：
+
+Beat03 Missing
+
+直接让当前 Unit 的 Storyboard 重生成一次。
+
+先不校验艺术质量，只校验：
+
+有没有漏拍。
+
+这成本非常低，但价值非常高。
+
+你可以直接让 DeepSeek 按这个开发顺序做：
+
+Director V1.5 开发目标：
+
+
+1. 在 DirectorPlan 中新增结构化 ActionPlan。
+2. Director 只能从现有 Combat Grammar 库选择 CombatGrammarIds。
+3. 新增 CombatGrammarEngine，将 ActionPlan + CombatGrammarIds 展开为 CombatBeats。
+4. CombatBeat 必须明确主体、目标、动作、响应、结果、空间关系。
+5. Storyboard 生成前必须先生成 CombatBeats。
+6. Storyboard 不允许修改 CombatBeat 的核心动作逻辑，只负责将 Beat 拆分成 Shot。
+7. 每个 Shot 增加 CombatBeatIndex / CombatBeatId。
+8. Storyboard 生成后检查所有 CombatBeat 是否被 Shot 覆盖；漏拍则只重生成当前 Unit。
+9. 保留旧 ActionStrategy 字段兼容现有数据，禁止破坏已有 Stage 流程。
+10. 本版本不做完整 DirectorValidator，不做六导演拆分，不重构已有模块。
+
+如果你按这个做完，Director V1.5 的验收标准其实就一句话：
+
+同一个 Unit 连续生成 5 次分镜，镜头可以不同，但“谁先打谁、怎么攻防、几个关键回合、最后谁赢”应该基本不变。
+
+这就说明 Combat Grammar 已经真正开始“管住打斗”了。

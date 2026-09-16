@@ -1,0 +1,2 @@
+SET NOCOUNT ON;
+SELECT '====='+CAST(PromptId AS VARCHAR(10)) AS PID, SUBSTRING(PromptTextH3, CHARINDEX(N'布包',PromptTextH3)-150, 320) AS seg FROM SeedancePrompts WHERE PromptId IN (5408,5409,5410,5423,5440,5451) AND PromptTextH3 LIKE N'%布包%';

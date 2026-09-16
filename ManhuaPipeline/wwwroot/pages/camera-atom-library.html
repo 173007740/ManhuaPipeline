@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>运镜原子库 - 漫创引擎</title>
+    <link rel="stylesheet" href="/lib/material-icons/material-icons.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        .container { max-width: 100%; padding: 32px 24px; }
+        .atom-list { margin-top: 8px; display: flex; flex-direction: column; gap: 12px; }
+        .atom-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
+        .atom-card:hover { border-color: var(--primary); background: var(--bg-card-hover); }
+        .atom-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
+        .atom-title .name { font-size: 15px; font-weight: 700; color: #e2e8f0; }
+        .cat-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
+        .cat-jingbie { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .cat-yunjing { background: rgba(16,185,129,0.15); color: #34d399; }
+        .cat-zhuanchang { background: rgba(249,115,22,0.15); color: #fb923c; }
+        .cat-guangying { background: rgba(168,85,247,0.15); color: #c084fc; }
+        .cat-jiezou { background: rgba(236,72,153,0.15); color: #f472b6; }
+        .prompt-head { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
+        .prompt-head label { font-size: 12px; color: #64748b; font-weight: 600; }
+        .prompt-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 10px; margin-top: 4px; font-size: 12px; color: #94a3b8; line-height: 1.6; white-space: pre-wrap; }
+        .btn-xs { font-size: 11px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer; color: #fff; background: #475569; }
+        .btn-xs.primary { background: #7c3aed; }
+        .btn-xs.green { background: #10b981; }
+        .btn-xs.red { background: #ef4444; }
+        .tag-mini { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: rgba(236,72,153,0.15); color: #f472b6; }
+        .atom-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+            </a>
+            <div class="nav-links" id="navLinks">
+                <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                <a href="asset-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 图片资产库</a>
+                <a href="skill-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
+                <a href="fight-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
+                <a href="camera-atom-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
+                <span id="navUser" style="display:none;">
+                    <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                    <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+                    <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                </span>
+                <span id="navGuest" style="display:none;">
+                    <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                    <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                </span>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
+            <div class="page-title" style="margin-bottom:0;font-size:24px;font-weight:700;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库<span class="atom-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+            <div class="action-bar" style="margin-bottom:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
+                <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索原子名/描述/标签..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:200px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAtoms()"></div>
+                <div style="display:flex;align-items:center;margin-right:8px;">
+                    <select id="filterCat" onchange="loadAtoms()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                        <option value="">全部分类</option>
+                        <option value="景别">景别</option>
+                        <option value="运镜">运镜</option>
+                        <option value="转场">转场</option>
+                        <option value="光影">光影</option>
+                        <option value="节奏">节奏</option>
+                    </select>
+                </div>
+                <div style="display:flex;align-items:center;margin-right:8px;">
+                    <select id="filterType" onchange="loadAtoms()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                        <option value="">全部适用类型</option>
+                        <option value="通用">通用</option>
+                        <option value="打斗">打斗</option>
+                        <option value="文戏">文戏</option>
+                        <option value="悬疑">悬疑</option>
+                        <option value="追逐">追逐</option>
+                        <option value="高潮">高潮</option>
+                    </select>
+                </div>
+                <button class="btn btn-primary" onclick="showAdd()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新增原子</button>
+            </div>
+        </div>
+        <div id="atomList" class="atom-list"></div>
+        <div id="atomEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无运镜原子，点击「新增原子」创建</div>
+    </div>
+
+    <div id="editModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;">
+        <div style="background:#1e293b;border-radius:12px;padding:24px;width:640px;max-width:94%;max-height:92vh;overflow:auto;">
+            <h3 id="modalTitle" style="color:#f1f5f9;margin:0 0 16px;font-size:16px;">新增原子</h3>
+            <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
+                <div style="flex:1;min-width:200px;">
+                    <label style="font-size:12px;color:#94a3b8;">原子名</label>
+                    <input id="aName" placeholder="如：缓推" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+                </div>
+                <div style="width:140px;">
+                    <label style="font-size:12px;color:#94a3b8;">分类</label>
+                    <select id="aCat" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;margin-top:4px;">
+                        <option value="景别">景别</option>
+                        <option value="运镜">运镜</option>
+                        <option value="转场">转场</option>
+                        <option value="光影">光影</option>
+                        <option value="节奏">节奏</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="font-size:12px;color:#94a3b8;">描述（只写技法与情绪用途，不写时代/场景/具体物件）</label>
+                <textarea id="aDesc" rows="4" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+            </div>
+            <div style="margin-bottom:16px;">
+                <label style="font-size:12px;color:#94a3b8;">适用类型标签（逗号分隔）</label>
+                <input id="aTags" placeholder="如：通用,打斗,文戏,悬疑,追逐,高潮" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn" onclick="$('#editModal').hide()">取消</button>
+                <button class="btn btn-primary" onclick="doSave()">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script src="../js/app.js?v=2"></script>
+    <script>
+        var _editId = 0;
+        var catNames = { '景别': '景别', '运镜': '运镜', '转场': '转场', '光影': '光影', '节奏': '节奏' };
+        var catClasses = { '景别': 'cat-jingbie', '运镜': 'cat-yunjing', '转场': 'cat-zhuanchang', '光影': 'cat-guangying', '节奏': 'cat-jiezou' };
+
+        function loadAtoms() {
+            var cat = $('#filterCat').val();
+            var search = $('#searchInput').val();
+            var type = $('#filterType').val();
+            $.get('/api/camera-atom/list', { category: cat || undefined, search: search, unitType: type || undefined }, function (d) {
+                if (!d || d.length === 0) { $('#atomList').empty(); $('#atomEmpty').show(); $('.atom-count').text(''); return; }
+                $('#atomEmpty').hide();
+                var h = '';
+                for (var i = 0; i < d.length; i++) {
+                    var t = d[i];
+                    var catCls = catClasses[t.category] || 'cat-jingbie';
+                    h += '<div class="atom-card">';
+                    h += '<div class="atom-title"><span class="name">' + escHtml(t.name) + '</span>';
+                    h += '<span class="cat-badge ' + catCls + '">' + (catNames[t.category] || escHtml(t.category || '')) + '</span></div>';
+                    h += '<div class="prompt-head"><label>描述</label><button class="btn-xs green" onclick="copyOne(this,' + t.atomId + ')">复制原子</button></div>';
+                    h += '<div class="prompt-box">' + escHtml(t.description || '（空）') + '</div>';
+                    if (t.tags) {
+                        var tagArr = String(t.tags).split(',').map(function (x) { return x.trim(); }).filter(Boolean);
+                        if (tagArr.length > 0) { h += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:8px;">'; for (var ti = 0; ti < tagArr.length; ti++) { h += '<span class="tag-mini">#' + escHtml(tagArr[ti]) + '</span>'; } h += '</div>'; }
+                    }
+                    h += '<div class="atom-actions">';
+                    h += '<button class="btn-xs primary" onclick="copyFull(this,' + t.atomId + ')">复制完整原子</button>';
+                    h += '<button class="btn-xs" onclick="showEdit(' + t.atomId + ')">编辑</button>';
+                    h += '<button class="btn-xs red" onclick="delAtom(' + t.atomId + ')">删除</button>';
+                    h += '</div></div>';
+                }
+                $('#atomList').html(h);
+                $('.atom-count').text('共 ' + d.length + ' 条原子');
+            }).fail(function () { $('#atomList').html('<p style="color:#ef4444;text-align:center;">加载失败</p>'); });
+        }
+
+        function showAdd() {
+            _editId = 0;
+            $('#modalTitle').text('新增原子');
+            $('#aName').val(''); $('#aCat').val('景别');
+            $('#aDesc').val(''); $('#aTags').val('通用');
+            $('#editModal').css('display', 'flex');
+        }
+
+        function showEdit(id) {
+            $.get('/api/camera-atom/list', {}, function (d) {
+                var t = null;
+                for (var i = 0; i < d.length; i++) { if (d[i].atomId === id) { t = d[i]; break; } }
+                if (!t) { alert('未找到原子'); return; }
+                _editId = id;
+                $('#modalTitle').text('编辑原子');
+                $('#aName').val(t.name);
+                $('#aCat').val(t.category || '景别');
+                $('#aDesc').val(t.description || '');
+                $('#aTags').val(t.tags || '通用');
+                $('#editModal').css('display', 'flex');
+            });
+        }
+
+        function doSave() {
+            var name = $('#aName').val().trim();
+            if (!name) { alert('原子名不能为空'); return; }
+            var cat = $('#aCat').val();
+            if (!cat) { alert('请选择分类'); return; }
+            var payload = {
+                name: name,
+                category: cat,
+                description: $('#aDesc').val(),
+                tags: $('#aTags').val()
+            };
+            var url = _editId ? '/api/camera-atom/' + _editId : '/api/camera-atom';
+            var method = _editId ? 'PUT' : 'POST';
+            $.ajax({
+                url: url, method: method, contentType: 'application/json', data: JSON.stringify(payload),
+                success: function () { $('#editModal').hide(); loadAtoms(); },
+                error: function (x) { alert('保存失败: ' + (x.responseJSON && x.responseJSON.message ? x.responseJSON.message : x.statusText)); }
+            });
+        }
+
+        function delAtom(id) {
+            if (!confirm('确定删除该原子？')) return;
+            $.ajax({
+                url: '/api/camera-atom/' + id, method: 'DELETE',
+                success: function () { loadAtoms(); },
+                error: function (x) { alert('删除失败: ' + (x.responseJSON && x.responseJSON.message ? x.responseJSON.message : x.statusText)); }
+            });
+        }
+
+        function getById(id, cb) {
+            $.get('/api/camera-atom/list', {}, function (d) {
+                for (var i = 0; i < d.length; i++) { if (d[i].atomId === parseInt(id)) { cb(d[i]); return; } }
+                alert('未找到原子');
+            });
+        }
+
+        function copyFull(btn, id) {
+            getById(id, function (t) {
+                var txt = '原子:' + t.name + '（' + (t.category || '') + '）\n' + (t.description || '');
+                copyText(btn, txt);
+            });
+        }
+
+        function copyOne(btn, id) {
+            getById(id, function (t) {
+                copyText(btn, t.name + '：' + (t.description || ''));
+            });
+        }
+
+        function copyText(btn, txt) {
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(txt).then(function () { flashCopied(btn); });
+            } else {
+                var ta = document.createElement('textarea');
+                ta.value = txt; document.body.appendChild(ta); ta.select();
+                document.execCommand('copy'); document.body.removeChild(ta); flashCopied(btn);
+            }
+        }
+
+        function flashCopied(btn) {
+            var old = $(btn).text();
+            $(btn).text('已复制');
+            setTimeout(function () { $(btn).text(old); }, 1200);
+        }
+
+        $(function () {
+            loadAtoms();
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,48 @@
+# .NET 编译产物
+bin/
+obj/
+publish/
+
+# IDE
+.vs/
+*.user
+
+# 本地配置（含数据库连接等敏感信息，勿提交）
+appsettings.Development.json
+appsettings.Production.json
+*.local.json
+
+# 日志与调试文件
+*.log
+logs/
+debug*.txt
+loadPrompts_debug.txt
+tmp_check_*.sql
+
+# 上传文件
+**/wwwroot/uploads/
+
+# ============ 敏感信息：含数据库密码，禁止提交 ============
+appsettings.json
+
+# 根目录临时脚本/数据（内含数据库连接串）
+/_*.ps1
+/_*.json
+/_*.txt
+/_*.csv
+
+# 临时、构建检查与工具产物目录
+_buildcheck/
+verify_h3/
+Tools/
+_final/
+_zw_bak/
+fix_h3/
+
+# 数据库与运行时文件
+*.mdf
+*.ldf
+*.db
+
+# 磁盘上已不存在、git 却仍尝试索引的残留条目
+*.inspect.ndjson

@@ -1,0 +1,499 @@
+是，14 个单元接近 57 分钟明显太长。而且从你这次数据看，问题已经非常明确：不是 Director V3/V4 本身慢，而是 14 个单元的分镜在串行跑。
+
+你这次大概是：
+
+整集导演计划          ≈ 3分24秒
+单元导演决策          ≈ 2分48秒
+中间处理              ≈ 5分钟
+14单元分镜生成         ≈ 44分24秒   ← 真正瓶颈
+
+44 分 24 秒 / 14 ≈ 每个 Unit 3.2 分钟。
+
+所以第一优先级不是继续优化 Prompt，而是：
+
+把 Unit 分镜从「串行」改成「有限并行」
+
+现在可能是：
+
+Unit01 → 3分钟
+          ↓
+Unit02 → 3分钟
+          ↓
+Unit03 → 3分钟
+          ↓
+...
+Unit14 → 3分钟
+
+
+≈ 44分钟
+
+应该改成例如 4 路并行：
+
+批次1
+Unit01   Unit02   Unit03   Unit04
+  ↓        ↓        ↓        ↓
+同时生成
+
+
+批次2
+Unit05   Unit06   Unit07   Unit08
+
+
+批次3
+Unit09   Unit10   Unit11   Unit12
+
+
+批次4
+Unit13   Unit14
+
+理论上分镜阶段就可能从：
+
+44分钟 → 约 11～15分钟
+
+实际考虑 API 限流、返工、不同 Unit 耗时，我会先把目标定成：
+
+整集 14 Unit：15～20分钟以内。
+
+但这里有个问题：你刚做了 V4 连续性
+
+不能简单粗暴 Task.WhenAll(14个Unit)。
+
+因为：
+
+Unit04 EndState
+↓
+Unit05 StartState
+
+存在依赖。
+
+但你要区分两种依赖。
+
+导演状态规划需要顺序，真正的“分镜生成”不一定需要顺序。
+
+所以可以变成：
+
+EpisodeMasterPlan
+        ↓
+Unit01 DirectorPlan
+        ↓
+Unit02 DirectorPlan
+        ↓
+Unit03 DirectorPlan
+        ↓
+...
+Unit14 DirectorPlan
+
+
+这一段快速顺序完成
+
+把所有 Unit 的：
+
+StartState
+EndState目标
+Transition
+Intensity
+CombatSpec
+角色状态
+场景状态
+
+先定下来。
+
+然后：
+
+            已锁定的14个 UnitPlan
+                      ↓
+        ┌─────────────┼─────────────┐
+        ↓             ↓             ↓
+      Unit01        Unit02        Unit03
+    Storyboard    Storyboard    Storyboard
+        ↓             ↓             ↓
+                 并行生成
+
+也就是说：
+
+先串行“导演”，再并行“施工”。
+
+这个特别适合你现在的架构。
+
+我建议你把 Stage 5 改成两阶段
+Stage 5A：Planning
+
+速度应该比较快：
+
+EpisodeMasterPlan
+↓
+14个 Unit DirectorPlan
+↓
+UnitTransition
+↓
+BattleSpec
+↓
+CombatGrammar
+↓
+ActionChain
+↓
+ShotPacking Plan
+
+这一步把导演决策全部锁定。
+
+输出类似：
+
+Unit04
+
+
+StartState
+EndState
+DirectorPlan
+CombatPlan
+ActionChains
+ShotCount
+ShotDuration
+TransitionToUnit05
+
+然后 Stage 5A 完成。
+
+Stage 5B：Rendering / Storyboard Generation
+
+开始并行：
+
+SemaphoreSlim(4)
+
+
+Unit01 ──┐
+Unit02 ──┤
+Unit03 ──┤ → LLM
+Unit04 ──┘
+
+
+完成一个
+↓
+马上加入下一个
+
+注意，不要固定“四个一批全部完成才开始下一批”。
+
+应该是并发池：
+
+最大同时运行：4
+
+
+Unit01完成
+→ 立刻开始Unit05
+
+
+Unit03完成
+→ 立刻开始Unit06
+
+这样效率更高。
+
+并发数我建议先用 3～4
+
+不要上来：
+
+Concurrency = 14
+
+很容易：
+
+API Rate Limit
+TPM限制
+连接超时
+DeepSeek/GPT并发不稳定
+大量429
+重试反而更慢
+
+第一版：
+
+MaxConcurrency = 3
+
+稳定以后：
+
+4
+
+再根据实际 API 配额尝试：
+
+5 / 6
+
+最好做成配置：
+
+StoryboardConcurrency = 4
+
+以后你自己调整。
+
+第二刀：FAST 单元不要走完整 V4 Validator
+
+你前面已经做了：
+
+FAST
+NORMAL
+STRICT
+
+现在真正要用起来。
+
+比如 14 个 Unit：
+
+Unit01   FAST
+Unit02   FAST
+Unit03   NORMAL
+Unit04   FAST
+Unit05   NORMAL
+Unit06   FAST
+Unit07   FAST
+Unit08   STRICT   ← 本集高潮
+Unit09   FAST
+...
+
+那么：
+
+FAST
+生成一次
+↓
+程序规则检查
+↓
+过
+
+不要：
+
+LLM SemanticValidator
+Repair
+Revalidate
+NORMAL
+生成
+↓
+Rule Validator
+↓
+必要时 LLM check 1次
+STRICT
+
+才：
+
+生成
+↓
+Rule Validator
+↓
+Semantic Validator
+↓
+Repair
+↓
+Revalidate
+
+如果你现在 14 个 Unit 全部默认跑 Director 闭环，时间一定爆炸。
+
+第三刀：战斗 Unit 别再让 Storyboard LLM“重新思考动作”
+
+因为你已经有：
+
+CombatGrammar
+ActionChain
+ShotPacker
+ShotTimeline
+
+那么分镜模型收到的应该已经非常接近最终答案。
+
+不要 Prompt：
+
+请根据以下资料设计专业仙侠打斗分镜……
+
+这种会让模型重新推理一遍。
+
+而是：
+
+以下 ActionChain、ShotTimeline、人物状态和导演约束已经确定。禁止重新设计战斗逻辑。请直接转换为最终分镜数据。
+
+它的工作从：
+
+理解
+→ 策划
+→ 设计
+→ 分镜
+
+减少成：
+
+结构化内容
+→ 分镜表达
+
+推理时间也会下来。
+
+第四刀：其实 14 个 Unit 不一定都需要独立 LLM 调用
+
+这里还有一个后续优化，我觉得很值得做。
+
+如果两个 Unit 非常简单，例如：
+
+Unit03：
+林烬走入演武场。
+
+
+Unit04：
+众弟子转头看向林烬。
+
+完全没必要：
+
+LLM请求一次 Unit03
++
+LLM请求一次 Unit04
+
+可以做：
+
+Storyboard Batch
+一次请求：
+
+
+Unit03
+Unit04
+Unit05
+
+
+分别输出：
+Unit03Shots[]
+Unit04Shots[]
+Unit05Shots[]
+
+不过我不建议你现在马上做。
+
+先做并发。
+
+因为并发对现有架构侵入最低，收益最大。
+
+还有一个现在必须补的东西：耗时日志
+
+你这次只能靠数据库时间反推，这以后不行。
+
+直接给每一次 LLM 调用记录：
+
+Stage
+EpisodeId
+UnitId
+
+
+Operation
+Model
+
+
+StartTime
+EndTime
+ElapsedMs
+
+
+PromptTokens
+CompletionTokens
+
+
+Attempt
+ValidationMode
+
+
+RetryCount
+Success
+
+
+FailureReason
+
+然后最后自动打印：
+
+========== Stage 5 Performance ==========
+
+
+Episode Director       204s
+
+
+Unit Director
+  U01       11s
+  U02       14s
+  ...
+Total                  168s
+
+
+Storyboard
+  U01       181s
+  U02        94s
+  U03       221s
+  ...
+Total wall time        812s
+
+
+LLM accumulated time   2511s
+Concurrency            4
+
+
+Validation
+FAST                    9
+NORMAL                  4
+STRICT                  1
+
+
+Repairs
+First-pass success      11/14
+Repair once              2/14
+Repair twice             1/14
+
+这里尤其要区分：
+
+累计 LLM 时间和用户实际等待时间。
+
+例如 4 个 Unit 同时各跑 3 分钟：
+
+累计模型耗时 = 12分钟
+实际等待时间 = 3分钟
+
+这个指标之后对你优化非常重要。
+
+我会给你的系统设这几个性能目标
+
+现在：
+
+14 Unit ≈ 57分钟
+
+第一阶段：
+
+14 Unit ≤ 20分钟
+
+并发稳定以后：
+
+14 Unit ≈ 10～15分钟
+
+后面再做 Batch / FAST Path / Prompt精简：
+
+14 Unit ≈ 6～10分钟
+
+我认为到 10分钟左右，这个系统的体验就会完全不一样。
+
+所以现在先不要升级 Director V5。
+
+你 Director 功能已经堆得够多了。
+
+现在应该开一个：
+
+Director Performance V4.1
+
+只做性能，不增加导演能力。
+
+优先级就是：
+
+P0  加完整耗时日志
+
+
+P0  Storyboard Unit 有限并行
+    MaxConcurrency = 3~4
+
+
+P0  导演规划串行
+    分镜施工并行
+
+
+P1  FAST / NORMAL / STRICT 真正分流
+
+
+P1  FAST 禁止进入 LLM语义校验/返工
+
+
+P1  Storyboard Prompt 禁止重新设计 Combat
+
+
+P2  简单 Unit 批量生成
+
+
+P2  Prompt Token / Context裁剪
+
+
+P3  缓存重复资产和固定规则上下文
+
+现在 57 分钟这个数据反而是好事，因为瓶颈已经非常清楚了：44 分钟都在分镜阶段。先把串行改掉，收益会比你继续改 Director Prompt 大得多。
