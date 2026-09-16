@@ -1,2 +1,0 @@
-SET NOCOUNT ON;
-SELECT PromptId, PromptTextH3 FROM SeedancePrompts WHERE PromptId IN (5408,5409,5410,5451) ORDER BY PromptId;
