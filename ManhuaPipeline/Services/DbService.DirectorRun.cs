@@ -31,14 +31,16 @@ ORDER BY SortOrder, DocId", conn);
         return list;
     }
 
-    public int CreateSkillRun(int packId, int? projectId, string? title, string? inputsJson)
+    /// <summary>开一次运行。projectId/episodeId 决定产出往哪入库，不传就只跑文本不落业务表。</summary>
+    public int CreateSkillRun(int packId, int? projectId, int? episodeId, string? title, string? inputsJson)
     {
         using var conn = GetConn(); conn.Open();
         using var cmd = new SqlCommand(@"
-INSERT INTO DirectorSkillRuns(PackId, ProjectId, Title, InputsJson, Status)
-VALUES(@pk, @pid, @t, @i, 'running'); SELECT SCOPE_IDENTITY();", conn);
+INSERT INTO DirectorSkillRuns(PackId, ProjectId, EpisodeId, Title, InputsJson, Status)
+VALUES(@pk, @pid, @eid, @t, @i, 'running'); SELECT SCOPE_IDENTITY();", conn);
         cmd.Parameters.AddWithValue("@pk", packId);
         cmd.Parameters.AddWithValue("@pid", (object?)projectId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@eid", (object?)episodeId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@t", (object?)title ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@i", (object?)inputsJson ?? DBNull.Value);
         return Convert.ToInt32(cmd.ExecuteScalar());

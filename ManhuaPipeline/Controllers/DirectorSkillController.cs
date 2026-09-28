@@ -91,7 +91,8 @@ public class DirectorSkillController : ControllerBase
         {
             stageId = s.StageId, stageKey = s.StageKey, name = s.Name, sortOrder = s.SortOrder,
             docFilter = s.DocFilter, inputsJson = s.InputsJson, outputContract = s.OutputContract,
-            gates = s.Gates, humanConfirm = s.HumanConfirm, isEnabled = s.IsEnabled
+            gates = s.Gates, humanConfirm = s.HumanConfirm, isEnabled = s.IsEnabled,
+            outputTarget = s.OutputTarget
         }));
     }
 
@@ -107,7 +108,8 @@ public class DirectorSkillController : ControllerBase
             catch { return BadRequest(new { message = "输入表单不是合法 JSON" }); }
         }
         return _db.SaveSkillStage(stageId, body.Name.Trim(), body.DocFilter, body.InputsJson,
-                                  body.OutputContract, body.Gates, body.HumanConfirm, body.IsEnabled)
+                                  body.OutputContract, body.Gates, body.HumanConfirm, body.IsEnabled,
+                                  body.OutputTarget)
             ? Ok(new { ok = true })
             : NotFound(new { message = "阶段不存在" });
     }
@@ -121,5 +123,7 @@ public class DirectorSkillController : ControllerBase
         public string? Gates { get; set; }
         public bool HumanConfirm { get; set; }
         public bool IsEnabled { get; set; } = true;
+        /// <summary>产出落到哪：assets / asset_prompts / frames / prompts，留空则不入库。</summary>
+        public string? OutputTarget { get; set; }
     }
 }

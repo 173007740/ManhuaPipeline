@@ -123,6 +123,7 @@
 
     var curPack = null, curDocId = null, dirty = false, docs = [];
     var mode = 'docs', stages = [], runId = 0, steps = [];
+    var projects = [], projectsLoaded = false;
 
     $('#spTabs').on('click', '.sp-tab', function(){
         if (dirty && !confirm('当前内容没保存，确定要切换吗？')) return;
@@ -190,12 +191,74 @@
         $('#spList').off('click').on('click', '.sp-item', function(){ showStepOutput($(this).data('step')); });
     }
 
+    function loadProjects(cb){
+        $.get('/api/project', function(list){ projects = list || []; projectsLoaded = true; if (cb) cb(); })
+         .fail(function(){ projectsLoaded = true; if (cb) cb(); });
+    }
+
+    function loadEpisodes(pid){
+        var sel = $('#rEps');
+        if (!pid){ sel.html('<option value="">（不选则分镜不入库）</option>'); return; }
+        $.get('/api/project/' + pid + '/episode', function(list){
+            sel.html('<option value="">（不选则分镜不入库）</option>'
+              + (list || []).map(function(e){ return '<option value="' + e.episodeId + '">第' + e.episodeNumber + '集 ' + esc(e.title || '') + '</option>'; }).join(''));
+        }).fail(function(){ sel.html('<option value="">（读取失败）</option>'); });
+    }
+
+    // 按阶段的 InputsJson 渲染输入表单：字段定义在库里，加一项减一项不用改页面
+    function renderInputForm(){
+        var st = stages.filter(function(s){ return s.stageKey === $('#rStage').val(); })[0];
+        var fields = [];
+        try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; } catch (e) { fields = []; }
+        if (!fields.length){ $('#rForm').html(''); return; }
+
+        var h = '<div style="font-size:12px;color:#94a3b8;margin-bottom:6px">本阶段要收集 ' + fields.length + ' 项</div>';
+        fields.forEach(function(f){
+            h += '<div class="sp-field"><label>' + esc(f.label || f.key)
+               + (f.required ? ' <span style="color:#f87171">*</span>' : '')
+               + (f.tip ? ' <span class="sp-hint">' + esc(f.tip) + '</span>' : '') + '</label>';
+            var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"';
+            if (f.type === 'select')
+                h += '<select style="width:100%"' + k + '>' + (f.options || []).map(function(o){ return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
+            else if (f.type === 'textarea')
+                h += '<textarea' + k + '></textarea>';
+            else if (f.type === 'number')
+                h += '<input type="number" style="width:100%"' + k + '>';
+            else if (f.type === 'list')
+                h += '<input style="width:100%" placeholder="逗号分隔"' + k + '>';
+            else
+                h += '<input style="width:100%"' + k + '>';
+            h += '</div>';
+        });
+        $('#rForm').html(h);
+    }
+
+    function collectForm(){
+        var parts = [];
+        $('#rForm [data-fk]').each(function(){
+            var v = ($(this).val() || '').trim();
+            if (v) parts.push($(this).data('fl') + '：' + v);
+        });
+        return parts.join('\n');
+    }
+
     function renderRunPanel(){
-        var opts = stages.map(function(s){ return '<option value="' + esc(s.stageKey) + '">' + esc(s.stageKey) + ' · ' + esc(s.name) + '</option>'; }).join('');
+        if (!projectsLoaded){ loadProjects(renderRunPanel); return; }
+        var opts = stages.map(function(s){
+            return '<option value="' + esc(s.stageKey) + '">' + esc(s.stageKey) + ' · ' + esc(s.name)
+                 + (s.outputTarget ? '（产出→' + esc(s.outputTarget) + '）' : '') + '</option>';
+        }).join('');
+        var popts = '<option value="">（不入库，只跑文本）</option>'
+                  + projects.map(function(p){ return '<option value="' + p.projectId + '">' + esc(p.title) + '</option>'; }).join('');
         $('#spMain').html(
-            '<div class="sp-row"><label>阶段</label><select id="rStage" style="flex:0 0 260px">' + opts + '</select>'
+            '<div class="sp-row"><label>阶段</label><select id="rStage" style="flex:0 0 300px">' + opts + '</select>'
           + '<span class="sp-hint" id="rHint"></span></div>'
-          + '<div class="sp-field"><label>输入（该阶段要处理的素材：前提、剧本、清单…）</label>'
+          + '<div class="sp-row"><label>落到</label>'
+          +   '<select id="rProject" style="flex:0 0 200px">' + popts + '</select>'
+          +   '<select id="rEps" style="flex:0 0 200px"><option value="">（不选则分镜不入库）</option></select>'
+          +   '<span class="sp-hint">选了项目，产出才会写进资产/分镜/提示词表</span></div>'
+          + '<div id="rForm" style="margin-top:10px"></div>'
+          + '<div class="sp-field"><label>或直接粘贴原文（上面表单有内容时优先用表单）</label>'
           +   '<textarea class="tall" id="rInput"></textarea></div>'
           + '<div class="sp-actions">'
           +   '<button class="btn" id="btnPreview">预览开销</button>'
@@ -204,8 +267,11 @@
           + '<div id="rPreview" style="margin-top:10px"></div>'
           + '<div id="rOutput" style="margin-top:12px"></div>'
         );
+        $('#rStage').change(function(){ renderInputForm(); $('#rPreview,#rOutput').empty(); });
+        $('#rProject').change(function(){ loadEpisodes($(this).val()); });
         $('#btnPreview').click(previewRun);
         $('#btnRun').click(doRun);
+        renderInputForm();
         loadSteps();
     }
 
@@ -245,18 +311,23 @@
         if (runId) { cb(); return; }
         $.ajax({
             url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json',
-            data: JSON.stringify({ packId: curPack.packId, title: curPack.name })
+            data: JSON.stringify({
+                packId: curPack.packId, title: curPack.name,
+                projectId: $('#rProject').val() ? +$('#rProject').val() : null,
+                episodeId: $('#rEps').val() ? +$('#rEps').val() : null
+            })
         }).done(function(d){ runId = d.runId; cb(); });
     }
 
     function doRun(){
-        if (!$('#rInput').val().trim()){ alert('先填输入内容'); return; }
+        var txt = collectForm() || $('#rInput').val();
+        if (!txt.trim()){ alert('先填输入内容'); return; }
         $('#btnRun').prop('disabled', true).text('执行中...');
         $('#rOutput').html('<div class="sp-empty">LLM 生成中，长文本可能要一两分钟...</div>');
         ensureRun(function(){
             $.ajax({
                 url: '/api/director-agent/runs/' + runId + '/steps', method: 'POST', contentType: 'application/json',
-                data: JSON.stringify({ stageKey: $('#rStage').val(), inputText: $('#rInput').val() })
+                data: JSON.stringify({ stageKey: $('#rStage').val(), inputText: txt })
             }).done(function(r){
                 var h = '<div style="border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px">';
                 h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">状态 ' + esc(r.status)
@@ -271,6 +342,10 @@
                 } else if (r.gates) {
                     h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">门禁：' + esc(r.gates) + '</div>';
                 }
+                if (r.importError)
+                    h += '<div style="font-size:12px;color:#fb923c;margin-bottom:8px">入库：' + esc(r.importError) + '</div>';
+                else if (r.imported > 0)
+                    h += '<div style="font-size:12px;color:#4ade80;margin-bottom:8px">✓ 已入库 ' + r.imported + ' 条</div>';
                 h += '<textarea class="tall" style="min-height:300px;margin-top:8px" readonly>' + esc(r.output || '') + '</textarea></div>';
                 $('#rOutput').html(h);
                 $('#btnConfirm').click(function(){ confirmStep($(this).data('step')); });
@@ -332,6 +407,8 @@
           +   '<textarea id="sOutput">' + esc(s.outputContract||'') + '</textarea></div>'
           + '<div class="sp-field"><label>门禁规则</label>'
           +   '<textarea id="sGates">' + esc(s.gates||'') + '</textarea></div>'
+          + '<div class="sp-field"><label>产出落到哪（assets / asset_prompts / frames / prompts，留空=不入库）</label>'
+          +   '<input style="width:100%" id="sTarget" value="' + esc(s.outputTarget||'') + '"></div>'
           + '<div class="sp-actions">'
           +   '<label class="sp-check"><input type="checkbox" id="sConfirm"' + (s.humanConfirm?' checked':'') + '> 人工确认后才放行（硬门禁）</label>'
           +   '<label class="sp-check"><input type="checkbox" id="sEnabled"' + (s.isEnabled?' checked':'') + '> 启用</label>'
@@ -340,7 +417,7 @@
           +   '<span class="sp-hint" id="spHint"></span>'
           + '</div>'
         );
-        $('#sInputs,#sOutput,#sGates,#sFilter,#sName').on('input', function(){
+        $('#sInputs,#sOutput,#sGates,#sFilter,#sName,#sTarget').on('input', function(){
             if (!dirty){ dirty = true; setHint('● 已改动，未保存', 'dirty'); }
         });
         $('#sConfirm,#sEnabled').change(function(){
@@ -364,7 +441,8 @@
                 outputContract: $('#sOutput').val(),
                 gates: $('#sGates').val(),
                 humanConfirm: $('#sConfirm').is(':checked'),
-                isEnabled: $('#sEnabled').is(':checked')
+                isEnabled: $('#sEnabled').is(':checked'),
+                outputTarget: $('#sTarget').val()
             })
         }).done(function(){
             dirty = false; setHint('✓ 已保存', 'ok');

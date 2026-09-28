@@ -56,7 +56,7 @@ public class DirectorAgentController : ControllerBase
     public IActionResult CreateRun([FromBody] CreateRunBody body)
     {
         if (GetUserId() == 0) return Unauthorized();
-        var id = _db.CreateSkillRun(body.PackId, body.ProjectId, body.Title, body.InputsJson);
+        var id = _db.CreateSkillRun(body.PackId, body.ProjectId, body.EpisodeId, body.Title, body.InputsJson);
         return Ok(new { runId = id });
     }
 
@@ -72,7 +72,7 @@ public class DirectorAgentController : ControllerBase
             {
                 stepId = r.StepId, stageKey = r.StageKey, status = r.Status,
                 output = r.Output, promptChars = r.PromptChars, estTokens = r.EstTokens,
-                gates = r.Gates, cost = Cost(r.Cost)
+                gates = r.Gates, cost = Cost(r.Cost), imported = r.Imported, importError = r.ImportError
             });
         }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }
@@ -129,6 +129,7 @@ public class DirectorAgentController : ControllerBase
     {
         public int PackId { get; set; }
         public int? ProjectId { get; set; }
+        public int? EpisodeId { get; set; }
         public string? Title { get; set; }
         public string? InputsJson { get; set; }
     }

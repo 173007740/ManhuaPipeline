@@ -20,11 +20,13 @@ public class DirectorAgentService
 {
     private readonly DbService _db;
     private readonly LLMService _llm;
+    private readonly SkillOutputImporter _importer;
     private readonly ILogger<DirectorAgentService> _log;
 
-    public DirectorAgentService(DbService db, LLMService llm, ILogger<DirectorAgentService> log)
+    public DirectorAgentService(DbService db, LLMService llm, SkillOutputImporter importer,
+                                ILogger<DirectorAgentService> log)
     {
-        _db = db; _llm = llm; _log = log;
+        _db = db; _llm = llm; _importer = importer; _log = log;
     }
 
     // ========== 1. 拼 prompt ==========
@@ -73,6 +75,14 @@ public class DirectorAgentService
             sb.AppendLine();
             sb.AppendLine("## 本阶段门禁（不满足就不要产出，直接指出卡在哪）");
             sb.AppendLine(stage.Gates);
+        }
+        // 产出要入库的阶段，顺便要求 LLM 附一个 json 块：解析就不用猜格式，这是可靠与能跑的分界线
+        var schema = SkillOutputImporter.OutputSchemaFor(stage.OutputTarget);
+        if (schema != null)
+        {
+            sb.AppendLine();
+            sb.AppendLine("## 结构化输出（除正文外必须附）");
+            sb.AppendLine(schema);
         }
         sb.AppendLine();
         sb.AppendLine("# 行业规则（skills 库）");
@@ -145,7 +155,7 @@ public class DirectorAgentService
     // ========== 3. 真正跑一步 ==========
 
     public sealed record StepResult(int StepId, string StageKey, string Status, string? Output, int PromptChars,
-                                    int EstTokens, string? Gates, StepCost Cost);
+                                    int EstTokens, string? Gates, StepCost Cost, int Imported, string? ImportError);
 
     public async Task<StepResult> RunStepAsync(int userId, int runId, string stageKey, string inputText)
     {
@@ -172,10 +182,23 @@ public class DirectorAgentService
                                            jsonMode: false, temperature: 0.7, thinkingMode: cfg.ThinkingMode);
             var json = TryExtractJson(raw);
             var status = stage.HumanConfirm ? "await_confirm" : "done";
+
+            // 入库放在落原始产出之后：原文先存住，解析失败也不至于丢东西，事后还能回灌
+            int imported = 0;
+            string? importError = null;
+            if (!string.IsNullOrWhiteSpace(stage.OutputTarget))
+            {
+                var (projectId, episodeId) = _db.GetRunContext(runId);
+                var res = _importer.Import(stage.OutputTarget!, json, raw, projectId, episodeId);
+                imported = res.Count;
+                importError = res.Error;
+            }
+
             _db.FinishSkillStep(stepId, status, raw, json, null);
+            _db.SetStepImport(stepId, imported, importError);
             _db.UpdateSkillRun(runId, stageKey, stage.HumanConfirm ? "await_confirm" : "running");
             return new StepResult(stepId, stageKey, status, raw, build.Chars,
-                                  EstimateTokens(sys), stage.Gates, cost);
+                                  EstimateTokens(sys), stage.Gates, cost, imported, importError);
         }
         catch (Exception ex)
         {

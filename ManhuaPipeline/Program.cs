@@ -86,6 +86,8 @@ builder.Services.AddScoped<PostOverlayPlanService>();
 builder.Services.AddScoped<KeyframePlanService>();
 // Skill 包执行引擎：按库里的阶段定义跑，不认业务概念
 builder.Services.AddScoped<DirectorAgentService>();
+// 产出入库：认识产出格式的那层，引擎只按数据里的 OutputTarget 找到它
+builder.Services.AddScoped<SkillOutputImporter>();
 
 var app = builder.Build();
 
