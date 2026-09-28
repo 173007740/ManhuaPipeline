@@ -66,8 +66,11 @@ def main():
     st = None
     for r in rows("SELECT StageKey, Name, SortOrder, DocFilter, InputsJson, OutputContract, Gates, HumanConfirm "
                   "FROM DirectorSkillStages WHERE PackId=? AND StageKey=?", (args.pack, args.stage)):
+        # pyodbc 把 bit 读成 bool，str() 后是 'True'；C# 那边是 GetBoolean，两边都要判对，
+        # 否则 HumanConfirm 恒为假，硬门禁就被静默绕过了
         st = dict(stageKey=r[0], name=r[1], sortOrder=int(r[2]), docFilter=r[3] or '',
-                  inputsJson=r[4] or '', output=r[5] or '', gates=r[6] or '', humanConfirm=(r[7] == '1'))
+                  inputsJson=r[4] or '', output=r[5] or '', gates=r[6] or '',
+                  humanConfirm=str(r[7]).lower() in ('1', 'true'))
     if not st:
         sys.exit('阶段不存在：%s' % args.stage)
 
