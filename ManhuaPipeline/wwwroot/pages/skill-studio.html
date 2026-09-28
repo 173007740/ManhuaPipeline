@@ -101,6 +101,11 @@
           <select id="eps" style="flex:0 0 190px"></select>
           <label style="min-width:auto">从</label>
           <select id="startStage" style="flex:0 0 230px"></select>
+          <label style="min-width:auto">提示词</label>
+          <select id="promptType" style="flex:0 0 210px">
+            <option>SD（Seedance·火山方舟）</option>
+            <option>H3（MiniMax·本地 ComfyUI）</option>
+          </select>
           <button class="btn" id="btnStart">▶ 开始跑</button>
           <button class="btn ghost" id="btnNew">↻ 新开一次</button>
           <span class="hint" id="stateHint"></span>
@@ -172,23 +177,31 @@
     if (t) say('产出将落到《' + t.title + '》');
   }
 
-  // 起始阶段的输入表单：字段定义在库里（Stages.InputsJson），加一项减一项不用改页面
+  // 起始阶段的输入表单：字段定义在库里（Stages.InputsJson），加一项减一项不用改页面。
+  // 预填顺序：上次填过的 > 字段自带的 default > 空。
+  // 画幅/交付形态/目标平台这类参数一部剧定一次就够了，不该每次跑都手填一遍。
   function renderForm(){
-    var st = stages.filter(function(s){ return s.stageKey === $('#startStage').val(); })[0];
+    var key = $('#startStage').val();
+    var st = stages.filter(function(s){ return s.stageKey === key; })[0];
     var fields = [];
     try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; } catch (e) { fields = []; }
     if (!fields.length){ $('#form').html('<div class="hint">本阶段没有要收集的字段</div>'); return; }
-    var h = '<div class="hint" style="margin-bottom:6px">' + esc(st.stageKey) + ' 要收集 ' + fields.length + ' 项</div>';
+    var saved = {};
+    try { saved = JSON.parse(localStorage.getItem('skillStudioForm_' + key) || '{}'); } catch (e) { saved = {}; }
+    var h = '<div class="hint" style="margin-bottom:6px">' + esc(st.stageKey) + ' 要收集 ' + fields.length + ' 项'
+          + '（画幅/交付/平台/集数/时长已预填默认值，想改再改）</div>';
     fields.forEach(function(f){
+      var v = saved[f.key] != null ? saved[f.key] : (f.default || '');
       h += '<div class="field"><label>' + esc(f.label || f.key) + (f.required ? ' <span style="color:#f87171">*</span>' : '')
          + (f.tip ? ' <span class="hint">' + esc(f.tip) + '</span>' : '') + '</label>';
       var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"';
       if (f.type === 'select')
-        h += '<select style="width:100%"' + k + '>' + (f.options || []).map(function(o){ return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
-      else if (f.type === 'textarea') h += '<textarea' + k + '></textarea>';
-      else if (f.type === 'number') h += '<input type="number" style="width:100%"' + k + '>';
-      else if (f.type === 'list') h += '<input style="width:100%" placeholder="逗号分隔"' + k + '>';
-      else h += '<input style="width:100%"' + k + '>';
+        h += '<select style="width:100%"' + k + '>' + (f.options || []).map(function(o){
+          return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
+      else if (f.type === 'textarea') h += '<textarea' + k + '>' + esc(v) + '</textarea>';
+      else if (f.type === 'number') h += '<input type="number" style="width:100%" value="' + esc(v) + '"' + k + '>';
+      else if (f.type === 'list') h += '<input style="width:100%" placeholder="逗号分隔" value="' + esc(v) + '"' + k + '>';
+      else h += '<input style="width:100%" value="' + esc(v) + '"' + k + '>';
       h += '</div>';
     });
     $('#form').html(h);
@@ -285,10 +298,18 @@
   $('#btnStart').click(function(){
     var txt = collectInput();
     if (!txt.trim()){ alert('先填设定（上面表单或补充原文）'); return; }
+
+    // 记住这次填的：下次进来直接预填，技术参数不用一遍遍重填
+    var form = {};
+    $('#form [data-fk]').each(function(){ form[$(this).data('fk')] = $(this).val(); });
+    localStorage.setItem('skillStudioForm_' + $('#startStage').val(), JSON.stringify(form));
+
     var payload = {
       packId: pack.packId, title: pack.name,
       projectId: $('#proj').val() ? +$('#proj').val() : null,
-      episodeId: $('#eps').val() ? +$('#eps').val() : null
+      episodeId: $('#eps').val() ? +$('#eps').val() : null,
+      // 提示词类型属于整次运行：P4 是自动串下来的，不会停下来让人再选一次
+      inputsJson: JSON.stringify({ promptType: $('#promptType').val() })
     };
     $('#btnStart').prop('disabled', true).text('启动中...');
     $.ajax({ url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json', data: JSON.stringify(payload) })

@@ -1,5 +1,6 @@
 using System.Text;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 
 namespace ManhuaPipeline.Services;
 
@@ -241,6 +242,19 @@ public class DirectorAgentService
         var cfg = _db.GetActiveConfig(userId, string.IsNullOrWhiteSpace(provider) ? "deepseek" : provider)
                   ?? throw new InvalidOperationException("没有可用的 LLM 配置，先去系统配置里配一个");
 
+        // 运行级参数注入：页面顶部选的提示词类型要跟着这次运行走到 P4——
+        // P4 是自动串下来的，不会停下来让人再选一次，所以类型得由这次运行带着走。
+        if (!string.IsNullOrWhiteSpace(stage.InputsJson) && stage.InputsJson!.Contains("promptType")
+            && !inputText.Contains("提示词类型"))
+        {
+            var runIn = _db.GetRunInputsJson(runId);
+            if (!string.IsNullOrWhiteSpace(runIn))
+            {
+                var m = Regex.Match(runIn!, "\"promptType\"\\s*:\\s*\"([^\"]+)\"");
+                if (m.Success) inputText += "\n提示词类型：" + m.Groups[1].Value;
+            }
+        }
+
         var build = BuildPrompt(packId, stage);
         var cost = CostOf(packId, stage);
         int stepId = _db.CreateSkillStep(runId, stage.StageKey, stage.Name, stage.SortOrder,
@@ -261,7 +275,7 @@ public class DirectorAgentService
             if (!string.IsNullOrWhiteSpace(stage.OutputTarget))
             {
                 var ctx = _db.GetRunContext(runId);
-                var res = _importer.Import(stage.OutputTarget!, json, raw, ctx.ProjectId, ctx.EpisodeId);
+                var res = _importer.Import(stage.OutputTarget!, json, raw, ctx.ProjectId, ctx.EpisodeId, inputText);
                 imported = res.Count;
                 importError = res.Error;
             }

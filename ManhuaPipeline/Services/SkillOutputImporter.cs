@@ -49,7 +49,7 @@ public class SkillOutputImporter
     };
 
     public ImportResult Import(string target, string? outputJson, string? outputText,
-                               int projectId, int episodeId)
+                               int projectId, int episodeId, string? inputText = null)
     {
         if (projectId <= 0)
             return new ImportResult(0, "本次运行没绑定项目，只留文本不入库");
@@ -61,7 +61,7 @@ public class SkillOutputImporter
                 "assets" => ImportAssets(outputJson, outputText, projectId),
                 "asset_prompts" => ImportAssetPrompts(outputJson, outputText, projectId),
                 "frames" => ImportFrames(outputJson, outputText, projectId, episodeId),
-                "prompts" => ImportPrompts(outputText ?? "", projectId),
+                "prompts" => ImportPrompts(outputText ?? "", projectId, inputText),
                 _ => new ImportResult(0, null)
             };
         }
@@ -258,7 +258,7 @@ public class SkillOutputImporter
 
     // ========== 投喂提示词（P4）==========
 
-    private ImportResult ImportPrompts(string outputText, int projectId)
+    private ImportResult ImportPrompts(string outputText, int projectId, string? inputText)
     {
         if (string.IsNullOrWhiteSpace(outputText)) return new ImportResult(0, "产出为空");
 
@@ -273,10 +273,37 @@ public class SkillOutputImporter
 
         // 按镜头原地覆盖：保留 PromptId、参考图绑定与成片，只换内容列，重跑不会越积越多
         foreach (var g in prompts.GroupBy(p => (p.UnitName ?? "", p.ShotLabel ?? "")))
-            _db.UpsertSeedancePromptsForShot(projectId, g.Key.Item1, g.Key.Item2, g.ToList());
+        {
+            var rows = g.ToList();
+            if (IsH3(inputText))
+            {
+                // H3 与 SD 共用一条记录、分列存放：正文搬到 PromptTextH3，SD 那列留着不动
+                foreach (var p in rows) { p.PromptTextH3 = ToH3Refs(p.PromptText); p.PromptText = ""; }
+                _db.UpsertH3PromptsForShot(projectId, g.Key.Item1, g.Key.Item2, rows);
+            }
+            else
+            {
+                _db.UpsertSeedancePromptsForShot(projectId, g.Key.Item1, g.Key.Item2, rows);
+            }
+        }
 
         return new ImportResult(prompts.Count, null);
     }
+
+    /// <summary>
+    /// 提示词类型写在这一步的输入里（P4 表单选的，或页面顶部选好带过来的），不靠猜产出文本。
+    /// SD 与 H3 的差别是两套写法：@图N vs @图片N、有没有 model= 行 —— 猜产出不可靠。
+    /// </summary>
+    private static bool IsH3(string? inputText)
+    {
+        if (string.IsNullOrWhiteSpace(inputText)) return false;
+        var m = Regex.Match(inputText, @"提示词类型\s*[:：]\s*(\S+)");
+        return m.Success && m.Groups[1].Value.Contains("H3", StringComparison.OrdinalIgnoreCase);
+    }
+
+    /// <summary>SD 写 @图N，H3 写 @图片N。解析器不关心这个，差别只在模型认哪种写法。</summary>
+    private static string ToH3Refs(string? text) =>
+        string.IsNullOrWhiteSpace(text) ? "" : Regex.Replace(text, @"@图(\d+)", "@图片$1");
 
     // ========== 小工具 ==========
 

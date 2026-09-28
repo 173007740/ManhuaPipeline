@@ -1,4 +1,5 @@
 using Microsoft.Data.SqlClient;
+using ManhuaPipeline.Models;
 
 namespace ManhuaPipeline.Services;
 
@@ -20,6 +21,72 @@ public partial class DbService
         using var r = cmd.ExecuteReader();
         if (!r.Read()) return (0, 0);
         return (r.IsDBNull(0) ? 0 : r.GetInt32(0), r.IsDBNull(1) ? 0 : r.GetInt32(1));
+    }
+
+    /// <summary>这次运行级别的输入（如页面顶部选的提示词类型）。跟着整次运行走，不属于任何单步。</summary>
+    public string? GetRunInputsJson(int runId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT InputsJson FROM DirectorSkillRuns WHERE RunId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", runId);
+        var v = cmd.ExecuteScalar();
+        return v is null or DBNull ? null : (string?)v;
+    }
+
+    /// <summary>
+    /// 按镜头覆盖 H3 提示词，只动 PromptTextH3，绝不碰 PromptText。
+    /// SD 和 H3 是同一条记录的两列、各存各的；拿 SD 的 upsert 写 H3 会把 SD 正文清空。
+    /// </summary>
+    public void UpsertH3PromptsForShot(int projectId, string? unitName, string? shotLabel, List<SeedancePrompt> rows)
+    {
+        if (rows == null || rows.Count == 0) return;
+        using var conn = GetConn(); conn.Open(); using var txn = conn.BeginTransaction();
+        try
+        {
+            var existingIds = new List<int>();
+            using (var q = new SqlCommand("SELECT PromptId FROM SeedancePrompts WHERE ProjectId=@pid AND UnitName=@un AND ShotLabel=@sl ORDER BY PromptId", conn, txn))
+            {
+                q.Parameters.AddWithValue("@pid", projectId);
+                q.Parameters.AddWithValue("@un", (object?)unitName ?? DBNull.Value);
+                q.Parameters.AddWithValue("@sl", (object?)shotLabel ?? DBNull.Value);
+                using var r = q.ExecuteReader();
+                while (r.Read()) existingIds.Add((int)r["PromptId"]);
+            }
+
+            var min = Math.Min(existingIds.Count, rows.Count);
+            for (int i = 0; i < min; i++)
+            {
+                using var upd = new SqlCommand("UPDATE SeedancePrompts SET PromptTextH3=@h3, ShotType=@stt, Duration=@dur WHERE PromptId=@id", conn, txn);
+                upd.Parameters.AddWithValue("@h3", rows[i].PromptTextH3 ?? "");
+                upd.Parameters.AddWithValue("@stt", (object?)rows[i].ShotType ?? DBNull.Value);
+                upd.Parameters.AddWithValue("@dur", rows[i].Duration);
+                upd.Parameters.AddWithValue("@id", existingIds[i]);
+                upd.ExecuteNonQuery();
+            }
+
+            // 多出来的行新建：PromptText 留空，等 SD 那边生成时填，这里只写 H3 列
+            for (int i = existingIds.Count; i < rows.Count; i++)
+            {
+                var p = rows[i];
+                using var ins = new SqlCommand(@"INSERT INTO SeedancePrompts(ProjectId,FrameId,PromptText,PromptTextH3,NegativePrompt,Status,BatchNumber,EpisodeNumber,UnitName,ShotLabel,ShotType,Duration,CreatedAt)
+VALUES(@pid,@fid,'',@h3,@np,@st,@bn,@en,@un,@sl,@stt,@dur,GETDATE())", conn, txn);
+                ins.Parameters.AddWithValue("@pid", projectId);
+                ins.Parameters.AddWithValue("@fid", (object?)p.FrameId ?? DBNull.Value);
+                ins.Parameters.AddWithValue("@h3", p.PromptTextH3 ?? "");
+                ins.Parameters.AddWithValue("@np", (object?)p.NegativePrompt ?? DBNull.Value);
+                ins.Parameters.AddWithValue("@st", p.Status);
+                ins.Parameters.AddWithValue("@bn", p.BatchNumber);
+                ins.Parameters.AddWithValue("@en", p.EpisodeNumber);
+                ins.Parameters.AddWithValue("@un", (object?)p.UnitName ?? DBNull.Value);
+                ins.Parameters.AddWithValue("@sl", (object?)p.ShotLabel ?? DBNull.Value);
+                ins.Parameters.AddWithValue("@stt", (object?)p.ShotType ?? DBNull.Value);
+                ins.Parameters.AddWithValue("@dur", p.Duration);
+                ins.ExecuteNonQuery();
+            }
+
+            txn.Commit();
+        }
+        catch { txn.Rollback(); throw; }
     }
 
     /// <summary>资产类别前缀 → 表名。AUD（声音）不出图也没有表，返回空串由调用方跳过。</summary>
