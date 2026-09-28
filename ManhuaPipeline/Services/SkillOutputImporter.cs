@@ -173,8 +173,11 @@ public class SkillOutputImporter
 
     private ImportResult ImportFrames(string? outputJson, string? outputText, int projectId, int episodeId)
     {
+        // 没选集就落到第一集（一集都没有就先建一集）：
+        // 剧集是阶段 3 才产出的，但流水线能直接产出分镜，不能因为没分集就让这一步白跑
+        if (episodeId <= 0) episodeId = _db.EnsureFirstEpisode(projectId);
         if (episodeId <= 0)
-            return new ImportResult(0, "本次运行没绑定剧集，分镜必须挂在具体某一集下，未入库");
+            return new ImportResult(0, "没找到可落的剧集，分镜必须挂在具体某一集下，未入库");
 
         var frames = new List<StoryboardFrame>();
         var epNo = _db.GetEpisodeNumber(episodeId);

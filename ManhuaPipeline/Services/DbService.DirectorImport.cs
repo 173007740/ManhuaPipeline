@@ -89,6 +89,32 @@ VALUES(@pid,@fid,'',@h3,@np,@st,@bn,@en,@un,@sl,@stt,@dur,GETDATE())", conn, txn
         catch { txn.Rollback(); throw; }
     }
 
+    /// <summary>
+    /// 取项目下的第一集；一集都没有就先建一集再返回。
+    /// 剧集本来是阶段 3（分集蓝图）才产出的，但流水线可以直接产出分镜——
+    /// 不能因为「还没分集」就让分镜没地方落，那这一步等于白跑。
+    /// </summary>
+    public int EnsureFirstEpisode(int projectId)
+    {
+        if (projectId <= 0) return 0;
+        using var conn = GetConn(); conn.Open();
+        using (var q = new SqlCommand("SELECT TOP 1 EpisodeId FROM Episodes WHERE ProjectId=@p ORDER BY EpisodeNumber, EpisodeId", conn))
+        {
+            q.Parameters.AddWithValue("@p", projectId);
+            var v = q.ExecuteScalar();
+            if (v is not null and not DBNull) return Convert.ToInt32(v);
+        }
+        using (var ins = new SqlCommand(@"
+INSERT INTO Episodes(ProjectId, UserId, EpisodeNumber, Title, SortOrder, CreatedAt, BatchNumber)
+SELECT @p, UserId, 1, N'第1集', 1, SYSDATETIME(), 1 FROM Projects WHERE ProjectId=@p;
+SELECT SCOPE_IDENTITY();", conn))
+        {
+            ins.Parameters.AddWithValue("@p", projectId);
+            var v = ins.ExecuteScalar();
+            return v is null or DBNull ? 0 : Convert.ToInt32(v);
+        }
+    }
+
     /// <summary>资产类别前缀 → 表名。AUD（声音）不出图也没有表，返回空串由调用方跳过。</summary>
     public static string AssetTableOf(string? category) => (category ?? "").ToUpperInvariant() switch
     {

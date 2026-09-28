@@ -161,9 +161,15 @@
   function loadEpisodes(pid){
     if (!pid){ $('#eps').html('<option value="">（先选项目）</option>'); return; }
     $.get('/api/project/' + pid + '/episode', function(list){
-      $('#eps').html('<option value="">（不选则分镜不入库）</option>'
-        + (list || []).map(function(e){ return '<option value="' + e.episodeId + '">第' + e.episodeNumber + '集 ' + esc(e.title || '') + '</option>'; }).join(''));
-      if (list && list.length === 1) $('#eps').val(list[0].episodeId);   // 只有一集就不用选了
+      if (!list || !list.length){
+        // 剧集是阶段 3（分集蓝图）才产出的，很多项目跑到分镜时还没分集——
+        // 与其让他卡在一个空下拉前，不如说清楚：不挑也会自动建第 1 集接着跑
+        $('#eps').html('<option value="">（该剧还没分集，入库时自动建第 1 集）</option>');
+        return;
+      }
+      $('#eps').html('<option value="">（不挑，自动落到第 1 集）</option>'
+        + list.map(function(e){ return '<option value="' + e.episodeId + '">第' + e.episodeNumber + '集 ' + esc(e.title || '') + '</option>'; }).join(''));
+      if (list.length === 1) $('#eps').val(list[0].episodeId);   // 只有一集就不用选了
     });
   }
 
