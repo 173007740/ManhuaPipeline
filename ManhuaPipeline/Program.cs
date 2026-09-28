@@ -84,6 +84,8 @@ builder.Services.AddScoped<ContinuityExtractionService>();
 builder.Services.AddScoped<PostOverlayPlanService>();
 // L3 关键帧层：每剧情节点一张（8-16 张/集），人工触发生成（见 Database\Upgrade_关键帧层.sql）
 builder.Services.AddScoped<KeyframePlanService>();
+// Skill 包执行引擎：按库里的阶段定义跑，不认业务概念
+builder.Services.AddScoped<DirectorAgentService>();
 
 var app = builder.Build();
 

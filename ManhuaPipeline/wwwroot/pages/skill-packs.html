@@ -100,6 +100,7 @@
     <div class="sp-tabs" id="spTabs">
       <button class="sp-tab active" data-mode="docs">规则文档</button>
       <button class="sp-tab" data-mode="stages">阶段编排</button>
+      <button class="sp-tab" data-mode="run">试跑</button>
       <span style="font-size:12px;color:#64748b;margin-left:6px" id="spTabTip">每份规则说什么</span>
     </div>
 
@@ -121,16 +122,17 @@
     var SCOPE_NAME  = { always:'常驻加载', stage:'按阶段加载', when:'按条件加载', ref:'备查 · 不加载' };
 
     var curPack = null, curDocId = null, dirty = false, docs = [];
-    var mode = 'docs', stages = [];
+    var mode = 'docs', stages = [], runId = 0, steps = [];
 
     $('#spTabs').on('click', '.sp-tab', function(){
         if (dirty && !confirm('当前内容没保存，确定要切换吗？')) return;
         mode = $(this).data('mode'); dirty = false; curDocId = null;
         $('#spTabs .sp-tab').removeClass('active');
         $(this).addClass('active');
-        $('#spTabTip').text(mode === 'docs' ? '每份规则说什么' : '跑到哪一步、每步要什么、产出什么、什么条件放行');
+        $('#spTabTip').text(mode === 'docs' ? '每份规则说什么' : mode === 'stages' ? '跑到哪一步、每步要什么、产出什么、什么条件放行' : '真跑一遍，跑之前先看烧多少');
         renderList(docs);
-        $('#spMain').html('<div class="sp-empty">← 左侧选一条' + (mode === 'docs' ? '规则文档' : '阶段') + '查看或编辑</div>');
+        if (mode === 'run') renderRunPanel();
+        else $('#spMain').html('<div class="sp-empty">← 左侧选一条' + (mode === 'docs' ? '规则文档' : '阶段') + '查看或编辑</div>');
     });
 
     function setHint(txt, cls){
@@ -150,6 +152,7 @@
 
     function renderList(list){
         if (mode === 'stages'){ renderStageList(); return; }
+        if (mode === 'run'){ renderRunList(); return; }
         var html = '';
         SCOPE_ORDER.forEach(function(sc){
             var g = list.filter(function(d){ return d.scope === sc; });
@@ -165,6 +168,117 @@
         });
         $('#spList').html(html || '<div class="sp-empty">没有文档</div>');
         $('#spList').off('click').on('click', '.sp-item', function(){ openDoc($(this).data('id')); });
+    }
+
+    function loadSteps(){
+        if (!runId){ steps = []; renderRunList(); return; }
+        $.get('/api/director-agent/runs/' + runId, function(d){
+            steps = d.steps || []; renderRunList();
+        });
+    }
+
+    function renderRunList(){
+        var html = '<div class="sp-group"><div class="sp-group-h"><span>本次运行</span><span>' + (runId ? '#' + runId : '未开始') + '</span></div>';
+        (steps || []).forEach(function(s){
+            html += '<div class="sp-item" data-step="' + s.stepId + '">'
+                  + '<span class="nm">' + esc(s.stageKey) + ' ' + esc(s.name || '') + '</span>'
+                  + '<span class="kb">' + esc(s.status) + '</span></div>';
+        });
+        if (!steps.length) html += '<div class="sp-empty">还没跑过，右边选阶段执行</div>';
+        html += '</div>';
+        $('#spList').html(html);
+        $('#spList').off('click').on('click', '.sp-item', function(){ showStepOutput($(this).data('step')); });
+    }
+
+    function renderRunPanel(){
+        var opts = stages.map(function(s){ return '<option value="' + esc(s.stageKey) + '">' + esc(s.stageKey) + ' · ' + esc(s.name) + '</option>'; }).join('');
+        $('#spMain').html(
+            '<div class="sp-row"><label>阶段</label><select id="rStage" style="flex:0 0 260px">' + opts + '</select>'
+          + '<span class="sp-hint" id="rHint"></span></div>'
+          + '<div class="sp-field"><label>输入（该阶段要处理的素材：前提、剧本、清单…）</label>'
+          +   '<textarea class="tall" id="rInput"></textarea></div>'
+          + '<div class="sp-actions">'
+          +   '<button class="btn" id="btnPreview">预览开销</button>'
+          +   '<button class="btn ghost" id="btnRun">执行</button>'
+          + '</div>'
+          + '<div id="rPreview" style="margin-top:10px"></div>'
+          + '<div id="rOutput" style="margin-top:12px"></div>'
+        );
+        $('#btnPreview').click(previewRun);
+        $('#btnRun').click(doRun);
+        loadSteps();
+    }
+
+    function previewRun(){
+        $('#rPreview').html('计算中...');
+        $.ajax({
+            url: '/api/director-agent/preview', method: 'POST', contentType: 'application/json',
+            data: JSON.stringify({ packId: curPack.packId, stageKey: $('#rStage').val() })
+        }).done(function(p){
+            var docs = (p.docs || []).map(function(d){ return '<div>' + esc(d.title) + ' <span class="sp-hint">' + d.chars + '字</span></div>'; }).join('');
+            $('#rPreview').html(
+                '<div style="border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px;background:rgba(15,23,42,.5)">'
+              + '<div style="font-size:13px;color:#e2e8f0;margin-bottom:6px">本次将加载 ' + (p.docs||[]).length + ' 份规则，prompt 共 '
+              + p.promptChars + ' 字符，约 <b style="color:#f59e0b">' + p.estTokens + '</b> token'
+              + (p.humanConfirm ? '（跑完停在人工确认）' : '') + '</div>'
+              + '<div style="max-height:180px;overflow:auto;font-size:12px;color:#94a3b8">' + docs + '</div>'
+              + '</div>');
+        }).fail(function(xhr){
+            $('#rPreview').html('<span class="sp-hint">预览失败：' + esc((xhr.responseJSON && xhr.responseJSON.message) || '') + '</span>');
+        });
+    }
+
+    function ensureRun(cb){
+        if (runId) { cb(); return; }
+        $.ajax({
+            url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json',
+            data: JSON.stringify({ packId: curPack.packId, title: curPack.name })
+        }).done(function(d){ runId = d.runId; cb(); });
+    }
+
+    function doRun(){
+        if (!$('#rInput').val().trim()){ alert('先填输入内容'); return; }
+        $('#btnRun').prop('disabled', true).text('执行中...');
+        $('#rOutput').html('<div class="sp-empty">LLM 生成中，长文本可能要一两分钟...</div>');
+        ensureRun(function(){
+            $.ajax({
+                url: '/api/director-agent/runs/' + runId + '/steps', method: 'POST', contentType: 'application/json',
+                data: JSON.stringify({ stageKey: $('#rStage').val(), inputText: $('#rInput').val() })
+            }).done(function(r){
+                var h = '<div style="border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px">';
+                h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">状态 ' + esc(r.status)
+                   + ' · prompt ' + r.promptChars + ' 字符 · 约 ' + r.estTokens + ' token</div>';
+                if (r.gates) h += '<div style="font-size:12px;color:#fb923c;margin-bottom:8px">门禁：' + esc(r.gates) + '</div>';
+                if (r.status === 'await_confirm')
+                    h += '<button class="btn" id="btnConfirm" data-step="' + r.stepId + '">确认放行</button>';
+                h += '<textarea class="tall" style="min-height:300px;margin-top:8px" readonly>' + esc(r.output || '') + '</textarea></div>';
+                $('#rOutput').html(h);
+                $('#btnConfirm').click(function(){ confirmStep($(this).data('step')); });
+                loadSteps();
+            }).fail(function(xhr){
+                var m = (xhr.responseJSON && xhr.responseJSON.message) || '执行失败';
+                $('#rOutput').html('<div class="sp-empty" style="color:#f87171">' + esc(m) + '</div>');
+            }).always(function(){
+                $('#btnRun').prop('disabled', false).text('执行');
+            });
+        });
+    }
+
+    function confirmStep(stepId){
+        $.post('/api/director-agent/steps/' + stepId + '/confirm', function(){
+            $('#rHint').text('✓ 已放行');
+            loadSteps();
+        });
+    }
+
+    function showStepOutput(stepId){
+        $.get('/api/director-agent/steps/' + stepId + '/output', function(d){
+            $('#rOutput').html(
+                '<div class="sp-field"><label>' + esc(d.stageKey) + ' 产出原文</label>'
+              + '<textarea class="tall" style="min-height:300px" readonly>' + esc(d.output || '') + '</textarea></div>'
+              + (d.docsSummary ? '<div class="sp-field"><label>本次加载的规则</label><textarea readonly style="min-height:80px">' + esc(d.docsSummary) + '</textarea></div>' : '')
+            );
+        });
     }
 
     function renderStageList(){
