@@ -43,13 +43,24 @@ def match_filter(doc_filter, scope, scope_value):
 
 def main():
     ap = argparse.ArgumentParser()
-    ap.add_argument('--pack', type=int, required=True)
-    ap.add_argument('--stage', required=True)
-    ap.add_argument('--input', required=True, help='输入文本文件路径')
+    ap.add_argument('--pack', type=int)
+    ap.add_argument('--stage')
+    ap.add_argument('--input', help='输入文本文件路径')
+    ap.add_argument('--dump', type=int, default=0, help='把某条 step 的产出从库里导出成 md（库是权威源，文件只是快照）')
     ap.add_argument('--save', type=int, default=0, help='回灌的 runId，0=不回灌')
     ap.add_argument('--out', default='')
     ap.add_argument('--head', type=int, default=900, help='终端只打印前 N 字符，全文写文件')
     args = ap.parse_args()
+
+    if args.dump:
+        for r in rows("SELECT s.StageKey, s.OutputText FROM DirectorSkillRunSteps s WHERE s.StepId=?", args.dump):
+            path = args.out or ('step%s_%s.md' % (args.dump, r[0]))
+            open(path, 'w', encoding='utf-8').write(r[1] or '')
+            print('已导出 step %s（%s）→ %s' % (args.dump, r[0], path))
+        return
+
+    if not (args.pack and args.stage and args.input):
+        sys.exit('跑阶段需要 --pack --stage --input；只导出产出用 --dump')
 
     # 1) 阶段定义
     st = None
