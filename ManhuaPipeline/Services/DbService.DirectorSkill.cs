@@ -93,4 +93,52 @@ WHERE DocId=@id", conn);
         cmd.Parameters.AddWithValue("@id", docId);
         return cmd.ExecuteNonQuery() > 0;
     }
+
+    public sealed record SkillStageRow(int StageId, string StageKey, string Name, int SortOrder,
+                                        string? DocFilter, string? InputsJson, string? OutputContract,
+                                        string? Gates, bool HumanConfirm, bool IsEnabled);
+
+    /// <summary>阶段编排清单。引擎按 SortOrder 依次跑，HumanConfirm=1 的阶段必须停下来等人确认。</summary>
+    public List<SkillStageRow> GetSkillStages(int packId)
+    {
+        using var conn = GetConn(); conn.Open();
+        var list = new List<SkillStageRow>();
+        using var cmd = new SqlCommand(@"
+SELECT StageId, StageKey, Name, SortOrder, DocFilter, InputsJson, OutputContract, Gates, HumanConfirm, IsEnabled
+FROM DirectorSkillStages
+WHERE PackId = @pk
+ORDER BY SortOrder, StageId", conn);
+        cmd.Parameters.AddWithValue("@pk", packId);
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+        {
+            list.Add(new SkillStageRow(
+                r.GetInt32(0), r.GetString(1), r.GetString(2), r.GetInt32(3),
+                r.IsDBNull(4) ? null : r.GetString(4), r.IsDBNull(5) ? null : r.GetString(5),
+                r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetString(7),
+                r.GetBoolean(8), r.GetBoolean(9)));
+        }
+        return list;
+    }
+
+    /// <summary>保存阶段编排。改完下一次跑流水线就按新编排走。</summary>
+    public bool SaveSkillStage(int stageId, string name, string? docFilter, string? inputsJson,
+                               string? outputContract, string? gates, bool humanConfirm, bool isEnabled)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+UPDATE DirectorSkillStages
+SET Name=@n, DocFilter=@f, InputsJson=@i, OutputContract=@o, Gates=@g,
+    HumanConfirm=@h, IsEnabled=@e, UpdatedAt=SYSDATETIME()
+WHERE StageId=@id", conn);
+        cmd.Parameters.AddWithValue("@n", name);
+        cmd.Parameters.AddWithValue("@f", (object?)docFilter ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@i", (object?)inputsJson ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@o", (object?)outputContract ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@g", (object?)gates ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@h", humanConfirm);
+        cmd.Parameters.AddWithValue("@e", isEnabled);
+        cmd.Parameters.AddWithValue("@id", stageId);
+        return cmd.ExecuteNonQuery() > 0;
+    }
 }

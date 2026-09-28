@@ -49,6 +49,16 @@
     .sp-hint.dirty{color:#fbbf24;}
     .sp-hint.ok{color:#4ade80;}
     .sp-empty{color:#94a3b8;font-size:13px;padding:20px;text-align:center;}
+    .sp-tabs{display:flex;gap:6px;margin-bottom:12px;}
+    .sp-tab{cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(30,41,59,.6);
+            color:#94a3b8;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;font-family:inherit;}
+    .sp-tab.active{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-color:transparent;}
+    .sp-item .gate{color:#fb923c;font-size:11px;}
+    .sp-field{margin-bottom:10px;}
+    .sp-field label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;}
+    .sp-field textarea{min-height:90px;}
+    .sp-field textarea.tall{min-height:180px;}
+    .sp-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#cbd5e1;cursor:pointer;}
   </style>
 </head>
 <body>
@@ -87,6 +97,12 @@
 
     <div class="sp-bar" id="spBar">加载中...</div>
 
+    <div class="sp-tabs" id="spTabs">
+      <button class="sp-tab active" data-mode="docs">规则文档</button>
+      <button class="sp-tab" data-mode="stages">阶段编排</button>
+      <span style="font-size:12px;color:#64748b;margin-left:6px" id="spTabTip">每份规则说什么</span>
+    </div>
+
     <div class="sp-layout">
       <div class="sp-list" id="spList"><div class="sp-empty">加载中...</div></div>
       <div class="sp-main" id="spMain">
@@ -105,6 +121,17 @@
     var SCOPE_NAME  = { always:'常驻加载', stage:'按阶段加载', when:'按条件加载', ref:'备查 · 不加载' };
 
     var curPack = null, curDocId = null, dirty = false, docs = [];
+    var mode = 'docs', stages = [];
+
+    $('#spTabs').on('click', '.sp-tab', function(){
+        if (dirty && !confirm('当前内容没保存，确定要切换吗？')) return;
+        mode = $(this).data('mode'); dirty = false; curDocId = null;
+        $('#spTabs .sp-tab').removeClass('active');
+        $(this).addClass('active');
+        $('#spTabTip').text(mode === 'docs' ? '每份规则说什么' : '跑到哪一步、每步要什么、产出什么、什么条件放行');
+        renderList(docs);
+        $('#spMain').html('<div class="sp-empty">← 左侧选一条' + (mode === 'docs' ? '规则文档' : '阶段') + '查看或编辑</div>');
+    });
 
     function setHint(txt, cls){
         $('#spHint').removeClass('dirty ok').addClass(cls||'').text(txt);
@@ -122,6 +149,7 @@
     }
 
     function renderList(list){
+        if (mode === 'stages'){ renderStageList(); return; }
         var html = '';
         SCOPE_ORDER.forEach(function(sc){
             var g = list.filter(function(d){ return d.scope === sc; });
@@ -137,6 +165,81 @@
         });
         $('#spList').html(html || '<div class="sp-empty">没有文档</div>');
         $('#spList').off('click').on('click', '.sp-item', function(){ openDoc($(this).data('id')); });
+    }
+
+    function renderStageList(){
+        var html = '<div class="sp-group"><div class="sp-group-h"><span>流水线阶段</span><span>' + stages.length + '</span></div>';
+        stages.forEach(function(s){
+            html += '<div class="sp-item' + (s.stageId===curDocId?' active':'') + '" data-id="' + s.stageId + '">'
+                  + '<span class="nm">' + esc(s.stageKey) + ' · ' + esc(s.name) + '</span>'
+                  + (s.humanConfirm ? '<span class="gate">需确认</span>' : '')
+                  + (s.isEnabled ? '' : '<span class="kb">停用</span>')
+                  + '</div>';
+        });
+        html += '</div>';
+        $('#spList').html(html || '<div class="sp-empty">没有阶段</div>');
+        $('#spList').off('click').on('click', '.sp-item', function(){ openStage($(this).data('id')); });
+    }
+
+    function openStage(id){
+        var s = stages.filter(function(x){ return x.stageId === id; })[0];
+        if (!s) return;
+        curDocId = id; dirty = false;
+        $('#spList .sp-item').removeClass('active');
+        $('#spList .sp-item[data-id="' + id + '"]').addClass('active');
+        $('#spMain').html(
+            '<div class="sp-row"><label>阶段</label><input class="sp-title" id="sName" value="' + esc(s.name) + '">'
+          + '<span class="sp-hint">标识 ' + esc(s.stageKey) + ' · 顺序 ' + s.sortOrder + '</span></div>'
+          + '<div class="sp-field"><label>加载哪些规则（DocFilter，逗号分隔，如 always,stage:P2,when:战斗）</label>'
+          +   '<input style="width:100%" id="sFilter" value="' + esc(s.docFilter||'') + '"></div>'
+          + '<div class="sp-field"><label>输入表单（JSON 数组，决定这一阶段向用户收集什么）</label>'
+          +   '<textarea class="tall" id="sInputs">' + esc(s.inputsJson||'') + '</textarea></div>'
+          + '<div class="sp-field"><label>产出契约（给 LLM 的格式要求，也是解析依据）</label>'
+          +   '<textarea id="sOutput">' + esc(s.outputContract||'') + '</textarea></div>'
+          + '<div class="sp-field"><label>门禁规则</label>'
+          +   '<textarea id="sGates">' + esc(s.gates||'') + '</textarea></div>'
+          + '<div class="sp-actions">'
+          +   '<label class="sp-check"><input type="checkbox" id="sConfirm"' + (s.humanConfirm?' checked':'') + '> 人工确认后才放行（硬门禁）</label>'
+          +   '<label class="sp-check"><input type="checkbox" id="sEnabled"' + (s.isEnabled?' checked':'') + '> 启用</label>'
+          +   '<button class="btn" id="btnSaveStage">保存</button>'
+          +   '<button class="btn ghost" id="btnReloadStage">放弃改动</button>'
+          +   '<span class="sp-hint" id="spHint"></span>'
+          + '</div>'
+        );
+        $('#sInputs,#sOutput,#sGates,#sFilter,#sName').on('input', function(){
+            if (!dirty){ dirty = true; setHint('● 已改动，未保存', 'dirty'); }
+        });
+        $('#sConfirm,#sEnabled').change(function(){
+            dirty = true; setHint('● 已改动，未保存', 'dirty');
+        });
+        $('#btnSaveStage').click(saveStage);
+        $('#btnReloadStage').click(function(){ openStage(id); });
+        setHint('就绪', '');
+    }
+
+    function saveStage(){
+        $('#btnSaveStage').prop('disabled', true).text('保存中...');
+        $.ajax({
+            url: '/api/director-skill/stages/' + curDocId,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify({
+                name: $('#sName').val(),
+                docFilter: $('#sFilter').val(),
+                inputsJson: $('#sInputs').val(),
+                outputContract: $('#sOutput').val(),
+                gates: $('#sGates').val(),
+                humanConfirm: $('#sConfirm').is(':checked'),
+                isEnabled: $('#sEnabled').is(':checked')
+            })
+        }).done(function(){
+            dirty = false; setHint('✓ 已保存', 'ok');
+            loadStages(curPack.packId);
+        }).fail(function(xhr){
+            setHint('× ' + ((xhr.responseJSON && xhr.responseJSON.message) || '保存失败'), 'dirty');
+        }).always(function(){
+            $('#btnSaveStage').prop('disabled', false).text('保存');
+        });
     }
 
     function openDoc(id){
@@ -208,11 +311,18 @@
         });
     }
 
+    function loadStages(packId){
+        $.get('/api/director-skill/packs/' + packId + '/stages', function(list){
+            stages = list; renderList(docs);
+        });
+    }
+
     $(function(){
         $.get('/api/director-skill/packs', function(packs){
             if (!packs.length){ $('#spBar').html('还没有导入任何 Skill 包'); $('#spList').html('<div class="sp-empty">用 Scripts/ImportSkillPack.py 导入</div>'); return; }
             curPack = packs[0];
             loadDocs(curPack.packId);
+            loadStages(curPack.packId);
         }).fail(function(xhr){
             if (xhr.status === 401) location.href = 'login.html';
         });

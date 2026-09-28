@@ -82,4 +82,44 @@ public class DirectorSkillController : ControllerBase
         public string? ScopeValue { get; set; }
         public string? Content { get; set; }
     }
+
+    [HttpGet("packs/{packId:int}/stages")]
+    public IActionResult GetStages(int packId)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        return Ok(_db.GetSkillStages(packId).Select(s => new
+        {
+            stageId = s.StageId, stageKey = s.StageKey, name = s.Name, sortOrder = s.SortOrder,
+            docFilter = s.DocFilter, inputsJson = s.InputsJson, outputContract = s.OutputContract,
+            gates = s.Gates, humanConfirm = s.HumanConfirm, isEnabled = s.IsEnabled
+        }));
+    }
+
+    /// <summary>保存阶段编排：加载哪些规则、收集哪些输入、产出什么格式、什么条件放行。</summary>
+    [HttpPut("stages/{stageId:int}")]
+    public IActionResult SaveStage(int stageId, [FromBody] SaveStageBody body)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(body.Name)) return BadRequest(new { message = "阶段名不能为空" });
+        if (!string.IsNullOrWhiteSpace(body.InputsJson))
+        {
+            try { System.Text.Json.JsonDocument.Parse(body.InputsJson!); }
+            catch { return BadRequest(new { message = "输入表单不是合法 JSON" }); }
+        }
+        return _db.SaveSkillStage(stageId, body.Name.Trim(), body.DocFilter, body.InputsJson,
+                                  body.OutputContract, body.Gates, body.HumanConfirm, body.IsEnabled)
+            ? Ok(new { ok = true })
+            : NotFound(new { message = "阶段不存在" });
+    }
+
+    public sealed class SaveStageBody
+    {
+        public string Name { get; set; } = "";
+        public string? DocFilter { get; set; }
+        public string? InputsJson { get; set; }
+        public string? OutputContract { get; set; }
+        public string? Gates { get; set; }
+        public bool HumanConfirm { get; set; }
+        public bool IsEnabled { get; set; } = true;
+    }
 }
