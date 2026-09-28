@@ -165,18 +165,85 @@ public class DirectorAgentService
             _db.UpdateSkillRunTarget(runId, projectId > 0 ? projectId : null, episodeId > 0 ? episodeId : null);
 
         var packId = _db.GetRunPackId(runId);
-        var stages = _db.GetSkillStages(packId);
-        var stage = stages.FirstOrDefault(s => s.StageKey == stageKey)
+        var stage = _db.GetSkillStages(packId).FirstOrDefault(s => s.StageKey == stageKey)
                     ?? throw new InvalidOperationException($"阶段不存在：{stageKey}");
         if (!stage.IsEnabled) throw new InvalidOperationException($"阶段已停用：{stageKey}");
 
+        var r = await ExecuteStepAsync(userId, runId, packId, stage, inputText);
+        _db.UpdateSkillRun(runId, stageKey, stage.HumanConfirm ? "await_confirm" : "running");
+        return r;
+    }
+
+    // ========== 3b. 一路往下跑：上一步产出自动喂给下一步 ==========
+
+    /// <summary>
+    /// 从某阶段起连着跑，遇到人工确认阶段就停在那儿等人。
+    /// 用户只该在「错了代价大」的地方被打断，其余阶段不该来回问——
+    /// 手动把上一步产出复制粘贴到下一步，是最没价值的那种操作。
+    /// </summary>
+    public async Task RunFromAsync(int userId, int runId, string startStageKey, string firstInput,
+                                   int? projectId = null, int? episodeId = null)
+    {
+        // 落点以本次请求为准：页面上换了项目/剧集立刻生效，不用重开一次运行
+        if (projectId > 0 || episodeId > 0)
+            _db.UpdateSkillRunTarget(runId, projectId > 0 ? projectId : null, episodeId > 0 ? episodeId : null);
+
+        var packId = _db.GetRunPackId(runId);
+        var stages = _db.GetSkillStages(packId).Where(s => s.IsEnabled).OrderBy(s => s.SortOrder).ToList();
+        var idx = stages.FindIndex(s => s.StageKey == startStageKey);
+        if (idx < 0) throw new InvalidOperationException($"阶段不存在：{startStageKey}");
+
+        var input = firstInput;
+        for (int i = idx; i < stages.Count; i++)
+        {
+            var st = stages[i];
+            _db.UpdateSkillRun(runId, st.StageKey, "running");
+            StepResult r;
+            try { r = await ExecuteStepAsync(userId, runId, packId, st, input); }
+            catch { _db.UpdateSkillRun(runId, st.StageKey, "error"); throw; }
+
+            if (st.HumanConfirm)
+            {
+                _db.UpdateSkillRun(runId, st.StageKey, "await_confirm");
+                return;
+            }
+            input = r.Output ?? "";   // 自动串联：上一步的产出就是下一步的素材
+        }
+        _db.UpdateSkillRun(runId, stages[^1].StageKey, "done");
+    }
+
+    /// <summary>确认卡点，然后接着往下跑到下一个卡点（或跑完）。</summary>
+    public async Task ContinueAsync(int userId, int runId)
+    {
+        var steps = _db.GetSkillSteps(runId);
+        var pending = steps.Where(s => s.Status == "await_confirm").OrderBy(s => s.SortOrder).FirstOrDefault();
+        if (pending != null) _db.ConfirmSkillStep(pending.StepId);
+
+        var last = steps.OrderByDescending(s => s.SortOrder).FirstOrDefault()
+                   ?? throw new InvalidOperationException("这次运行还没跑过任何阶段");
+        var packId = _db.GetRunPackId(runId);
+        var stages = _db.GetSkillStages(packId).Where(s => s.IsEnabled).OrderBy(s => s.SortOrder).ToList();
+        var idx = stages.FindIndex(s => s.StageKey == last.StageKey) + 1;
+        if (idx >= stages.Count)
+        {
+            _db.UpdateSkillRun(runId, last.StageKey, "done");
+            return;
+        }
+        await RunFromAsync(userId, runId, stages[idx].StageKey, last.OutputText ?? "");
+    }
+
+    // ========== 3c. 单步执行的核心：单跑和连跑都走这里 ==========
+
+    private async Task<StepResult> ExecuteStepAsync(int userId, int runId, int packId,
+                                                    DbService.SkillStageRow stage, string inputText)
+    {
         var provider = _db.GetActiveLLMProvider(userId);
         var cfg = _db.GetActiveConfig(userId, string.IsNullOrWhiteSpace(provider) ? "deepseek" : provider)
                   ?? throw new InvalidOperationException("没有可用的 LLM 配置，先去系统配置里配一个");
 
         var build = BuildPrompt(packId, stage);
         var cost = CostOf(packId, stage);
-        int stepId = _db.CreateSkillStep(runId, stageKey, stage.Name, stage.SortOrder,
+        int stepId = _db.CreateSkillStep(runId, stage.StageKey, stage.Name, stage.SortOrder,
                                          inputText, build.DocsSummary, build.Chars, stage.Gates);
 
         var sys = build.SystemPrompt + "\n\n# 输入（用户提供的素材）\n" + inputText;
@@ -201,15 +268,13 @@ public class DirectorAgentService
 
             _db.FinishSkillStep(stepId, status, raw, json, null);
             _db.SetStepImport(stepId, imported, importError);
-            _db.UpdateSkillRun(runId, stageKey, stage.HumanConfirm ? "await_confirm" : "running");
-            return new StepResult(stepId, stageKey, status, raw, build.Chars,
+            return new StepResult(stepId, stage.StageKey, status, raw, build.Chars,
                                   EstimateTokens(sys), stage.Gates, cost, imported, importError);
         }
         catch (Exception ex)
         {
-            _log.LogError(ex, "skill step failed run={RunId} stage={Stage}", runId, stageKey);
+            _log.LogError(ex, "skill step failed run={RunId} stage={Stage}", runId, stage.StageKey);
             _db.FinishSkillStep(stepId, "error", null, null, ex.Message);
-            _db.UpdateSkillRun(runId, stageKey, "error");
             throw;
         }
     }

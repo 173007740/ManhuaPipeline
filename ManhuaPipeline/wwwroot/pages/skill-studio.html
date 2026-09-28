@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>导演流水线 - 漫创引擎</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+  <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+  <style>
+    .container{max-width:100%;padding:24px;}
+    .page-title{font-size:24px;font-weight:700;margin-bottom:6px;color:var(--primary-light);}
+    .page-tip{font-size:12px;color:#94a3b8;margin-bottom:16px;line-height:1.75;}
+    .bar{display:flex;gap:12px;flex-wrap:wrap;align-items:center;background:rgba(30,41,59,.6);
+         border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#94a3b8;}
+    .bar b{color:#c4b5fd;}
+    .wrap{display:flex;gap:14px;align-items:flex-start;}
+    /* 左：流水线。每一步的状态一眼可见——跑到哪了、卡在哪、入库了几条 */
+    .pipe{width:290px;flex:0 0 290px;background:rgba(30,41,59,.6);border:1px solid rgba(255,255,255,.08);
+          border-radius:10px;padding:10px;}
+    .pipe-h{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px;padding:4px 6px 8px;}
+    .st{padding:8px 10px;border-radius:8px;font-size:12.5px;color:#94a3b8;display:flex;gap:8px;align-items:center;
+        border-left:3px solid rgba(255,255,255,.08);margin-bottom:2px;line-height:1.4;}
+    .st .ico{width:16px;text-align:center;font-size:12px;}
+    .st .nm{flex:1;}
+    .st .ex{font-size:10px;color:#64748b;white-space:nowrap;}
+    .st.wait{color:#94a3b8;}
+    .st.running{background:rgba(96,165,250,.12);border-left-color:#60a5fa;color:#bfdbfe;}
+    .st.done{color:#86efac;border-left-color:#4ade80;}
+    .st.confirm{background:rgba(251,146,60,.12);border-left-color:#fb923c;color:#fdba74;}
+    .st.error{background:rgba(248,113,113,.12);border-left-color:#f87171;color:#fca5a5;}
+    .st .gate{color:#fb923c;font-size:10px;}
+    .main{flex:1;min-width:0;background:rgba(30,41,59,.6);border:1px solid rgba(255,255,255,.08);
+          border-radius:10px;padding:14px 16px;}
+    .row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+    .row label{font-size:12px;color:#94a3b8;min-width:52px;}
+    input,select,textarea{background:rgba(15,23,42,.75);border:1px solid rgba(255,255,255,.12);
+             color:#e2e8f0;border-radius:7px;padding:7px 9px;font-size:13px;font-family:inherit;}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(124,58,237,.6);}
+    textarea{width:100%;min-height:110px;resize:vertical;line-height:1.7;
+             font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;}
+    .field{margin-bottom:10px;}
+    .field label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;}
+    .btn{cursor:pointer;border:none;border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;
+         background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;}
+    .btn:disabled{opacity:.45;cursor:not-allowed;}
+    .btn.ghost{background:rgba(255,255,255,.08);color:#cbd5e1;}
+    .btn.warn{background:linear-gradient(135deg,#ea580c,#fb923c);}
+    .hint{font-size:12px;color:#64748b;}
+    .log{margin-top:12px;font-size:12px;color:#94a3b8;line-height:1.9;max-height:150px;overflow:auto;
+         border-top:1px solid rgba(255,255,255,.08);padding-top:8px;}
+    .gatebox{border:1px solid rgba(251,146,60,.35);border-radius:8px;padding:12px;margin:10px 0;background:rgba(251,146,60,.08);}
+    .empty{color:#94a3b8;font-size:13px;padding:20px;text-align:center;}
+  </style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <a href="skill-studio.html" style="color:#c4b5fd;text-decoration:none;padding:8px 16px;font-size:14px;font-weight:700;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">auto_awesome</span> 导演流水线</a>
+        <a href="system-config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
+        <span id="navUser" style="display:none;">
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest" style="display:none;">
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">auto_awesome</span> 导演流水线</div>
+    <div class="page-tip">
+      填一次设定，点一下跑到<b>下一个卡点</b>；中间阶段自动串下去，上一步产出自动喂给下一步，产出自动入库。<br>
+      只在<b style="color:#fb923c">错了代价大</b>的地方停（P1 剧本 / P2b 资产清单 / P2d 图册 / P5 交付）——停的时候会说清错了要赔多少。
+    </div>
+
+    <div class="bar" id="bar">加载中...</div>
+
+    <div class="wrap">
+      <div class="pipe">
+        <div class="pipe-h">流水线</div>
+        <div id="pipeList"><div class="empty">加载中</div></div>
+      </div>
+
+      <div class="main">
+        <div class="row">
+          <label>落到</label>
+          <select id="proj" style="flex:0 0 190px"></select>
+          <select id="eps" style="flex:0 0 190px"></select>
+          <label style="min-width:auto">从</label>
+          <select id="startStage" style="flex:0 0 230px"></select>
+          <button class="btn" id="btnStart">▶ 开始跑</button>
+          <button class="btn ghost" id="btnNew">↻ 新开一次</button>
+          <span class="hint" id="stateHint"></span>
+        </div>
+
+        <div id="form"></div>
+
+        <div class="field">
+          <label>补充原文（可选，会和上面表单一起喂进去）</label>
+          <textarea id="extra" style="min-height:70px"></textarea>
+        </div>
+
+        <div id="gate"></div>
+        <div class="log" id="log"></div>
+      </div>
+    </div>
+  </div>
+  </div>
+
+  <script src="/lib/jquery/jquery.min.js"></script>
+  <script src="../js/app.js"></script>
+  <script>
+  var pack = null, stages = [], runId = 0, timer = null, lastStatus = '';
+
+  function esc(s){ return $('<div>').text(s == null ? '' : s).html(); }
+  function say(t){ $('#log').prepend('<div>' + esc(t) + '</div>'); }
+
+  function loadAll(){
+    $.get('/api/director-skill/packs', function(list){
+      if (!list || !list.length){ $('#bar').html('没有 Skill 包，先去系统配置里导入'); return; }
+      pack = list[0];
+      $.get('/api/director-skill/packs/' + pack.packId + '/stages', function(st){
+        stages = (st || []).filter(function(s){ return s.isEnabled; })
+                           .sort(function(a,b){ return a.sortOrder - b.sortOrder; });
+        $('#bar').html('<span>规则包：<b>' + esc(pack.name) + '</b></span><span>阶段 <b>' + stages.length + '</b> 个</span>'
+          + '<span>卡点在 <b>' + (stages.filter(function(s){ return s.humanConfirm; }).map(function(s){ return s.stageKey; }).join(' / ') || '无') + '</b></span>'
+          + '<span>入库阶段 <b>' + (stages.filter(function(s){ return s.outputTarget; }).map(function(s){ return s.stageKey + '→' + s.outputTarget; }).join('，') || '无') + '</b></span>');
+        $('#startStage').html(stages.map(function(s){
+          return '<option value="' + esc(s.stageKey) + '">' + esc(s.stageKey) + ' · ' + esc(s.name) + '</option>';
+        }).join(''));
+        renderForm(); renderPipe([]);
+      });
+    });
+    $.get('/api/project', function(list){
+      $('#proj').html('<option value="">（不入库）</option>'
+        + (list || []).map(function(p){ return '<option value="' + p.projectId + '">' + esc(p.title) + '</option>'; }).join(''));
+    });
+  }
+
+  $('#proj').change(function(){
+    var pid = $(this).val();
+    if (!pid){ $('#eps').html('<option value="">（先选项目）</option>'); return; }
+    $.get('/api/project/' + pid + '/episode', function(list){
+      $('#eps').html('<option value="">（不选则分镜不入库）</option>'
+        + (list || []).map(function(e){ return '<option value="' + e.episodeId + '">第' + e.episodeNumber + '集 ' + esc(e.title || '') + '</option>'; }).join(''));
+    });
+  });
+
+  // 起始阶段的输入表单：字段定义在库里（Stages.InputsJson），加一项减一项不用改页面
+  function renderForm(){
+    var st = stages.filter(function(s){ return s.stageKey === $('#startStage').val(); })[0];
+    var fields = [];
+    try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; } catch (e) { fields = []; }
+    if (!fields.length){ $('#form').html('<div class="hint">本阶段没有要收集的字段</div>'); return; }
+    var h = '<div class="hint" style="margin-bottom:6px">' + esc(st.stageKey) + ' 要收集 ' + fields.length + ' 项</div>';
+    fields.forEach(function(f){
+      h += '<div class="field"><label>' + esc(f.label || f.key) + (f.required ? ' <span style="color:#f87171">*</span>' : '')
+         + (f.tip ? ' <span class="hint">' + esc(f.tip) + '</span>' : '') + '</label>';
+      var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"';
+      if (f.type === 'select')
+        h += '<select style="width:100%"' + k + '>' + (f.options || []).map(function(o){ return '<option>' + esc(o) + '</option>'; }).join('') + '</select>';
+      else if (f.type === 'textarea') h += '<textarea' + k + '></textarea>';
+      else if (f.type === 'number') h += '<input type="number" style="width:100%"' + k + '>';
+      else if (f.type === 'list') h += '<input style="width:100%" placeholder="逗号分隔"' + k + '>';
+      else h += '<input style="width:100%"' + k + '>';
+      h += '</div>';
+    });
+    $('#form').html(h);
+  }
+
+  function collectInput(){
+    var parts = [];
+    $('#form [data-fk]').each(function(){
+      var v = ($(this).val() || '').trim();
+      if (v) parts.push($(this).data('fl') + '：' + v);
+    });
+    var ex = ($('#extra').val() || '').trim();
+    if (ex) parts.push(ex);
+    return parts.join('\n');
+  }
+
+  // 左侧进度：每一步跑到哪、入库几条、卡在哪，一眼看完
+  function renderPipe(steps){
+    var byKey = {};
+    (steps || []).forEach(function(s){ byKey[s.stageKey] = s; });
+    var h = stages.map(function(s){
+      var st = byKey[s.stageKey], cls = 'wait', ico = '○', ex = '';
+      if (st){
+        if (st.status === 'running'){ cls = 'running'; ico = '◐'; ex = '跑中…'; }
+        else if (st.status === 'await_confirm'){ cls = 'confirm'; ico = '⏸'; ex = '待确认'; }
+        else if (st.status === 'error'){ cls = 'error'; ico = '✗'; ex = '失败'; }
+        else if (st.status === 'done'){
+          cls = 'done'; ico = '✓';
+          ex = st.imported > 0 ? '入库 ' + st.imported + ' 条'
+             : (st.importError ? '未入库' : (s.outputTarget ? '0 条' : ''));
+        }
+      }
+      return '<div class="st ' + cls + '"><span class="ico">' + ico + '</span><span class="nm">'
+           + esc(s.stageKey) + ' ' + esc(s.name) + '</span>'
+           + (s.humanConfirm ? '<span class="gate">卡</span>' : '')
+           + '<span class="ex">' + esc(ex) + '</span></div>';
+    }).join('');
+    $('#pipeList').html(h);
+  }
+
+  function startPoll(){
+    clearInterval(timer);
+    timer = setInterval(pollOnce, 2500);
+    pollOnce();
+  }
+
+  function pollOnce(){
+    if (!runId) return;
+    $.get('/api/director-agent/runs/' + runId, function(d){
+      renderPipe(d.steps);
+      $('#stateHint').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了' }[d.status] || d.status);
+      if (d.status === 'running') return;          // 还在跑，继续轮询
+      clearInterval(timer);
+      if (d.status === 'done'){ say('全部跑完'); $('#gate').html('<div class="gatebox" style="border-color:rgba(74,222,128,.35);background:rgba(74,222,128,.08);color:#86efac">流水线跑完了，产出已入库。</div>'); }
+      else if (d.status === 'error'){ say('出错，看左侧红的那一步'); }
+      else if (d.status === 'await_confirm'){ showGate(d); }
+    });
+  }
+
+  // 卡点：把产出、门禁、代价和「确认并继续」摆在一起。没有代价的确认就是形式主义
+  function showGate(d){
+    var pending = (d.steps || []).filter(function(s){ return s.status === 'await_confirm'; })[0];
+    if (!pending) return;
+    say('停在 ' + pending.stageKey + '，等你确认');
+    var box = '<div class="gatebox"><div style="font-size:13px;color:#fb923c;font-weight:600;margin-bottom:6px">'
+            + '停在人工确认 · ' + esc(pending.stageKey) + ' ' + esc(pending.name || '') + '</div>';
+    if (pending.gates) box += '<div style="font-size:12px;color:#fdba74;margin-bottom:6px">门禁：' + esc(pending.gates) + '</div>';
+    box += '<div id="gateCost" class="hint">代价计算中…</div>'
+        + '<div style="margin-top:8px"><button class="btn warn" id="btnGoOn">确认并继续</button> '
+        + '<button class="btn ghost" id="btnView">看产出</button></div>'
+        + '<div id="gateOut" style="margin-top:10px"></div></div>';
+    $('#gate').html(box);
+
+    $.post('/api/director-agent/preview', JSON.stringify({ packId: pack.packId, stageKey: pending.stageKey }), function(p){
+      if (!p || !p.cost) { $('#gateCost').text(''); return; }
+      var w = function(n){ return n >= 10000 ? (n/10000).toFixed(1) + '万' : n + ''; };
+      $('#gateCost').html('放行的代价：错了重跑约 <b style="color:#f59e0b">' + w(p.cost.rerunTokens) + '</b> token'
+        + (p.cost.downstreamCount ? '，下游 <b style="color:#f87171">' + p.cost.downstreamCount + '</b> 个阶段跟着重跑，约 <b style="color:#f87171">' + w(p.cost.downstreamTokens) + '</b> token' : ''));
+    }, 'json');
+
+    $('#btnView').click(function(){
+      $.get('/api/director-agent/steps/' + pending.stepId + '/output', function(o){
+        $('#gateOut').html('<textarea readonly style="min-height:260px">' + esc(o.output || '') + '</textarea>');
+      });
+    });
+    $('#btnGoOn').click(function(){
+      $('#gate').empty(); say('已确认，继续往下跑');
+      $.post('/api/director-agent/runs/' + runId + '/continue', function(){ startPoll(); }, 'json');
+    });
+  }
+
+  $('#startStage').change(function(){ renderForm(); $('#gate').empty(); });
+
+  $('#btnStart').click(function(){
+    var txt = collectInput();
+    if (!txt.trim()){ alert('先填设定（上面表单或补充原文）'); return; }
+    var payload = {
+      packId: pack.packId, title: pack.name,
+      projectId: $('#proj').val() ? +$('#proj').val() : null,
+      episodeId: $('#eps').val() ? +$('#eps').val() : null
+    };
+    $('#btnStart').prop('disabled', true).text('启动中...');
+    $.ajax({ url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json', data: JSON.stringify(payload) })
+     .done(function(d){
+        runId = d.runId;
+        localStorage.setItem('skillStudioRun', runId);
+        $.ajax({ url: '/api/director-agent/runs/' + runId + '/run-all', method: 'POST', contentType: 'application/json',
+                 data: JSON.stringify({ stageKey: $('#startStage').val(), inputText: txt,
+                                        projectId: payload.projectId, episodeId: payload.episodeId }) })
+         .done(function(r){
+            if (!r.started){ alert(r.message || '没启动'); return; }
+            say('从 ' + $('#startStage').val() + ' 开始跑，自动串下去');
+            startPoll();
+         })
+         .always(function(){ $('#btnStart').prop('disabled', false).text('▶ 开始跑'); });
+     })
+     .fail(function(){ $('#btnStart').prop('disabled', false).text('▶ 开始跑'); });
+  });
+
+  $('#btnNew').click(function(){
+    clearInterval(timer); runId = 0; localStorage.removeItem('skillStudioRun');
+    $('#gate').empty(); $('#log').empty(); $('#stateHint').text(''); renderPipe([]);
+    say('已重置，可以新开一次运行');
+  });
+
+  $(function(){
+    loadAll();
+    var saved = localStorage.getItem('skillStudioRun');
+    if (saved){ runId = +saved; say('接上上次运行 #' + runId); startPoll(); }
+    $('#eps').html('<option value="">（先选项目）</option>');
+  });
+  </script>
+</body>
+</html>

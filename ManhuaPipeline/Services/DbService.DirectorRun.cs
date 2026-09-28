@@ -118,7 +118,8 @@ WHERE StepId=@id", conn);
 
     public sealed record SkillStepRow(int StepId, string StageKey, string? Name, int SortOrder, string Status,
                                        int PromptChars, string? OutputText, string? Gates, string? Error,
-                                       string? DocsSummary, string? ConfirmedAt);
+                                       string? DocsSummary, string? ConfirmedAt,
+                                       int? ImportedCount = null, string? ImportError = null);
 
     public List<SkillStepRow> GetSkillSteps(int runId)
     {
@@ -126,7 +127,7 @@ WHERE StepId=@id", conn);
         var list = new List<SkillStepRow>();
         using var cmd = new SqlCommand(@"
 SELECT StepId, StageKey, Name, SortOrder, Status, ISNULL(PromptChars,0), OutputText, Gates, Error, DocsSummary,
-       CONVERT(varchar(16), ConfirmedAt, 120)
+       CONVERT(varchar(16), ConfirmedAt, 120), ImportedCount, ImportError
 FROM DirectorSkillRunSteps WHERE RunId = @r ORDER BY SortOrder, StepId", conn);
         cmd.Parameters.AddWithValue("@r", runId);
         using var r = cmd.ExecuteReader();
@@ -136,7 +137,8 @@ FROM DirectorSkillRunSteps WHERE RunId = @r ORDER BY SortOrder, StepId", conn);
                 r.GetInt32(0), r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2), r.GetInt32(3),
                 r.GetString(4), r.GetInt32(5), r.IsDBNull(6) ? null : r.GetString(6),
                 r.IsDBNull(7) ? null : r.GetString(7), r.IsDBNull(8) ? null : r.GetString(8),
-                r.IsDBNull(9) ? null : r.GetString(9), r.IsDBNull(10) ? null : r.GetString(10)));
+                r.IsDBNull(9) ? null : r.GetString(9), r.IsDBNull(10) ? null : r.GetString(10),
+                r.IsDBNull(11) ? null : r.GetInt32(11), r.IsDBNull(12) ? null : r.GetString(12)));
         }
         return list;
     }

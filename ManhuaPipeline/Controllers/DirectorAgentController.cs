@@ -14,8 +14,13 @@ public class DirectorAgentController : ControllerBase
 {
     private readonly DbService _db;
     private readonly DirectorAgentService _agent;
+    private readonly ILogger<DirectorAgentController> _log;
 
-    public DirectorAgentController(DbService db, DirectorAgentService agent) { _db = db; _agent = agent; }
+    public DirectorAgentController(DbService db, DirectorAgentService agent, ILogger<DirectorAgentController> log)
+    { _db = db; _agent = agent; _log = log; }
+
+    /// <summary>正在跑的运行，防重复启动。一次连跑十几分钟，同一次运行不该被点两下。</summary>
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> _running = new();
 
     private int GetUserId() => HttpContext.Session.GetInt32("UserId") ?? 0;
 
@@ -80,6 +85,51 @@ public class DirectorAgentController : ControllerBase
         catch (Exception ex) { return StatusCode(500, new { message = ex.Message }); }
     }
 
+    /// <summary>
+    /// 从某阶段起一路往下跑，遇到人工确认阶段自动停下。
+    /// 后台跑、前端轮询进度：一次可能十几分钟，不能让 HTTP 请求干等，也不能让浏览器转圈转到超时。
+    /// </summary>
+    [HttpPost("runs/{runId:int}/run-all")]
+    public IActionResult RunAll(int runId, [FromBody] RunStepBody body)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        if (!_running.TryAdd(runId, 0)) return Ok(new { started = false, message = "这次运行正在跑" });
+
+        _ = Task.Run(async () =>
+        {
+            try { await _agent.RunFromAsync(uid, runId, body.StageKey, body.InputText ?? "", body.ProjectId, body.EpisodeId); }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "run-all failed run={RunId} stage={Stage}", runId, body.StageKey);
+                _db.UpdateSkillRun(runId, body.StageKey, "error");
+            }
+            finally { _running.TryRemove(runId, out _); }
+        });
+        return Ok(new { started = true });
+    }
+
+    /// <summary>确认卡点，然后接着往下跑到下一个卡点。</summary>
+    [HttpPost("runs/{runId:int}/continue")]
+    public IActionResult Continue(int runId)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        if (!_running.TryAdd(runId, 0)) return Ok(new { started = false, message = "这次运行正在跑" });
+
+        _ = Task.Run(async () =>
+        {
+            try { await _agent.ContinueAsync(uid, runId); }
+            catch (Exception ex)
+            {
+                _log.LogError(ex, "continue failed run={RunId}", runId);
+                _db.UpdateSkillRun(runId, null, "error");
+            }
+            finally { _running.TryRemove(runId, out _); }
+        });
+        return Ok(new { started = true });
+    }
+
     [HttpPost("steps/{stepId:int}/confirm")]
     public IActionResult Confirm(int stepId)
     {
@@ -104,6 +154,7 @@ public class DirectorAgentController : ControllerBase
                 stepId = s.StepId, stageKey = s.StageKey, name = s.Name, status = s.Status,
                 promptChars = s.PromptChars, gates = s.Gates, error = s.Error,
                 confirmedAt = s.ConfirmedAt,
+                imported = s.ImportedCount, importError = s.ImportError,
                 hasOutput = !string.IsNullOrEmpty(s.OutputText)
             })
         });
