@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>Skill 包 - 漫创引擎</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+  <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+  <style>
+    .container{max-width:100%;padding:24px;}
+    .page-title{font-size:24px;font-weight:700;margin-bottom:6px;color:var(--primary-light);}
+    .page-tip{font-size:12px;color:#94a3b8;margin-bottom:18px;line-height:1.75;}
+    .sp-bar{display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:rgba(30,41,59,.6);
+            border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#94a3b8;}
+    .sp-bar b{color:#c4b5fd;font-size:13px;}
+    .sp-chip{background:rgba(124,58,237,.16);border:1px solid rgba(124,58,237,.35);color:#c4b5fd;
+             border-radius:6px;padding:2px 8px;font-weight:600;}
+    .sp-layout{display:flex;gap:14px;align-items:flex-start;}
+    .sp-list{width:330px;flex:0 0 330px;max-height:calc(100vh - 260px);overflow:auto;
+             background:rgba(30,41,59,.6);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;}
+    .sp-group{margin-bottom:10px;}
+    .sp-group-h{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px;padding:4px 6px;
+                text-transform:uppercase;display:flex;justify-content:space-between;}
+    .sp-item{padding:7px 9px;border-radius:7px;cursor:pointer;font-size:12.5px;color:#cbd5e1;
+             display:flex;align-items:center;gap:6px;line-height:1.4;}
+    .sp-item:hover{background:rgba(124,58,237,.12);}
+    .sp-item.active{background:rgba(124,58,237,.26);color:#fff;}
+    .sp-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .sp-item .kb{font-size:10px;color:#64748b;white-space:nowrap;}
+    .sp-star{color:#fbbf24;font-size:11px;}
+    .sp-main{flex:1;min-width:0;background:rgba(30,41,59,.6);border:1px solid rgba(255,255,255,.08);
+             border-radius:10px;padding:14px 16px;}
+    .sp-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
+    .sp-row label{font-size:12px;color:#94a3b8;min-width:56px;}
+    input,select,textarea{background:rgba(15,23,42,.75);border:1px solid rgba(255,255,255,.12);
+             color:#e2e8f0;border-radius:7px;padding:7px 9px;font-size:13px;font-family:inherit;}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(124,58,237,.6);}
+    .sp-title{flex:1;min-width:220px;}
+    textarea{width:100%;min-height:calc(100vh - 400px);resize:vertical;line-height:1.7;
+             font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;}
+    .sp-actions{display:flex;gap:10px;align-items:center;margin-top:10px;}
+    .btn{cursor:pointer;border:none;border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;
+         background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;}
+    .btn:disabled{opacity:.45;cursor:not-allowed;}
+    .btn.ghost{background:rgba(255,255,255,.08);color:#cbd5e1;}
+    .sp-hint{font-size:12px;color:#64748b;}
+    .sp-hint.dirty{color:#fbbf24;}
+    .sp-hint.ok{color:#4ade80;}
+    .sp-empty{color:#94a3b8;font-size:13px;padding:20px;text-align:center;}
+  </style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <a href="system-config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
+        <span id="navUser" style="display:none;">
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest" style="display:none;">
+          <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">auto_awesome</span> Skill 包</div>
+    <div class="page-tip">
+      外部 Agent Skill 的规则库已经落成数据：<b>在这里改规则，下一次跑流水线就生效</b>，不用改代码、不用重启。<br>
+      <b>加载范围</b>决定这份规则什么时候进 prompt —— <span class="sp-chip">always</span> 常驻（控制在少数几份，别撑爆上下文）、
+      <span class="sp-chip">stage</span> 跑到某阶段才加载、<span class="sp-chip">when</span> 满足条件才加载（如「战斗」「微表情」）、
+      <span class="sp-chip">ref</span> 只备查不进 prompt。
+    </div>
+
+    <div class="sp-bar" id="spBar">加载中...</div>
+
+    <div class="sp-layout">
+      <div class="sp-list" id="spList"><div class="sp-empty">加载中...</div></div>
+      <div class="sp-main" id="spMain">
+        <div class="sp-empty">← 左侧选一份规则文档查看或编辑</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+<script src="../js/app.js?v=2"></script>
+<script>
+    function esc(s){ return $('<div>').text(s==null?"":s).html(); }
+
+    var SCOPE_ORDER = ['always','stage','when','ref'];
+    var SCOPE_NAME  = { always:'常驻加载', stage:'按阶段加载', when:'按条件加载', ref:'备查 · 不加载' };
+
+    var curPack = null, curDocId = null, dirty = false, docs = [];
+
+    function setHint(txt, cls){
+        $('#spHint').removeClass('dirty ok').addClass(cls||'').text(txt);
+    }
+
+    function renderBar(pack, list){
+        var total = 0, cnt = { always:0, stage:0, when:0, ref:0 };
+        list.forEach(function(d){ total += d.chars; cnt[d.scope] = (cnt[d.scope]||0)+1; });
+        var html = '<span>包：<b>' + esc(pack.name) + '</b> ' + esc(pack.version) + '</span>'
+                 + '<span>文档 <b>' + list.length + '</b> 份</span>'
+                 + '<span>正文合计 <b>' + (total/1000).toFixed(1) + 'K</b> 字符</span>'
+                 + '<span>常驻 <b>' + (cnt.always||0) + '</b> 份 · ' + ((list.filter(function(d){return d.scope==='always';}).reduce(function(s,d){return s+d.chars;},0))/1000).toFixed(1) + 'K 字符</span>';
+        if (pack.sourcePath) html += '<span style="opacity:.7">来源：' + esc(pack.sourcePath) + '</span>';
+        $('#spBar').html(html);
+    }
+
+    function renderList(list){
+        var html = '';
+        SCOPE_ORDER.forEach(function(sc){
+            var g = list.filter(function(d){ return d.scope === sc; });
+            if (!g.length) return;
+            html += '<div class="sp-group"><div class="sp-group-h"><span>' + SCOPE_NAME[sc] + '</span><span>' + g.length + '</span></div>';
+            g.forEach(function(d){
+                html += '<div class="sp-item' + (d.docId===curDocId?' active':'') + '" data-id="' + d.docId + '">'
+                      + (d.isCore ? '<span class="sp-star">★</span>' : '')
+                      + '<span class="nm">' + esc(d.title) + '</span>'
+                      + '<span class="kb">' + (d.chars/1000).toFixed(1) + 'K</span></div>';
+            });
+            html += '</div>';
+        });
+        $('#spList').html(html || '<div class="sp-empty">没有文档</div>');
+        $('#spList').off('click').on('click', '.sp-item', function(){ openDoc($(this).data('id')); });
+    }
+
+    function openDoc(id){
+        if (dirty && !confirm('当前文档没保存，确定要切换吗？')) return;
+        $.get('/api/director-skill/docs/' + id, function(d){
+            curDocId = id; dirty = false;
+            $('#spList .sp-item').removeClass('active');
+            $('#spList .sp-item[data-id="' + id + '"]').addClass('active');
+            $('#spMain').html(
+                '<div class="sp-row"><label>标题</label><input class="sp-title" id="dTitle" value="' + esc(d.title) + '">'
+              + '<label style="min-width:auto">加载范围</label>'
+              + '<select id="dScope">' + SCOPE_ORDER.map(function(s){
+                    return '<option value="' + s + '"' + (d.scope===s?' selected':'') + '>' + SCOPE_NAME[s] + '</option>';
+                }).join('') + '</select>'
+              + '<input id="dScopeVal" style="width:130px;display:' + ((d.scope==='stage'||d.scope==='when')?'':'none') + '" placeholder="阶段/条件" value="' + esc(d.scopeValue||'') + '">'
+              + '</div>'
+              + '<div class="sp-row" style="justify-content:space-between">'
+              +   '<span class="sp-hint">文件：<code>' + esc(d.fileName) + '</code> · ' + (d.content.length/1000).toFixed(1) + 'K 字符</span>'
+              +   '<span class="sp-hint" id="spHint"></span>'
+              + '</div>'
+              + '<textarea id="dContent" spellcheck="false">' + esc(d.content) + '</textarea>'
+              + '<div class="sp-actions">'
+              +   '<button class="btn" id="btnSave">保存</button>'
+              +   '<button class="btn ghost" id="btnReload">放弃改动</button>'
+              +   '<span style="font-size:12px;color:#64748b">改动即时生效：保存后下一次调用 LLM 用的就是新规则</span>'
+              + '</div>'
+            );
+            $('#dScope').change(function(){
+                var v = $(this).val();
+                $('#dScopeVal').toggle(v==='stage'||v==='when');
+            });
+            $('#dContent, #dTitle, #dScopeVal').on('input', function(){
+                if (!dirty){ dirty = true; setHint('● 已改动，未保存', 'dirty'); }
+            });
+            $('#btnSave').click(save);
+            $('#btnReload').click(function(){ openDoc(id); });
+            setHint('就绪', '');
+        }).fail(function(xhr){
+            $('#spMain').html('<div class="sp-empty">加载失败：' + esc(xhr.responseJSON && xhr.responseJSON.message || xhr.statusText) + '</div>');
+        });
+    }
+
+    function save(){
+        var body = {
+            title: $('#dTitle').val(),
+            scope: $('#dScope').val(),
+            scopeValue: $('#dScopeVal').val(),
+            content: $('#dContent').val()
+        };
+        $('#btnSave').prop('disabled', true).text('保存中...');
+        $.ajax({
+            url: '/api/director-skill/docs/' + curDocId,
+            method: 'PUT',
+            contentType: 'application/json',
+            data: JSON.stringify(body)
+        }).done(function(){
+            dirty = false; setHint('✓ 已保存，后续调用立即生效', 'ok');
+            loadDocs(curPack.packId);
+        }).fail(function(xhr){
+            setHint('× ' + ((xhr.responseJSON && xhr.responseJSON.message) || '保存失败'), 'dirty');
+        }).always(function(){
+            $('#btnSave').prop('disabled', false).text('保存');
+        });
+    }
+
+    function loadDocs(packId){
+        $.get('/api/director-skill/packs/' + packId + '/docs', function(list){
+            docs = list; renderBar(curPack, list); renderList(list);
+        });
+    }
+
+    $(function(){
+        $.get('/api/director-skill/packs', function(packs){
+            if (!packs.length){ $('#spBar').html('还没有导入任何 Skill 包'); $('#spList').html('<div class="sp-empty">用 Scripts/ImportSkillPack.py 导入</div>'); return; }
+            curPack = packs[0];
+            loadDocs(curPack.packId);
+        }).fail(function(xhr){
+            if (xhr.status === 401) location.href = 'login.html';
+        });
+    });
+</script>
+</body>
+</html>
