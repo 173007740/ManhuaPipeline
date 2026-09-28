@@ -157,8 +157,13 @@ public class DirectorAgentService
     public sealed record StepResult(int StepId, string StageKey, string Status, string? Output, int PromptChars,
                                     int EstTokens, string? Gates, StepCost Cost, int Imported, string? ImportError);
 
-    public async Task<StepResult> RunStepAsync(int userId, int runId, string stageKey, string inputText)
+    public async Task<StepResult> RunStepAsync(int userId, int runId, string stageKey, string inputText,
+                                               int? projectId = null, int? episodeId = null)
     {
+        // 落点以本次请求为准：页面上换了项目/剧集立刻生效，不用重开一次运行
+        if (projectId > 0 || episodeId > 0)
+            _db.UpdateSkillRunTarget(runId, projectId > 0 ? projectId : null, episodeId > 0 ? episodeId : null);
+
         var packId = _db.GetRunPackId(runId);
         var stages = _db.GetSkillStages(packId);
         var stage = stages.FirstOrDefault(s => s.StageKey == stageKey)
@@ -188,8 +193,8 @@ public class DirectorAgentService
             string? importError = null;
             if (!string.IsNullOrWhiteSpace(stage.OutputTarget))
             {
-                var (projectId, episodeId) = _db.GetRunContext(runId);
-                var res = _importer.Import(stage.OutputTarget!, json, raw, projectId, episodeId);
+                var ctx = _db.GetRunContext(runId);
+                var res = _importer.Import(stage.OutputTarget!, json, raw, ctx.ProjectId, ctx.EpisodeId);
                 imported = res.Count;
                 importError = res.Error;
             }

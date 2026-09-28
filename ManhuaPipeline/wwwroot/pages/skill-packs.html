@@ -320,14 +320,19 @@
     }
 
     function doRun(){
-        var txt = collectForm() || $('#rInput').val();
+        // 表单与原文都要带：本阶段参数走表单，上一步产出粘在原文框，两者拼起来一起喂
+        var txt = [collectForm(), $('#rInput').val()].filter(function(s){ return (s||'').trim(); }).join('\n\n');
         if (!txt.trim()){ alert('先填输入内容'); return; }
         $('#btnRun').prop('disabled', true).text('执行中...');
         $('#rOutput').html('<div class="sp-empty">LLM 生成中，长文本可能要一两分钟...</div>');
         ensureRun(function(){
             $.ajax({
                 url: '/api/director-agent/runs/' + runId + '/steps', method: 'POST', contentType: 'application/json',
-                data: JSON.stringify({ stageKey: $('#rStage').val(), inputText: txt })
+                data: JSON.stringify({
+                    stageKey: $('#rStage').val(), inputText: txt,
+                    projectId: $('#rProject').val() ? +$('#rProject').val() : null,
+                    episodeId: $('#rEps').val() ? +$('#rEps').val() : null
+                })
             }).done(function(r){
                 var h = '<div style="border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px">';
                 h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">状态 ' + esc(r.status)
@@ -342,10 +347,15 @@
                 } else if (r.gates) {
                     h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">门禁：' + esc(r.gates) + '</div>';
                 }
+                var stg = stages.filter(function(s){ return s.stageKey === r.stageKey; })[0];
                 if (r.importError)
                     h += '<div style="font-size:12px;color:#fb923c;margin-bottom:8px">入库：' + esc(r.importError) + '</div>';
                 else if (r.imported > 0)
                     h += '<div style="font-size:12px;color:#4ade80;margin-bottom:8px">✓ 已入库 ' + r.imported + ' 条</div>';
+                else if (stg && stg.outputTarget)
+                    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">入库 0 条（目标 ' + esc(stg.outputTarget) + '，可能都已存在或没解析出条目）</div>';
+                else
+                    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">本阶段产出不入库（产出是文本，不是业务数据）</div>';
                 h += '<textarea class="tall" style="min-height:300px;margin-top:8px" readonly>' + esc(r.output || '') + '</textarea></div>';
                 $('#rOutput').html(h);
                 $('#btnConfirm').click(function(){ confirmStep($(this).data('step')); });

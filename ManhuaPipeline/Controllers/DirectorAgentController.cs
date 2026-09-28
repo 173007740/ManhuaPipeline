@@ -67,7 +67,8 @@ public class DirectorAgentController : ControllerBase
         if (GetUserId() == 0) return Unauthorized();
         try
         {
-            var r = await _agent.RunStepAsync(GetUserId(), runId, body.StageKey, body.InputText ?? "");
+            var r = await _agent.RunStepAsync(GetUserId(), runId, body.StageKey, body.InputText ?? "",
+                                              body.ProjectId, body.EpisodeId);
             return Ok(new
             {
                 stepId = r.StepId, stageKey = r.StageKey, status = r.Status,
@@ -133,5 +134,12 @@ public class DirectorAgentController : ControllerBase
         public string? Title { get; set; }
         public string? InputsJson { get; set; }
     }
-    public sealed class RunStepBody { public string StageKey { get; set; } = ""; public string? InputText { get; set; } }
+    public sealed class RunStepBody
+    {
+        public string StageKey { get; set; } = "";
+        public string? InputText { get; set; }
+        /// <summary>本次落点。以请求带的为准，页面上改了项目/剧集立刻生效。</summary>
+        public int? ProjectId { get; set; }
+        public int? EpisodeId { get; set; }
+    }
 }

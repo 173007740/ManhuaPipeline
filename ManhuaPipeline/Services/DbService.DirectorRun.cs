@@ -46,6 +46,20 @@ VALUES(@pk, @pid, @eid, @t, @i, 'running'); SELECT SCOPE_IDENTITY();", conn);
         return Convert.ToInt32(cmd.ExecuteScalar());
     }
 
+    /// <summary>改落点。页面上的项目/剧集是随时可改的，不能让第一次创建时的选择把整轮锁死。</summary>
+    public void UpdateSkillRunTarget(int runId, int? projectId, int? episodeId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+UPDATE DirectorSkillRuns
+SET ProjectId = ISNULL(@pid, ProjectId), EpisodeId = ISNULL(@eid, EpisodeId), UpdatedAt = SYSDATETIME()
+WHERE RunId = @id", conn);
+        cmd.Parameters.AddWithValue("@pid", (object?)projectId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@eid", (object?)episodeId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", runId);
+        cmd.ExecuteNonQuery();
+    }
+
     public void UpdateSkillRun(int runId, string? stage, string status)
     {
         using var conn = GetConn(); conn.Open();
