@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
 <head>
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
@@ -22,8 +22,7 @@
                     <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
                     <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
                     <span id="navUser" style="display:none;">
-                        <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
-                        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                        <a href="system-config.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
                         <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:13px;"></span>
                         <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
                     </span>
@@ -35,7 +34,7 @@
             </div>
         </nav>
         <div class="container config-card">
-            <h2 class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</h2>
+            <h2 class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 接口配置</h2>
 
                         <div class="config-section">
                 <h3 class="config-section-title"><span class="material-icons">smart_toy</span> 大语言模型配置</h3>
@@ -94,61 +93,58 @@
             </div>
 
             <div class="config-section">
-                <h3 class="config-section-title"><span class="material-icons">image</span> 图片模型配置（资产卡出图）</h3>
+                <h3 class="config-section-title"><span class="material-icons">image</span> 图片模型配置（资产卡 / 画布出图）</h3>
                 <div class="config-grid">
                     <div class="card">
-                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#0891b2">image</span> 文生图（中转 API）</h3>
-                        <div class="form-group"><label>API Key</label><input type="password" id="imgKey" placeholder="sk-..."></div>
-                        <div class="form-group"><label>API 地址</label><input type="text" id="imgUrl" placeholder="https://your-relay.com/v1"></div>
-                        <div class="form-group"><label>模型名称</label><input type="text" id="imgModel" placeholder="gpt-image-1 / seedream-3.0 / gemini-2.5-flash-image"></div>
-                        <p style="font-size:11px;color:#64748b;margin-top:8px;">
-                            用于「项目 → 资产库」中给角色/道具/环境/特效卡片点「出图」。填中转站的 base 地址即可（如 <code>https://xxx.com/v1</code>），
-                            只填域名会自动补 <code>/v1</code>；先走 <code>/images/generations</code>，不通会自动回退 <code>/chat/completions</code>。
-                            出图结果会回填资产卡图片，并同步一份进「我的资产」图库（文件名=资产名，可被「自动绑定参考图」直接命中）。
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#0891b2">image</span> 出图渠道（可配多个）</h3>
+                        <div id="imageModelList"></div>
+                        <button class="btn btn-small" id="addImageModel">+ 新增图片模型</button>
+                        <p style="font-size:11px;color:#64748b;margin-top:10px;">
+                            可以配多个渠道并存（中转 / 方舟 / 302.ai …）。标了「默认」的那条是全局默认：
+                            资产卡出图用它，画布节点在节点面板里没单独挑也用它 —— 画布里每个节点还能单独指定用哪个渠道。
+                            填中转站的 base 地址即可（如 <code>https://xxx.com/v1</code>），只填域名会自动补 <code>/v1</code>；
+                            请求先走 <code>/images/generations</code>，不通会自动回退 <code>/chat/completions</code>。
+                            改地址或名字时 API Key <b>留空</b>即表示不改动原 Key。
+                            模型下拉里的 ID 是 2026-09-26 从两家接口实测拿到的：展示名跟接口 ID 常常不一致
+                            （直接填 <code>Doubao-Seedream-5.0-pro</code> 这种展示名会 404），所以下拉显示的是习惯叫法、
+                            存进去的是接口真认的 ID。方舟目前没有 Seedream-5.0-lite，换到提供它的渠道时选「自定义」手填。
                         </p>
-                        <button class="btn btn-small btn-primary" id="saveIMG">保存文生图配置</button>
                     </div>
-                </div>
-            </div>
 
-            <div class="config-section">
-                <h3 class="config-section-title"><span class="material-icons">auto_awesome</span> 资产提示词模版（账号默认 · 每部剧可覆盖）</h3>
-                <p style="font-size:12px;color:#64748b;margin:0 0 12px;line-height:1.7;">
-                    跑 <b>Stage 6 角色 / 7 道具 / 8 环境 / 11 特效</b> 提取资产时，系统会把下面这个分类的「<b>类别规则</b>」注入提示词，
-                    让大模型为每个资产直接产出一条「<b>出图提示词</b>」并写进资产卡；点「出图」时再把「<b>统一视觉风格</b> + <b>统一负面提示词</b>」自动拼在提示词后面。<br>
-                    这里是<b>账号默认模版</b>，所有剧共用；<b>每部剧风格不一样时，请到「项目页 → 本剧提示词模版」按剧覆盖</b>
-                    （可一键带入该剧的项目画风），生效顺序是 <b>本剧模版 → 账号默认 → 出厂默认</b>。<br>
-                    改动<b>对已有资产立即生效</b>，不用重新跑提取；老项目可以在资产库里点「按模版重生成提示词 / 补齐缺失提示词」。
-                </p>
-                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:12px;">
-                    <button class="btn btn-small apt-tab btn-primary" data-cat="characters">角色</button>
-                    <button class="btn btn-small apt-tab" data-cat="props">道具</button>
-                    <button class="btn btn-small apt-tab" data-cat="environments">环境</button>
-                    <button class="btn btn-small apt-tab" data-cat="effects">特效</button>
-                </div>
-                <div class="card">
-                    <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:12px;flex-wrap:wrap;">
-                        <h3 id="aptTitle" style="margin:0;">角色提示词模版</h3>
-                        <label style="font-size:12px;color:#475569;display:flex;align-items:center;gap:6px;">
-                            <input type="checkbox" id="aptEnabled" checked> 启用模版化提取
-                        </label>
-                    </div>
-                    <div class="form-group">
-                        <label>统一视觉风格（硬锁定，出图时自动追加）</label>
-                        <textarea id="aptStyle" rows="3" placeholder="账号默认风格，例如：电影级日系动画电影质感，厚涂插画与精致渲染结合……（每部剧的画风建议在项目页覆盖）"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>类别规则（提取时指导大模型怎么写「出图提示词」正文）</label>
-                        <textarea id="aptRule" rows="9" placeholder="例如：角色卡规范：浅暖灰纯色背景，单人出镜；只写外貌、发型、瞳色、服装层次、材质、饰件……禁止写剧情、动作过程、运镜、景别。"></textarea>
-                    </div>
-                    <div class="form-group">
-                        <label>统一负面提示词（出图时自动追加）</label>
-                        <textarea id="aptNegative" rows="3" placeholder="例如：真人、cosplay、低幼Q版、廉价3D、角色换脸、肢体畸形、文字、水印、logo。"></textarea>
-                    </div>
-                    <div style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;">
-                        <button class="btn btn-small btn-primary" id="aptSave">保存该分类模版</button>
-                        <button class="btn btn-small" id="aptReset">恢复出厂默认</button>
-                        <span id="aptHint" style="font-size:12px;color:#64748b;"></span>
+                    <div class="card">
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#0891b2">tune</span> 出图参数</h3>
+                        <div class="form-group">
+                            <label>画面比例</label>
+                            <select id="igRatio"></select>
+                            <p style="font-size:11px;color:#64748b;margin-top:6px;">
+                                实际出图尺寸：<b id="igActualSize">—</b>
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label>质量档位 quality</label>
+                            <select id="igQuality"></select>
+                            <p style="font-size:11px;color:#64748b;margin-top:6px;">
+                                档位越高越慢（实测 low≈25s、high≈100s），token 不变。2.5 的 high 只等于上一代的 medium，xhigh 才对得上旧 high。
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label>一次出几张 n</label>
+                            <select id="igCount"></select>
+                            <p style="font-size:11px;color:#64748b;margin-top:6px;">
+                                中转一次只回 1 张，这里按次数依次生成：每张都进「我的资产」图库，第一张回填资产卡。
+                            </p>
+                        </div>
+                        <div class="form-group">
+                            <label>背景 background</label>
+                            <select id="igBackground"></select>
+                            <p style="font-size:11px;color:#64748b;margin-top:6px;">transparent 会真的出带透明通道的图；jpeg 不支持透明。</p>
+                        </div>
+                        <div class="form-group">
+                            <label>输出格式 output_format</label>
+                            <select id="igFormat"></select>
+                            <p style="font-size:11px;color:#64748b;margin-top:6px;">当前中转恒返回 PNG，这个参数先存着，换中转后即可生效。</p>
+                        </div>
+                        <button class="btn btn-small btn-primary" id="saveIG">保存出图参数</button>
                     </div>
                 </div>
             </div>
@@ -280,64 +276,266 @@
                         .done(function () { $("#configMsg").text("\u2714 \u89c6\u9891\u751f\u6210\u5f15\u64ce\u5df2\u4fdd\u5b58").show().fadeOut(3000); updateEngineLabel($("#videoEngine").val()); });
                 });
 
-                // ===== 文生图（中转 API，用于资产卡出图）=====
-                $.get("/api/config/llm/image", function (cfg) {
-                    setSecretField("#imgKey", cfg);
-                    if (cfg) { $("#imgUrl").val(cfg.apiUrl || ""); $("#imgModel").val(cfg.modelName || ""); }
-                });
-                $("#saveIMG").click(function () {
-                    if (!$.trim($("#imgUrl").val())) { $("#configMsg").text("请填写文生图 API 地址（中转 base，如 https://xxx.com/v1）").show().fadeOut(4000); return; }
-                    if (!$.trim($("#imgModel").val())) { $("#configMsg").text("请填写文生图模型名称").show().fadeOut(4000); return; }
-                    saveLLM("image", $("#imgKey").val(), $("#imgUrl").val(), $("#imgModel").val(), false, "#imgKey");
-                });
-                // ===== 资产提示词模版（角色/道具/环境/特效） =====
-                var aptCache = {}, aptCurrent = "characters";
-                function aptFill() {
-                    var t = aptCache[aptCurrent] || {};
-                    $("#aptTitle").text((t.categoryName || "资产") + "提示词模版 · 账号默认");
-                    $("#aptHint").text(t.isDefault ? "当前使用出厂默认值（未按 IP 定制），保存后即成为你的账号默认模版" : "账号默认模版已保存（修改后记得再保存一次）");
-                    $("#aptStyle").val(t.styleLock || "");
-                    $("#aptRule").val(t.ruleText || "");
-                    $("#aptNegative").val(t.negativePrompt || "");
-                    $("#aptEnabled").prop("checked", t.enabled !== false);
-                    $(".apt-tab").removeClass("btn-primary").filter('[data-cat="' + aptCurrent + '"]').addClass("btn-primary");
+                // ===== 出图渠道：可配多个并存，可指定默认 =====
+                // 一条渠道 = 一组「API Key + 地址 + 模型名」，页面上一张可编辑的小卡片。
+                // 标了「默认」的那条是全局默认：资产卡出图用它，画布节点没单独挑也用它。
+                var imModels = [];
+
+                // 可选模型清单。显示名用大家习惯的写法，value 是接口真正认的 model id ——
+                // 这两者经常不一致（填「Doubao-Seedream-5.0-pro」这种展示名会直接 404）。
+                // 2026-09-26 实测：中转站 /v1/models 只回 gpt-image-2.5 系列三个；
+                // 方舟 /models 的 seedream 系列如下（方舟当前没有 5.0-lite，想要只能换渠道）。
+                // 以后出新型号往这里加即可；列表里没有的走「自定义…」手填。
+                var MODEL_PRESETS = [
+                    {
+                        group: 'GPT 图像（中转 / OpenAI 兼容）', items: [
+                            { id: 'gpt-image-2.5', label: 'gpt-image-2.5', tip: '实测总像素锁在 ~1.57MP，16:9 只出 1672×941，够不到 1080p' },
+                            { id: 'gpt-image-2.5-sunburst', label: 'gpt-image-2.5-sunburst', tip: '更精细的一档，更慢更贵；分辨率同样锁在 ~1.57MP' },
+                            { id: 'gpt-image-2.5-flare', label: 'gpt-image-2.5-flare', tip: '更快更省的一档，画质略低' }
+                        ]
+                    },
+                    {
+                        group: '即梦 / 豆包 Seedream（火山方舟）', items: [
+                            { id: 'doubao-seedream-5-0-260128', label: 'Doubao-Seedream-5.0', tip: '实测可用，出 2560×1440（2K）' },
+                            { id: 'doubao-seedream-5-0-pro-260628', label: 'Doubao-Seedream-5.0-pro', tip: '画质更好；要先在方舟控制台开通，没开通会报 403' },
+                            { id: 'doubao-seedream-5-0-flash-260915', label: 'Doubao-Seedream-5.0-flash', tip: '更快的一档，画质略低' },
+                            { id: 'doubao-seedream-4-5-251128', label: 'Doubao-Seedream-4.5', tip: '上一代，方舟同样有像素下限、出 2K' },
+                            { id: 'doubao-seedream-4-0-250828', label: 'Doubao-Seedream-4.0', tip: '上上一代' },
+                            { id: 'doubao-seedream-3-0-t2i-250415', label: 'Doubao-Seedream-3.0', tip: '更早一代，纯文生图' }
+                        ]
+                    },
+                    {
+                        // 2026-09-27 用户新增：走中转的 OpenAI 兼容接口。
+                        // 四个型号都还没实测过分辨率与 size 参数的兼容性，跑一张后把实测结论补进 tip。
+                        group: 'Gemini（香蕉 / nano banana，中转）', items: [
+                            { id: 'gemini-3.1-flash-image', label: 'gemini-3.1-flash-image', tip: 'Gemini 图像模型（nano banana 一脉），速度快；未实测' },
+                            { id: 'gemini-3.1-flash-image-preview', label: 'gemini-3.1-flash-image-preview', tip: '预览版：更便宜，但型号可能随时变动或回收；未实测' },
+                            { id: 'gemini-3.1-pro-preview', label: 'gemini-3.1-pro-preview', tip: 'Pro 版（nano banana Pro 一脉），画质更高、更慢更贵；未实测' },
+                            { id: 'gemini-3.8-flash', label: 'gemini-3.8-flash', tip: '看型号像通用多模态而非专用图像模型 —— 若不支持出图会直接报错；未实测' }
+                        ]
+                    }
+                ];
+
+                function imMsg(t) { $("#configMsg").text(t).show().fadeOut(4000); }
+
+                // 渲染单个渠道卡片。用 $('<input>').val() 而不是拼 HTML 字符串，
+                // 这样渠道名里带引号、尖括号也不会把结构弄坏
+                function imItem(m) {
+                    var $it = $('<div>').addClass('im-item').attr('data-id', m.configId || 0)
+                        .css({ border: '1px solid var(--border)', borderRadius: '8px', padding: '12px', marginBottom: '12px' });
+
+                    // 渠道名必须包进 .form-group：页面输入框的边框/内边距/圆角是 .form-group input
+                    // 这条规则给的，裸 input 会掉回浏览器默认样式，跟其它输入框看起来不是一套。
+                    // 「默认」徽标挂在 label 上，省得再单独占一行。
+                    var $nameLabel = $('<label>').text('渠道名')
+                        .css({ display: 'flex', alignItems: 'center', gap: '8px' });
+                    if (m.isDefault) {
+                        $nameLabel.append($('<span>').text('默认').css({
+                            fontSize: '11px', background: '#0891b2', color: '#fff',
+                            borderRadius: '10px', padding: '2px 8px', fontWeight: '600'
+                        }));
+                    }
+                    $it.append($('<div>').addClass('form-group').append($nameLabel)
+                        .append($('<input>').addClass('im-name').attr('type', 'text')
+                            .attr('placeholder', '渠道名，如：方舟 seedream 2K').val(m.displayName || '')));
+
+                    $it.append($('<div>').addClass('form-group').append($('<label>').text('API Key'))
+                        .append($('<input>').addClass('im-key').attr('type', 'password')
+                            .attr('placeholder', m.hasKey ? '已保存，留空表示不改动' : 'sk-...')));
+                    $it.append($('<div>').addClass('form-group').append($('<label>').text('API 地址'))
+                        .append($('<input>').addClass('im-url').attr('type', 'text')
+                            .attr('placeholder', 'https://your-relay.com/v1').val(m.apiUrl || '')));
+                    // 模型名称：下拉挑，避免手填展示名（如 Doubao-Seedream-5.0-pro）被接口判 404。
+                    // 列表里没有的型号走最后一项「自定义…」，那时才出现手输框。
+                    var $modelFg = $('<div>').addClass('form-group').append($('<label>').text('模型名称'));
+                    var $sel = $('<select>').addClass('im-model');
+                    $sel.append($('<option>').val('').text('— 请选择模型 —'));
+                    $.each(MODEL_PRESETS, function (_, g) {
+                        var $og = $('<optgroup>').attr('label', g.group);
+                        $.each(g.items, function (_, it) { $og.append($('<option>').val(it.id).text(it.label)); });
+                        $sel.append($og);
+                    });
+                    $sel.append($('<option>').val('__custom__').text('自定义…（手动填模型 ID）'));
+
+                    // 已存的模型不在预设里（老数据 / 别家渠道）就落到「自定义」，值原样带出来，不会丢
+                    var cur = m.modelName || '', known = false;
+                    $.each(MODEL_PRESETS, function (_, g) {
+                        $.each(g.items, function (_, it) { if (it.id === cur) known = true; });
+                    });
+                    $sel.val(known ? cur : (cur ? '__custom__' : ''));
+
+                    $modelFg.append($sel);
+                    $modelFg.append($('<input>').addClass('im-model-custom').attr('type', 'text')
+                        .attr('placeholder', '直接填渠道方给的模型 ID').val(cur));
+                    $modelFg.append($('<p>').addClass('im-model-tip')
+                        .css({ fontSize: '11px', color: '#64748b', marginTop: '6px' }));
+                    $it.append($modelFg);
+                    imRefreshModel($it);
+
+                    var $ops = $('<div>').css({ display: 'flex', alignItems: 'center', gap: '8px' });
+                    $ops.append($('<button>').addClass('btn btn-small btn-primary im-save').text('保存'));
+                    if (!m.isDefault) $ops.append($('<button>').addClass('btn btn-small im-default').text('设为默认'));
+                    // 不同渠道能出的分辨率差很多（gpt-image 够不到 1080p、方舟是 2K），挑的时候得先看见
+                    if (m.resolutionHint) {
+                        $ops.append($('<span>').text('实际出图约 ' + m.resolutionHint)
+                            .css({ fontSize: '11px', color: '#64748b' }));
+                    }
+                    // 删除靠右放，跟左边的「保存 / 设为默认」拉开距离，免得手滑点错
+                    $ops.append($('<button>').addClass('btn btn-small im-del').text('删除').css({ marginLeft: 'auto' }));
+                    $it.append($ops);
+                    return $it;
                 }
-                function aptLoad() {
-                    $.get("/api/config/asset-prompt-templates", function (list) {
-                        aptCache = {};
-                        (list || []).forEach(function (t) { aptCache[t.category] = t; });
-                        aptFill();
+
+                // 选了「自定义…」才显示手输框；并把该型号的实测说明写在下面，
+                // 让人在挑的时候就知道它大概能出多大、要不要额外开通
+                function imRefreshModel($it) {
+                    var v = $it.find('.im-model').val() || '';
+                    var isCustom = v === '__custom__';
+                    $it.find('.im-model-custom').toggle(isCustom);
+
+                    var tip = '';
+                    if (isCustom) {
+                        tip = '手填渠道方给的模型 ID —— 列表里没有的型号（新出的、或换到别的渠道）走这里。';
+                    } else {
+                        $.each(MODEL_PRESETS, function (_, g) {
+                            $.each(g.items, function (_, it) { if (it.id === v) tip = it.tip; });
+                        });
+                    }
+                    $it.find('.im-model-tip').text(tip);
+                }
+
+                function imRender() {
+                    var $box = $("#imageModelList").empty();
+                    if (!imModels.length) {
+                        $box.append($('<p>').text('还没有配置任何出图渠道，点下面「+ 新增图片模型」加一个。')
+                            .css({ fontSize: '12px', color: '#94a3b8' }));
+                        return;
+                    }
+                    $.each(imModels, function (_, m) { $box.append(imItem(m)); });
+                }
+
+                function imLoad() {
+                    $.get("/api/config/image-models", function (r) {
+                        imModels = (r && r.models) || [];
+                        imRender();
                     });
                 }
-                $(".apt-tab").click(function () { aptCurrent = $(this).data("cat"); aptFill(); });
-                $("#aptSave").click(function () {
+
+                function imPayload($it) {
+                    var $sel = $it.find('.im-model');
+                    // 走「自定义…」时取手输框，否则取下拉的 value（= 接口认的 model id）
+                    var model = $sel.val() === '__custom__'
+                        ? $.trim($it.find('.im-model-custom').val())
+                        : $.trim($sel.val() || '');
+                    return {
+                        configId: parseInt($it.attr('data-id'), 10) || 0,
+                        displayName: $.trim($it.find('.im-name').val()),
+                        apiKey: $.trim($it.find('.im-key').val()),
+                        apiUrl: $.trim($it.find('.im-url').val()),
+                        modelName: model
+                    };
+                }
+
+                $("#imageModelList").on('click', '.im-save', function () {
+                    var $it = $(this).closest('.im-item'), p = imPayload($it);
+                    if (!p.apiUrl) { imMsg('请填写 API 地址'); return; }
+                    if (!p.modelName) { imMsg('请填写模型名称'); return; }
+                    if (!p.configId && !p.apiKey) { imMsg('新增渠道请填写 API Key'); return; }
                     $.ajax({
-                        url: "/api/config/asset-prompt-templates", method: "POST", contentType: "application/json",
+                        url: "/api/config/image-models", method: "POST", contentType: "application/json",
+                        data: JSON.stringify(p),
+                        success: function () { imMsg('\u2714 出图渠道已保存'); imLoad(); },
+                        error: function (x) { imMsg('保存失败：' + ((x.responseJSON && x.responseJSON.message) || x.status)); }
+                    });
+                });
+
+                $("#imageModelList").on('change', '.im-model', function () {
+                    imRefreshModel($(this).closest('.im-item'));
+                });
+
+                $("#imageModelList").on('click', '.im-default', function () {
+                    var id = parseInt($(this).closest('.im-item').attr('data-id'), 10) || 0;
+                    if (!id) { imMsg('请先保存这条渠道，再设为默认'); return; }
+                    $.post("/api/config/image-models/" + id + "/default", function () {
+                        imMsg('\u2714 已设为默认出图渠道'); imLoad();
+                    });
+                });
+
+                $("#imageModelList").on('click', '.im-del', function () {
+                    var $it = $(this).closest('.im-item');
+                    var id = parseInt($it.attr('data-id'), 10) || 0;
+                    if (!id) { imModels.splice($it.index(), 1); imRender(); return; }   // 还没存过的新条目，直接去掉
+                    if (!confirm('确定删除这条出图渠道？\n删掉后，画布上指定用它的节点会退回用默认渠道。')) return;
+                    $.ajax({
+                        url: "/api/config/image-models/" + id, method: "DELETE",
+                        success: function () { imMsg('\u2714 已删除'); imLoad(); }
+                    });
+                });
+
+                $("#addImageModel").click(function () {
+                    imModels.push({
+                        configId: 0, displayName: '', modelName: '', apiUrl: '',
+                        hasKey: false, isDefault: false, resolutionHint: null
+                    });
+                    imRender();
+                    $("#imageModelList .im-item").last().find('.im-name').focus();
+                });
+
+                imLoad();
+                // ===== 出图参数（比例 / 质量 / 张数 / 背景 / 格式） =====
+                // 比例下拉里带的是「中转实测会吐回来的分辨率」：中转把总像素锁在 ~1.57MP
+                // 后按比例分配宽高，请求值跟实际输出并不一致，所以直接把实际值写进选项。
+                var igRatios = [];
+                function igActualSizeText(r) {
+                    for (var i = 0; i < igRatios.length; i++) {
+                        if (igRatios[i].value === r) return igRatios[i].width + " × " + igRatios[i].height;
+                    }
+                    return "—";
+                }
+                function igLoad() {
+                    $.get("/api/config/image-options", function (cfg) {
+                        if (!cfg) return;
+                        igRatios = cfg.ratios || [];
+                        $("#igRatio").empty();
+                        igRatios.forEach(function (r) {
+                            $("#igRatio").append($("<option>").val(r.value).text(r.label + "（" + r.width + "×" + r.height + "）"));
+                        });
+                        $("#igQuality").empty();
+                        (cfg.qualities || []).forEach(function (q) { $("#igQuality").append($("<option>").val(q).text(q)); });
+                        var maxN = cfg.maxCount || 10;
+                        $("#igCount").empty();
+                        for (var i = 1; i <= maxN; i++) $("#igCount").append($("<option>").val(i).text(i + " 张"));
+                        $("#igBackground").empty();
+                        (cfg.backgrounds || []).forEach(function (b) { $("#igBackground").append($("<option>").val(b).text(b)); });
+                        $("#igFormat").empty();
+                        (cfg.formats || []).forEach(function (f) { $("#igFormat").append($("<option>").val(f).text(f)); });
+
+                        $("#igRatio").val(cfg.aspectRatio);
+                        $("#igQuality").val(cfg.quality);
+                        $("#igCount").val(cfg.imageCount);
+                        $("#igBackground").val(cfg.background);
+                        $("#igFormat").val(cfg.outputFormat);
+                        $("#igActualSize").text(igActualSizeText(cfg.aspectRatio));
+                    });
+                }
+                $("#igRatio").change(function () { $("#igActualSize").text(igActualSizeText($(this).val())); });
+                $("#saveIG").click(function () {
+                    $.ajax({
+                        url: "/api/config/image-options", method: "POST", contentType: "application/json",
                         data: JSON.stringify({
-                            category: aptCurrent,
-                            styleLock: $("#aptStyle").val(),
-                            ruleText: $("#aptRule").val(),
-                            negativePrompt: $("#aptNegative").val(),
-                            enabled: $("#aptEnabled").is(":checked")
+                            aspectRatio: $("#igRatio").val(),
+                            quality: $("#igQuality").val(),
+                            imageCount: parseInt($("#igCount").val(), 10) || 1,
+                            background: $("#igBackground").val(),
+                            outputFormat: $("#igFormat").val()
                         })
                     }).done(function (r) {
-                        $("#configMsg").text("\u2714 " + (r.message || "模版已保存")).show().fadeOut(3000);
-                        aptLoad();
+                        $("#configMsg").text("\u2714 " + (r.message || "出图参数已保存")).show().fadeOut(3000);
                     }).fail(function (x) {
-                        $("#configMsg").text(x.responseJSON && x.responseJSON.message ? x.responseJSON.message : "模版保存失败").show().fadeOut(4000);
+                        $("#configMsg").text("保存失败: " + ((x.responseJSON && x.responseJSON.message) || x.statusText || "请求失败")).show().fadeOut(4000);
                     });
                 });
-                $("#aptReset").click(function () {
-                    var name = (aptCache[aptCurrent] || {}).categoryName || "该分类";
-                    if (!confirm("恢复出厂默认会覆盖当前「" + name + "」模版，继续？")) return;
-                    $.post("/api/config/asset-prompt-templates/" + aptCurrent + "/reset", function (r) {
-                        $("#configMsg").text("\u2714 " + (r.message || "已恢复出厂默认")).show().fadeOut(3000);
-                        aptLoad();
-                    }).fail(function (x) {
-                        $("#configMsg").text(x.responseJSON && x.responseJSON.message ? x.responseJSON.message : "恢复默认失败").show().fadeOut(4000);
-                    });
-                });
-                aptLoad();
+                igLoad();
 
                 $("#saveCF").click(function () {
                     var url = $("#cfUrl").val() || "http://127.0.0.1:8188";

@@ -162,9 +162,8 @@
             <div class="nav-links" id="navLinks">
                 <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
                 <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
-                <a href="config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
+                <a href="system-config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
                 <span id="navUser" style="display:none;">
-                    <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
                     <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:13px;"></span>
                     <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
                 </span>
@@ -266,7 +265,7 @@
                         </div>
                         <div id="episodeCountWrap" style="display:none;margin-bottom:16px;padding:12px;border-radius:8px;">
                             <label style="font-weight:600;color:#e2e8f0;">总集数：</label>
-                            <input type="number" id="episodeCount" value="12" min="1" max="99" style="width:70px;padding:4px 8px;border-radius:4px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;">
+                            <input type="number" id="episodeCount" value="1" min="1" max="99" style="width:70px;padding:4px 8px;border-radius:4px;border:1px solid #475569;background:#1e293b;color:#e2e8f0;">
                             <button class="btn btn-small" id="btnSetEpCount" style="margin-left:8px;">设置</button>
                         </div>
                         <div id="targetDurationWrap" style="display:none;margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.2);">
@@ -918,7 +917,7 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
                 });
             }, 3000);
         }
-        function loadAssets(num) { $("#ptmBar").show(); renderAssetStyleHint(); window._currentAssetStage = num; var api = ""; var cat = ""; var icon = ""; if (num === 6) { api = "/api/project/" + currentProjectId + "/asset/characters"; cat = "characters"; icon = "\U0001f464" } else if (num === 7) { api = "/api/project/" + currentProjectId + "/asset/props"; cat = "props"; icon = "\U0001f527" } else if (num === 8) { api = "/api/project/" + currentProjectId + "/asset/environments"; cat = "environments"; icon = "\U0001f3fe" } else if (num === 11) { api = "/api/project/" + currentProjectId + "/asset/effects"; cat = "effects"; icon = "\u26a1" } $("#assetIcon").text(icon); $.get(api, function (d) { window._assetList = d || []; if (!d || d.length === 0) { var raw = stages[num - 1] || {}; var rc = raw.content || raw.llmResponse || ""; if (rc) { $("#stageResult").html(rc.replace(/\*\*/g, "").replace(/\n/g, "<br>")) } else { $("#stageResult").html("<p style='color:#94a3b8;padding:20px;'>暂无数据</p>") }; return } var h = "<div style='display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin-bottom:8px;'><button onclick='batchGenAssetImages(\"" + cat + "\")' title='给这个分类里还没有图的资产排队出图（已有的不重复出，想换图点单张「重新出图」）；后台依次执行，关掉页面也会继续跑完' style='font-size:12px;background:#0e7490;color:#fff;border-radius:6px;padding:5px 12px;border:none;cursor:pointer;'><i class='fas fa-images' style='font-size:11px;'></i> 批量出图</button><button onclick='rebuildMissingPrompts(this,\"" + cat + "\")' title='按「API 配置 → 资产提示词模版」给还没有出图提示词的资产补生成，不必重跑流水线' style='font-size:12px;background:#0f766e;color:#fff;border-radius:6px;padding:5px 12px;border:none;cursor:pointer;'><i class='fas fa-wand-magic-sparkles' style='font-size:11px;'></i> 补齐缺失提示词</button><button onclick='addAsset(\"" + cat + "\")' style='font-size:12px;background:#7c3aed;color:#fff;border-radius:6px;padding:5px 12px;border:none;cursor:pointer;'><i class='fas fa-plus' style='font-size:11px;'></i> 添加</button></div>"; for (var i = 0; i < d.length; i++) {
+        function loadAssets(num) { $("#ptmBar").show(); renderAssetStyleHint(); window._currentAssetStage = num; var api = ""; var cat = ""; var icon = ""; if (num === 6) { api = "/api/project/" + currentProjectId + "/asset/characters"; cat = "characters"; icon = "\U0001f464" } else if (num === 7) { api = "/api/project/" + currentProjectId + "/asset/props"; cat = "props"; icon = "\U0001f527" } else if (num === 8) { api = "/api/project/" + currentProjectId + "/asset/environments"; cat = "environments"; icon = "\U0001f3fe" } else if (num === 11) { api = "/api/project/" + currentProjectId + "/asset/effects"; cat = "effects"; icon = "\u26a1" } $("#assetIcon").text(icon); $.get(api, function (d) { window._assetList = d || []; if (!d || d.length === 0) { var raw = stages[num - 1] || {}; var rc = raw.content || raw.llmResponse || ""; if (rc) { $("#stageResult").html(rc.replace(/\*\*/g, "").replace(/\n/g, "<br>")) } else { $("#stageResult").html("<p style='color:#94a3b8;padding:20px;'>暂无数据</p>") }; return } var h = "<div style='display:flex;justify-content:flex-end;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:8px;'><button onclick='autoBindAssetImages(this,\"" + cat + "\")' title='按项目名过滤资源库，再按资产名匹配图片名，把图绑到资产卡上（画布出好图「存资源库」后就是这么回来的）' style='font-size:12px;background:#0891b2;color:#fff;border-radius:6px;padding:5px 12px;border:none;cursor:pointer;'><i class='fas fa-link' style='font-size:11px;'></i> 自动绑定图片</button><label style='display:inline-flex;align-items:center;gap:4px;font-size:11px;color:#94a3b8;cursor:pointer;' title='勾选后，已经绑过图的资产也会被资源库里最新的同名图替换掉'><input type=checkbox id=autoBindOverwrite style='margin:0;'>覆盖已有</label><button onclick='batchGenAssetImages(\"" + cat + "\")' title='给这个分类里还没有图的资产排队出图（已有的不重复出，想换图点单张「重新出图」）；后台依次执行，关掉页面也会继续跑完' style='font-size:12px;background:#0e7490;color:#fff;border-radius:6px;padding:5px 12px;border:none;cursor:pointer;'><i class='fas fa-images' style='font-size:11px;'></i> 批量出图</button><button onclick='rebuildMissingPrompts(this,\"" + cat + "\")' title='按「API 配置 → 资产提示词模版」给还没有出图提示词的资产补生成，不必重跑流水线' style='font-size:12px;background:#0f766e;color:#fff;border-radius:6px;padding:5px 12px;border:none;cursor:pointer;'><i class='fas fa-wand-magic-sparkles' style='font-size:11px;'></i> 补齐缺失提示词</button><button onclick='addAsset(\"" + cat + "\")' style='font-size:12px;background:#7c3aed;color:#fff;border-radius:6px;padding:5px 12px;border:none;cursor:pointer;'><i class='fas fa-plus' style='font-size:11px;'></i> 添加</button></div>"; for (var i = 0; i < d.length; i++) {
             var a = d[i];
             // 卡片两栏：左=提示词+按钮，右=生成的图片
             h += "<div style='border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,0.03);display:flex;gap:12px;align-items:flex-start;'>";
@@ -953,15 +952,65 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
         } $("#stageResult").html(h) }) } function loadPrompts() { restoreH3Progress(); autoPollStage9IfRunning();
             var statusMap = { pending: "排队等待", queued: "排队等待", running: "正在生成", processing: "正在生成", succeeded: "成功", completed: "成功", failed: "失败", expired: "任务超时", cancelled: "已取消", enhancing: "增强中", unknown: "状态未知", null: "等待生成" };
             var statusColor = { pending: "#f59e0b", queued: "#f59e0b", running: "#3b82f6", processing: "#3b82f6", succeeded: "#10b981", completed: "#10b981", failed: "#ef4444", expired: "#6b7280", cancelled: "#94a3b8", enhancing: "#f59e0b", unknown: "#94a3b8" };
-            function fmtStatus(s) { var label = statusMap[s] || s || "等待生成"; var color = statusColor[s] || "#94a3b8"; return "<span style='background:" + color + "22;color:" + color + ";border:1px solid " + color + "44;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:500;'>" + label + "</span>" } var sb = "<div style='background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;'>"; sb += "<span style='color:#a78bfa;font-weight:600;font-size:13px;'>⚙️ 视频参数</span>"; sb += "<label style='color:#cbd5e1;font-size:13px;'>比例 <select id=vidRatio style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value=16:9 selected>16:9</option><option value=9:16>9:16</option><option value=1:1>1:1</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'><input type=checkbox id=vidWatermark style='margin-right:4px;'>水印</label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'><input type=checkbox id=vidAudio checked style='margin-right:4px;'>音频</label><label style='color:#cbd5e1;font-size:13px;'>分辨率 <select id=vidResolution style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value='480p'>480p</option><option value='720p' selected>720p</option><option value='1080p'>1080p</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'>风格 <select id=vidStyle style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;min-width:130px;'></select></label><a href='video-styles.html' target='_blank' style='font-size:12px;color:#a78bfa;text-decoration:none;margin-left:4px;'><i class='fas fa-cog'></i> 管理</a>"; sb += "<label style='color:#cbd5e1;font-size:13px;display:inline-flex;align-items:center;gap:6px;'>项目标签 <input id=projectTagsInput value='" + escHtml(window.projectTags || "") + "' placeholder='纸上山河,古风' style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;width:230px;box-sizing:border-box;'></label>";
-            sb += "<button id=btnAutoBind style='font-size:13px;padding:6px 14px;background:#0891b2;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-wand-magic-sparkles'></i> 自动绑定参考图</button><button class=btn-primary onclick='openAddPromptModal()' style='font-size:13px;padding:6px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-plus'></i> 添加提示词</button><button id=btnPromptImport class=btn-primary style='font-size:13px;padding:6px 14px;background:#0e7490;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-file-import'></i> Excel 导入</button><button class=btn-primary id=btnBatchVideo style='margin-left:auto;font-size:13px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-film'></i> 批量生成视频</button><a href='video-tasks.html?id='+currentProjectId+' style='font-size:12px;color:#a78bfa;text-decoration:none;margin-left:8px;'><i class='fas fa-list'></i> 任务记录</a>"; sb += "</div>"; $.get("/api/project/" + currentProjectId + "/prompt", function (d) {
-                window.promptData = d; if (!d || d.length === 0) { $("#stageResult").html(sb + "<p style='color:#94a3b8;padding:20px;'>暂无提示词数据</p>"); _applyVideoSettings(window.projectVideoSettings); loadVideoStyles(); return } var _totSec = 0;
+            function fmtStatus(s) { var label = statusMap[s] || s || "等待生成"; var color = statusColor[s] || "#94a3b8"; return "<span style='background:" + color + "22;color:" + color + ";border:1px solid " + color + "44;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:500;'>" + label + "</span>" } var sb = "<div style='background:rgba(124,58,237,0.1);border:1px solid rgba(124,58,237,0.25);border-radius:8px;padding:12px 16px;margin-bottom:12px;display:flex;align-items:center;gap:12px;flex-wrap:wrap;'>"; sb += "<span style='color:#a78bfa;font-weight:600;font-size:13px;'>⚙️ 视频参数</span>"; sb += "<label style='color:#cbd5e1;font-size:13px;'>比例 <select id=vidRatio style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value=16:9 selected>16:9</option><option value=9:16>9:16</option><option value=1:1>1:1</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'><input type=checkbox id=vidWatermark style='margin-right:4px;'>水印</label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'><input type=checkbox id=vidAudio checked style='margin-right:4px;'>音频</label><label style='color:#cbd5e1;font-size:13px;'>分辨率 <select id=vidResolution style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value='480p'>480p</option><option value='720p' selected>720p</option><option value='1080p'>1080p</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;' title='ComfyUI 引擎的出图像素档：画幅按这个档位算宽高，档位越高越清晰也越慢、越吃显存'>像素档 <select id=vidMp style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value='0.5'>0.5MP</option><option value='1' selected>1MP</option><option value='1.5'>1.5MP</option><option value='2'>2MP</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'>风格 <select id=vidStyle style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;min-width:130px;'></select></label><a href='video-styles.html' target='_blank' style='font-size:12px;color:#a78bfa;text-decoration:none;margin-left:4px;'><i class='fas fa-cog'></i> 管理</a>"; sb += "<label style='color:#cbd5e1;font-size:13px;display:inline-flex;align-items:center;gap:6px;'>项目标签 <input id=projectTagsInput value='" + escHtml(window.projectTags || "") + "' placeholder='纸上山河,古风' style='background:#1e293b;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;width:230px;box-sizing:border-box;'></label>";
+            sb += "<button id=btnAutoBind style='font-size:13px;padding:6px 14px;background:#0891b2;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-wand-magic-sparkles'></i> 自动绑定参考图</button><button id=btnForceRebind style='font-size:13px;padding:6px 14px;background:#475569;color:#e2e8f0;border:none;border-radius:6px;cursor:pointer;' title='全部提示词重新匹配（含已绑定的），用于按资产卡图统一修正换脸'><i class='fas fa-rotate'></i> 强制重绑全部</button><button class=btn-primary onclick='openAddPromptModal()' style='font-size:13px;padding:6px 14px;background:#10b981;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-plus'></i> 添加提示词</button><button id=btnPromptImport class=btn-primary style='font-size:13px;padding:6px 14px;background:#0e7490;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-file-import'></i> Excel 导入</button><button class=btn-primary id=btnBatchVideo style='margin-left:auto;font-size:13px;padding:6px 14px;background:#7c3aed;color:#fff;border:none;border-radius:6px;cursor:pointer;'><i class='fas fa-film'></i> 批量生成视频</button><a href='video-tasks.html?id='+currentProjectId+' style='font-size:12px;color:#a78bfa;text-decoration:none;margin-left:8px;'><i class='fas fa-list'></i> 任务记录</a>"; sb += "</div>"; $.get("/api/project/" + currentProjectId + "/prompt", function (d) {
+                window.promptData = d; if (!d || d.length === 0) { $("#stageResult").html(sb + "<div id='promptStatsBar' style='display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;'></div><p style='color:#94a3b8;padding:20px;'>暂无提示词数据</p>"); setTimeout(function () { window._loadPromptStats(); }, 0); _applyVideoSettings(window.projectVideoSettings); loadVideoStyles(); return } var _totSec = 0;
 for (var _pi = 0; _pi < d.length; _pi++) { _totSec += (d[_pi].duration || 0); }
 function _fmtTotal(sec) { if (!sec) return "0秒"; var hh = Math.floor(sec / 3600), mm = Math.floor((sec % 3600) / 60), ss = sec % 60; var t = ""; if (hh > 0) t += hh + "小时"; if (mm > 0 || hh > 0) t += mm + "分"; t += ss + "秒"; return t; }
-var _statsHtml = "<div style='display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;'>"
-  + "<div style='background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);border-radius:8px;padding:10px 20px;text-align:center;'><div style='font-size:20px;font-weight:700;color:#a78bfa;'>" + d.length + "</div><div style='font-size:12px;color:#cbd5e1;'>提示词总数</div></div>"
-  + "<div style='background:rgba(16,185,129,0.12);border:1px solid rgba(16,185,129,0.3);border-radius:8px;padding:10px 20px;text-align:center;'><div style='font-size:20px;font-weight:700;color:#22c55e;'>" + _fmtTotal(_totSec) + "</div><div style='font-size:12px;color:#cbd5e1;'>提示词总时长</div></div>"
-  + "</div>";
+var _statsHtml = "<div id='promptStatsBar' style='display:flex;gap:12px;margin-bottom:12px;flex-wrap:wrap;'></div>";
+// 统计条单独渲染：分镜总数要从分镜脚本里数镜头，走 /prompt/stats 异步拿，到了再补上
+function _statCard(val, label, color, rgb, sub, subColor) {
+    // flex:1 1 150px + max-width：卡片等分一行横排；诊断文案再长也只在卡内折行，不会把卡片撑成整行
+    return "<div style='flex:1 1 150px;min-width:150px;max-width:320px;box-sizing:border-box;background:rgba(" + rgb + ",0.12);border:1px solid rgba(" + rgb + ",0.3);border-radius:8px;padding:10px 16px;text-align:center;'>"
+        + "<div style='font-size:20px;font-weight:700;color:" + color + ";'>" + val + "</div>"
+        + "<div style='font-size:12px;color:#cbd5e1;'>" + label + "</div>"
+        + (sub ? "<div style='font-size:11px;color:" + (subColor || color) + ";margin-top:2px;white-space:normal;word-break:break-word;'>" + sub + "</div>" : "") + "</div>";
+}
+window._renderPromptStats = function (st, retry) {
+    var $bar = $("#promptStatsBar");
+    if (!$bar.length) { if ((retry || 0) < 10) setTimeout(function () { window._renderPromptStats(st, (retry || 0) + 1); }, 60); return; }
+    var shotTotal = (st && st.shotTotal) ? st.shotTotal : 0;
+    var promptTotal = (st && st.promptTotal != null) ? st.promptTotal : ((d && d.length) || 0);
+    var videoDone = (st && st.videoDone != null) ? st.videoDone : 0;
+    var miss = shotTotal > 0 ? Math.max(0, shotTotal - promptTotal) : 0;
+    var pct = shotTotal > 0 ? Math.round(promptTotal * 100 / shotTotal) : 0;
+    // 取不到分镜数时把原因写清楚，别让人对着「—」猜
+    var why = "";
+    if (!shotTotal) {
+        if (!st) why = "读取中…";
+        else if (st.shotSource === "error") why = "分镜列表接口 /episode/frames 不可用 HTTP " + (st.httpStatus || "?");
+        else if (typeof st === "string") why = "接口返回的是页面不是 JSON —— 后端没重启，路由被 SPA 回退吃了";
+        else why = "分镜脚本表（StoryboardFrames）里该项目 0 条，先跑完阶段 5";
+    }
+    // 定位用：取不到时把接口返回原文摊在卡片上，省得猜
+    if (!shotTotal) {
+        var raw = (typeof st === "undefined" || st === null) ? "（还没拿到接口返回）" : JSON.stringify(st);
+        why += (why ? " ｜ " : "") + raw.slice(0, 80);
+    }
+    var h = "";
+    h += _statCard(shotTotal || "—", "分镜总数", shotTotal ? "#38bdf8" : "#f59e0b", "56,189,248", why, "#f59e0b");
+    h += _statCard(promptTotal + (shotTotal ? " / " + shotTotal : ""), "已生成提示词" + (shotTotal ? "（" + pct + "%）" : ""),
+        miss > 0 ? "#f59e0b" : "#22c55e", miss > 0 ? "245,158,11" : "16,185,129",
+        miss > 0 ? "还差 " + miss + " 个镜头没生成" : (shotTotal ? "已全部生成" : ""));
+    h += _statCard(videoDone, "视频已生成", "#22c55e", "16,185,129");
+    h += _statCard(_fmtTotal(_totSec), "提示词总时长", "#a78bfa", "124,58,237");
+    $bar.html(h);
+};
+// 统计条取数：三个数全部走已有接口，不依赖任何新增接口 —— 改完刷新就生效，不用重启服务。
+//   分镜总数   = /episode/frames 的条数（阶段 5「分镜脚本」页面渲染的就是这份数据，StoryboardFrames 表）
+//   已生成提示词 = 当前提示词列表条数
+//   视频已生成  = 列表里 videoUrl / localVideoUrl 非空的条数
+window._loadPromptStats = function () {
+    window._renderPromptStats(null);
+    $.get("/api/project/" + currentProjectId + "/episode/frames", function (fr) {
+        var n = (d && d.length) || 0, done = 0;
+        for (var i = 0; i < n; i++) { var p = d[i]; if (p && (p.videoUrl || p.localVideoUrl)) done++; }
+        window._renderPromptStats({ shotTotal: (fr && fr.length) || 0, promptTotal: n, videoDone: done, shotSource: "frames" });
+    }).fail(function (x) {
+        window._renderPromptStats({ shotTotal: 0, promptTotal: (d && d.length) || 0, videoDone: 0, shotSource: "error", httpStatus: (x && x.status) || 0 });
+    });
+};
+setTimeout(function () { window._loadPromptStats(); }, 0);
 var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='promptTable'><thead><tr><th style='width:40px;'>#</th><th style='width:50px;'>提示词ID</th><th style='width:70px;'>集数/单元</th><th style='width:45px;'>镜头</th><th style='width:60px;'>类型</th><th style='width:400px;'>提示词内容</th><th style='width:60px;'>状态</th><th style='width:40px;'>时长</th><th style='width:190px;'>操作</th><th style='width:150px;'>参考图</th><th style='width:450px;'>视频</th></tr></thead><tbody id='promptTableBody'></tbody></table><div id='promptLoadMoreWrap' style='text-align:center;padding:12px;'></div>"; window._promptPage = 0; window._promptPageSize = 100; window._renderPromptRows = function (from, to) { var rows = ""; for (var i = from; i < to; i++) { var p = d[i]; if (!p) continue; var manual = !p.episodeNumber && !p.unitName && p.shotLabel; var label = manual ? p.shotLabel : ("【第" + (p.episodeNumber || "") + "集】" + (p.unitName ? " 【单元" + p.unitName + "】" : "")); var shotLabel = manual ? "-" : (p.shotLabel || (i + 1)); var actionBtn = ""; if (p.status === "enhancing") { actionBtn = "<button class='btn btn-small' style='font-size:11px;background:#f59e0b;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:default;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-sparkles' style='font-size:16px;'></i><span>增强中</span></button>" } else if (p.videoUrl) { actionBtn = "<button class='btn btn-small' onclick='genVideo(this," + p.promptId + ")' style='font-size:11px;background:#7c3aed;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-sync-alt' style='font-size:16px;'></i><span>重新生成</span></button>" } else if (p.status === "processing" || p.status === "running" || p.status === "pending" || p.status === "queued" || p.status === "unknown") { actionBtn = "<button class='btn btn-small poll-trigger' data-pid='" + p.promptId + "' onclick='pollVideoStatus(this," + p.promptId + ")' style='font-size:11px;background:#7c3aed;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-spinner fa-pulse' style='font-size:16px;'></i><span>生成中</span></button>" } else { actionBtn = "<button class='btn btn-small' onclick='genVideo(this," + p.promptId + ")' style='font-size:11px;background:#7c3aed;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-video' style='font-size:16px;'></i><span>生成视频</span></button>" } var refHtml = ""; var refImgs = []; try { refImgs = p.referenceImages ? JSON.parse(p.referenceImages) : [] } catch (e) { } var styleSlot = _styleSlotOf(p.promptText); refHtml += "<div style=\'display:flex;flex-direction:column;gap:4px;align-items:center;\'>"; for (var si = 0; si < 9; si++) { var slotLabel = si === 0 ? "主角" : si === styleSlot ? "风格" : ""; if (slotLabel) refHtml += "<div style='font-size:10px;color:#94a3b8;line-height:1;'>" + slotLabel + "</div>"; if (si < refImgs.length && refImgs[si]) { refHtml += "<div style=\'position:relative;width:40px;height:40px;\'><img id='refSlot_" + p.promptId + "_" + si + "' src=\'" + _thumbUrl(refImgs[si], 80) + "\' loading=\'lazy\' decoding=\'async\' style=\'width:40px;height:40px;object-fit:cover;border-radius:4px;cursor:pointer;\' onclick=\'window.open(\"" + refImgs[si] + "\")\'><div onclick=\'clearRefSlot(" + p.promptId + "," + si + ")\' style=\'position:absolute;top:-4px;right:-4px;width:14px;height:14px;border-radius:50%;background:#ef4444;color:#fff;font-size:10px;line-height:14px;text-align:center;cursor:pointer;\'>x</div></div>" } else { refHtml += "<div style=\'display:flex;gap:2px;align-items:center;\'><label style=\'display:flex;align-items:center;justify-content:center;width:40px;height:40px;border:1px dashed rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;color:rgba(255,255,255,0.3);font-size:18px;\' title=\'上传参考图\'><input type=file accept=\'image/*\' style=\'display:none\' onchange=\'uploadRefSlot(this," + p.promptId + "," + si + ")\'>+</label><span style='width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:1px dashed rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;color:rgba(255,255,255,0.3);font-size:14px;' title='从资产库选择' onclick=\'openAssetLibrary(" + p.promptId + "," + si + ")\'><i class='fas fa-folder-open'></i></span><span style='width:40px;height:40px;display:flex;align-items:center;justify-content:center;border:1px dashed rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;color:rgba(255,255,255,0.3);font-size:14px;' title='引用风格帧' onclick=\'openStyleFrame(" + p.promptId + "," + si + ")\'><i class='fas fa-palette'></i></span></div>" } } refHtml += "<div style=\'display:flex;align-items:center;gap:4px;margin-top:6px;\'>"; var refVids = []; try { refVids = p.referenceVideos ? JSON.parse(p.referenceVideos) : [] } catch (e) { } if (refVids.length && refVids[0]) { refHtml += "<video src=\'" + refVids[0] + "\' controls style=\'width:80px;height:44px;object-fit:cover;border-radius:4px;\'></video><span title=\'清除参考视频\' onclick=\'clearRefVideo(" + p.promptId + ")\' style=\'cursor:pointer;color:#ef4444;font-size:12px;margin-left:4px;\'><i class=\'fas fa-times\'></i></span>" } else { refHtml += "<label style=\'display:flex;align-items:center;justify-content:center;width:80px;height:44px;border:1px dashed rgba(255,255,255,0.2);border-radius:4px;cursor:pointer;color:rgba(255,255,255,0.4);font-size:12px;\' title=\'上传参考视频\'><input type=file accept=\'video/*\' style=\'display:none\' onchange=\'uploadRefVideo(this," + p.promptId + ")\'><i class=\'fas fa-video\'></i> 参考视频</label>" } refHtml += "</div>"; var editBtn = "<button class='btn btn-small' onclick='editPrompt(this," + p.promptId + ")' style='font-size:11px;background:#475569;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-pen' style='font-size:16px;'></i><span>编辑</span></button>"; var deleteBtn = "<button class='btn btn-small' onclick='deletePrompt(this," + p.promptId + ")' style='font-size:11px;background:#ef4444;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-trash' style='font-size:16px;'></i><span style='font-size:11px;'>删除</span></button>"; var isRunning = p.status === "processing" || p.status === "running" || p.status === "pending" || p.status === "queued" || p.status === "unknown";
             var cancelBtn =  "<button class='btn btn-small' onclick='cancelVideo(this,\"" + p.promptId + "\")' style='font-size:11px;background:#ef4444;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-times' style='font-size:16px;'></i><span style='font-size:11px;'>取消生成</span></button>";
             var durationBtn = "<button class='btn btn-small' onclick='editDuration(" + p.promptId + "," + (p.duration || 11) + ")' style='font-size:11px;background:#10b981;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-clock' style='font-size:16px;'></i><span style='font-size:11px;'>修改时长</span></button>"; var shotLabelBtn = "<button class='btn btn-small' onclick='editShotLabel(" + p.promptId + ")' style='font-size:11px;background:#f59e0b;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-tag' style='font-size:16px;'></i><span style='font-size:11px;'>修改镜号</span></button>"; var regenPromptBtn = "<button class='btn btn-small' onclick='regeneratePromptFromPrompt(this," + p.promptId + ")' style='font-size:11px;background:#0891b2;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;'><i class='fas fa-wand-magic-sparkles' style='font-size:16px;'></i><span style='font-size:11px;'>重新生成提示词</span></button>"; var h3PromptBtn = "<button class='btn btn-small' onclick='genH3Prompt(this," + p.promptId + ")' style='font-size:11px;background:#0e7490;color:#fff;border-radius:6px;padding:8px 6px;border:none;cursor:pointer;display:flex;flex-direction:column;align-items:center;gap:4px;width:100%;margin:3px 0;' title='基于该镜头现有 SD 提示词生成 H3 参考生视频提示词（ComfyUI 引擎提交视频时使用）'><i class='fas fa-clapperboard' style='font-size:16px;'></i><span style='font-size:11px;'>生成H3提示词</span></button>"; var videoHtml = ""; var vidUrl = p.localVideoUrl; if (vidUrl) { videoHtml = "<div style='text-align:center;'><video src='" + vidUrl + "' controls preload='metadata' style='width:100%;border-radius:6px;' loop></video></div>" } rows += "<tr id='promptRow_" + p.promptId + "' style='height:120px;'><td>" + (i + 1) + "</td><td style='text-align:center;'>" + p.promptId + "</td><td style='max-width:70px;word-wrap:break-word;overflow-wrap:break-word;' title='" + label + "'>" + label + "</td><td style='max-width:45px;word-wrap:break-word;overflow-wrap:break-word;'>" + shotLabel + "</td><td style='text-align:center;'>" + typeBadge(p.shotType) + "</td><td style='max-width:400px;overflow:hidden;'><div class='cell-wrap'>" + (p.promptTextH3 ? "<span style='color:#22d3ee;font-weight:700;font-size:11px;'>H3</span> " + escHtml(p.promptTextH3) : "") + ((p.promptTextH3 && p.promptText) ? "<div style='height:1px;background:rgba(255,255,255,0.12);margin:5px 0;'></div>" : "") + (p.promptText ? "<span style='color:#a78bfa;font-weight:700;font-size:11px;'>SD</span> " + escHtml(p.promptText) : "") + "</div></td><td id='promptStatus_" + p.promptId + "' style='text-align:center;'>" + fmtStatus(p.status) + "</td><td style='text-align:center;font-size:13px;color:#e2e8f0;'>" + (p.duration||11) + "s</td><td style='width:190px;vertical-align:middle;'><div class=\"ops-col\">" + actionBtn + regenPromptBtn + h3PromptBtn + cancelBtn + durationBtn + editBtn + deleteBtn + shotLabelBtn + "</div></td><td style='width:150px;vertical-align:middle;'>" + refHtml + "</td><td id='promptVideo_" + p.promptId + "'>" + videoHtml + "</td></tr>" } return rows; }; $("#stageResult").html(h); _applyVideoSettings(window.projectVideoSettings); try { var _tb = document.getElementById("promptTableBody"); if (_tb) { _tb.insertAdjacentHTML("beforeend", window._renderPromptRows(0, window._promptPageSize)); window._promptPage = 1; } updatePromptLoadMore(); autoRenderRemainingPrompts(); } catch (err) { console.error("loadPrompts render error:", err); } ensureVideoSSE(); setTimeout(function () { loadVideoStyles(); }, 500);
@@ -1006,7 +1055,7 @@ var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='prom
 
         // ======== 视频参数按项目保存到数据库 ========
         function saveVideoParams() {
-            var v = { ratio: $("#vidRatio").val() || "16:9", watermark: $("#vidWatermark").is(":checked"), audio: $("#vidAudio").is(":checked"), resolution: $("#vidResolution").val() || "720p" };
+            var v = { ratio: $("#vidRatio").val() || "16:9", watermark: $("#vidWatermark").is(":checked"), audio: $("#vidAudio").is(":checked"), resolution: $("#vidResolution").val() || "720p", megapixels: parseFloat($("#vidMp").val()) || 1 };
             window.projectVideoSettings = v;
             $.ajax({ url: "/api/project/" + currentProjectId + "/video-settings", method: "PUT", contentType: "application/json", data: JSON.stringify(v), error: function () { } });
         }
@@ -1016,12 +1065,13 @@ var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='prom
             if ($("#vidWatermark").length) $("#vidWatermark").prop("checked", !!s.watermark);
             if ($("#vidAudio").length) $("#vidAudio").prop("checked", s.audio !== false);
             if (s.resolution && $("#vidResolution").length) $("#vidResolution").val(s.resolution);
+            if ($("#vidMp").length) $("#vidMp").val(String(parseFloat(s.megapixels) || 1));
         }
         function restoreVideoParams() {
             if (window.projectVideoSettings) { _applyVideoSettings(window.projectVideoSettings); return; }
-            $.get("/api/project/" + currentProjectId, function (p) { window.projectVideoSettings = { ratio: p.videoRatio, watermark: p.videoWatermark, audio: p.videoAudio, resolution: p.videoResolution }; _applyVideoSettings(window.projectVideoSettings) });
+            $.get("/api/project/" + currentProjectId, function (p) { window.projectVideoSettings = { ratio: p.videoRatio, watermark: p.videoWatermark, audio: p.videoAudio, resolution: p.videoResolution, megapixels: p.videoMegapixels }; _applyVideoSettings(window.projectVideoSettings) });
         }
-        $(document).on("change", "#vidRatio, #vidWatermark, #vidAudio, #vidResolution", function () { saveVideoParams() });
+        $(document).on("change", "#vidRatio, #vidWatermark, #vidAudio, #vidResolution, #vidMp", function () { saveVideoParams() });
         // ======== 自动绑定参考图（按提示词"参考图:"说明从资产库匹配） ========
         function _promptRefs(p) {
             if (!p) return [];
@@ -1431,6 +1481,21 @@ var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='prom
             }
             return best ? best.localPath : null;
         }
+        // 资产卡指定图优先：1) 资产名完全相同；2) 提示词里的名字包含某资产名（取最长者），
+        // 例如「玻吕茜亚-战斗态」→ 玻吕茜亚的资产卡图。命中即直接返回，绝不进入图库打分。
+        function _cardImageOf(name, projectAssets) {
+            var n = (name || "").trim();
+            if (!n || !projectAssets) return "";
+            var best = "", bestLen = 0;
+            for (var i = 0; i < projectAssets.length; i++) {
+                var pa = projectAssets[i];
+                var an = (pa.name || "").trim();
+                if (!an || !pa.imageUrl) continue;
+                if (n === an) return pa.imageUrl;
+                if (an.length >= 2 && n.indexOf(an) !== -1 && an.length > bestLen) { bestLen = an.length; best = pa.imageUrl; }
+            }
+            return best;
+        }
         function _matchStyleAsset(assets, learned) {
             if (learned && learned.__style__) return learned.__style__;
             var cands = [];
@@ -1451,25 +1516,28 @@ var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='prom
             }
             return best ? best.localPath : null;
         }
-        function autoBindRefImages(btn) {
+        function autoBindRefImages(btn, force) {
             var prompts = window.promptData || [];
-            var todo = [];
+            var unbound = [], boundCount = 0;
             for (var i = 0; i < prompts.length; i++) {
                 var refs = _promptRefs(prompts[i]);
                 var has = false;
                 for (var j = 0; j < refs.length; j++) { if (refs[j]) { has = true; break; } }
-                if (!has) todo.push(prompts[i]);
+                if (has) boundCount++; else unbound.push(prompts[i]);
             }
-            if (todo.length === 0) { showCopyDialog("自动绑定参考图", "没有需要绑定的提示词（都已绑定参考图）"); return; }
+            // 默认只处理未绑定的，已绑定的保持不动；只有点「强制重绑全部」才全量覆盖（用于修正换脸）
+            var todo = force ? prompts.slice() : unbound;
+            if (todo.length === 0) { showCopyDialog("自动绑定参考图", "没有需要绑定的提示词（" + boundCount + " 条已绑定参考图）。\n如需按资产卡图统一重绑，请点「强制重绑全部」。"); return; }
             var tagText = window.projectTags || "";
             var tagEl = $("#projectTagsInput");
             if (tagEl.length) { tagText = tagEl.val().trim(); window.projectTags = tagText; }
             var listParams = tagText ? { tags: tagText } : {};
-            if (!confirm("将为 " + todo.length + " 条未绑定参考图的提示词自动匹配并绑定，已绑定的会自动跳过。" + (tagText ? "\n按项目标签「" + tagText + "」过滤资产库。" : "") + "\n\n匹配不了的会列出来让你手动补。继续？")) return;
+            if (!confirm("将为 " + todo.length + " 条" + (force ? "（全量，含已绑定的）" : "未绑定") + "提示词匹配并绑定参考图：优先用资产卡上已指定的图，资产卡没图的才按图库文件名兜底。" + (tagText ? "\n按项目标签「" + tagText + "」过滤资产库。" : "") + "\n\n匹配不了的会列出来让你手动补。继续？")) return;
+            var btnHtml0 = btn.html();
             btn.prop("disabled", true).html("<i class='fas fa-spinner fa-spin'></i> 匹配中...");
             $.get("/api/reference/list", listParams, function (assets) {
                 if (listParams.tags && assets.length === 0) {
-                    btn.html("<i class='fas fa-wand-magic-sparkles'></i> 自动绑定参考图").prop("disabled", false);
+                    btn.html(btnHtml0).prop("disabled", false);
                     showCopyDialog("自动绑定参考图", "按项目标签（" + tagText + "）过滤后资产库为空，没有可绑定的资产。\n请检查项目标签与资产标签是否一致，或清空标签后重试。");
                     return;
                 }
@@ -1490,23 +1558,29 @@ var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='prom
                         var arr2 = args[ai2] || [];
                         var cat = assetApis[ai2][0];
                         for (var pa = 0; pa < arr2.length; pa++) {
-                            projectAssets.push({ name: arr2[pa].name || "", description: arr2[pa].description || "", cat: cat });
+                            projectAssets.push({ name: arr2[pa].name || "", description: arr2[pa].description || "", cat: cat, imageUrl: arr2[pa].imageUrl || "" });
                         }
                     }
                     var skills = args[4] || [];
                     var skillMap = {};
                     for (var si = 0; si < skills.length; si++) { if (skills[si].imageUrl) skillMap[skills[si].name] = skills[si].imageUrl; }
+                    // 资产卡上已指定的参考图（imageUrl）是权威来源：资产名命中就直接用，
+                    // 不再去图库里按文件名模糊打分挑图（图库里同名有多张时会挑错，导致同一角色不同镜头换脸）
+                    var guessNames = [];
                 var learned = {};
                 for (var k = 0; k < prompts.length; k++) _learnRefs(prompts[k], learned, assets);
                 var ok = 0, skipNoLine = 0, failed = [], styleMiss = [];
                 var idx = 0;
                 (function next() {
                     if (idx >= todo.length) {
-                        btn.html("<i class='fas fa-wand-magic-sparkles'></i> 自动绑定参考图").prop("disabled", false);
+                        btn.html(btnHtml0).prop("disabled", false);
                         var msg = "绑定完成：成功 " + ok + " 条";
                         if (skipNoLine) msg += "，无参考图说明 " + skipNoLine + " 条";
                         if (failed.length) msg += "\n\n失败 " + failed.length + " 条：\n" + failed.join("\n");
                         if (styleMiss.length) msg += "\n\n缺风格图 " + styleMiss.length + " 条：\n" + styleMiss.join("\n");
+                        var uniqGuess = [];
+                        for (var gi = 0; gi < guessNames.length; gi++) { if (uniqGuess.indexOf(guessNames[gi]) === -1) uniqGuess.push(guessNames[gi]); }
+                        if (uniqGuess.length) msg += "\n\n以下资产卡没有指定图，是按图库文件名模糊匹配的（建议给资产卡指定唯一参考图，否则可能换脸）：\n" + uniqGuess.join("、");
                         showCopyDialog("绑定结果", msg);
                         loadPrompts();
                         return;
@@ -1522,7 +1596,9 @@ var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='prom
                     for (var e = 0; e < parsed.length; e++) {
                         var it = parsed[e];
                         if (it.exactMissing) { miss.push("【未找到资产】" + it.name + "（疑似 AI 编造，请在提示词里修正）"); continue; }
-                        var path = it.path || _matchAsset(it.name, srcText, assets, learned, skillMap);
+                        var cardImg = _cardImageOf(it.name, projectAssets);
+                        var path = it.path || cardImg || _matchAsset(it.name, srcText, assets, learned, skillMap);
+                        if (!it.path && !cardImg && path) guessNames.push(it.name);
                         if (path) { arr[it.slot] = path; learned[it.name] = path; }
                         else miss.push(it.name);
                     }
@@ -1549,16 +1625,20 @@ var h = _statsHtml + sb + "<table class='storyboard-table prompt-table' id='prom
                     $.ajax({ url: "/api/project/" + currentProjectId + "/video/references/" + p.promptId, method: "PUT", contentType: "application/json", data: JSON.stringify(body), success: function () { ok++; next(); }, error: function () { failed.push("提示词ID " + p.promptId + "：保存失败"); next(); } });
                 })();
                 }).fail(function () {
-                    btn.html("<i class='fas fa-wand-magic-sparkles'></i> 自动绑定参考图").prop("disabled", false);
+                    btn.html(btnHtml0).prop("disabled", false);
                     alert("加载项目资产/技能库失败");
                 });
             }).fail(function () {
-                btn.html("<i class='fas fa-wand-magic-sparkles'></i> 自动绑定参考图").prop("disabled", false);
+                btn.html(btnHtml0).prop("disabled", false);
                 alert("加载资产库失败");
             });
         }
         $(document).on("change", "#projectTagsInput", function () { var v = $(this).val().trim(); window.projectTags = v; $.ajax({ url: "/api/project/" + currentProjectId + "/tags", method: "PUT", contentType: "application/json", data: JSON.stringify({ tags: v }), error: function () { alert("保存项目标签失败") } }); });
-        $(document).on("click", "#btnAutoBind", function () { autoBindRefImages($(this)); });
+        $(document).on("click", "#btnAutoBind", function () { autoBindRefImages($(this), false); });
+        $(document).on("click", "#btnForceRebind", function () {
+            if (!confirm("将按资产卡上已指定的参考图，对全部提示词重新绑定（已绑定的也会被覆盖）。\n用于修正「同一角色不同镜头用了不同图」的换脸问题。\n\n确定继续？")) return;
+            autoBindRefImages($(this), true);
+        });
         if (!$("#promptImportFile").length) { $("<input type='file' id='promptImportFile' accept='.xlsx' style='display:none'>").appendTo(document.body); }
         $(document).on("click", "#btnPromptImport", function () { $("#promptImportFile").trigger("click"); });
         $(document).on("change", "#promptImportFile", function () {
@@ -1696,7 +1776,7 @@ function loadVideoStyles() { $.get("/api/video-style", function (styles) { var s
             var sc = sColor[st] || "#3b82f6", stx = sMap[st] || "生成中";
             _setVideoBtn(pid, "<i class='fas fa-spinner fa-pulse' style='font-size:16px;color:" + sc + ";'></i><span style='color:" + sc + ";font-size:11px;'>" + stx + "</span>", true);
         }
-        function genVideo(btn, promptId) { var prompts = window.promptData || []; var p = prompts.find(function(x){return x.promptId===promptId}); var dur = (p&&p.duration) || 11; var ratio = $("#vidRatio").val() || "16:9"; var wm = $("#vidWatermark").is(":checked"); var aud = $("#vidAudio").is(":checked"); var res = $("#vidResolution").val() || "720p"; var plen = p ? promptEffLen(p.promptText) : 0; if (plen > 2000 && !confirm("当前提示词 " + plen + " 字（官方建议不超过 500 字），过长可能导致模型忽略细节，是否继续生成？")) return; _genBusy[promptId] = true; _setVideoBtn(promptId, _videoBusyInnerHtml("提交中…"), false); $.ajax({ url: "/api/project/" + currentProjectId + "/video/generate/" + promptId, method: "POST", contentType: "application/json", data: JSON.stringify({ duration: parseInt(dur), ratio: ratio, watermark: wm, generateAudio: aud, resolution: res }), success: function (r) { _setVideoBtn(promptId, _videoBusyInnerHtml("生成中"), true); ensureVideoSSE() }, error: function (x) { if (x.status === 409) { _setVideoBtn(promptId, _videoBusyInnerHtml("生成中"), true); ensureVideoSSE(); return } delete _genBusy[promptId]; _setVideoBtn(promptId, "<i class='fas fa-sync-alt' style='font-size:16px;'></i><span>重新生成</span>", true); alert("提交失败: " + (x.responseJSON?.message || x.statusText)) } }) }
+        function genVideo(btn, promptId) { var prompts = window.promptData || []; var p = prompts.find(function(x){return x.promptId===promptId}); var dur = (p&&p.duration) || 11; var ratio = $("#vidRatio").val() || "16:9"; var wm = $("#vidWatermark").is(":checked"); var aud = $("#vidAudio").is(":checked"); var res = $("#vidResolution").val() || "720p"; var plen = p ? promptEffLen(p.promptText) : 0; if (plen > 2000 && !confirm("当前提示词 " + plen + " 字（官方建议不超过 500 字），过长可能导致模型忽略细节，是否继续生成？")) return; _genBusy[promptId] = true; _setVideoBtn(promptId, _videoBusyInnerHtml("提交中…"), false); $.ajax({ url: "/api/project/" + currentProjectId + "/video/generate/" + promptId, method: "POST", contentType: "application/json", data: JSON.stringify({ duration: parseInt(dur), ratio: ratio, watermark: wm, generateAudio: aud, resolution: res, megapixels: parseFloat($("#vidMp").val()) || 1 }), success: function (r) { _setVideoBtn(promptId, _videoBusyInnerHtml("生成中"), true); ensureVideoSSE() }, error: function (x) { if (x.status === 409) { _setVideoBtn(promptId, _videoBusyInnerHtml("生成中"), true); ensureVideoSSE(); return } delete _genBusy[promptId]; _setVideoBtn(promptId, "<i class='fas fa-sync-alt' style='font-size:16px;'></i><span>重新生成</span>", true); alert("提交失败: " + (x.responseJSON?.message || x.statusText)) } }) }
 
         // ======== pollVideoStatus ========
         
@@ -2313,6 +2393,8 @@ function closeAssetLib() { $("#assetLibModal").hide() }
                 h += '</datalist>';
                 h += '<input type="file" id="voiceFileInput" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg" style="color:#94a3b8;font-size:12px;max-width:220px;">';
                 h += '<button class="btn btn-primary" id="voiceUploadBtn">上传绑定</button>';
+                h += '<button class="btn" id="voicePickLibBtn" style="background:#6d28d9;border-color:#a78bfa;color:#fff;" title="从音色库里选一个已保存的音色直接绑定给该角色，不用每次重新上传"><i class="fas fa-music"></i> 从音色库选择</button>';
+                h += '<a href="voice-library.html" target="_blank" class="btn" style="border-color:#475569;color:#94a3b8;text-decoration:none;" title="打开音色库页面管理音色">音色库</a>';
                 h += '</div>';
                 h += '<div id="voiceUploadMsg" style="font-size:12px;margin-top:8px;"></div>';
                 h += '</div>';
@@ -2324,6 +2406,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
                     replaceVoice($(this).attr("data-name") || "");
                 });
                 $("#voiceUploadBtn").on("click", function () { uploadVoice(); });
+                $("#voicePickLibBtn").on("click", function () { openVoiceLibraryPicker(); });
                 if (voicePendingMsg) { $("#voiceUploadMsg").html(voicePendingMsg); voicePendingMsg = null; }
             }).fail(function (xhr) {
                 var msg = "读取音色参考失败";
@@ -2361,6 +2444,93 @@ function closeAssetLib() { $("#assetLibModal").hide() }
                 .always(function () { $b.prop("disabled", false).text("上传绑定"); });
         }
 
+        // ======== 从音色库选音色绑定（不上传文件） ========
+        function openVoiceLibraryPicker() {
+            var name = ($("#voiceCharacterInput").val() || "").trim();
+            if (!name) {
+                $("#voiceUploadMsg").html('<span style="color:#f59e0b;">先填写或选择角色名，再从音色库里挑音色</span>');
+                return;
+            }
+            var mask = $('<div style="position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:2300;display:flex;align-items:center;justify-content:center;"></div>');
+            mask.append('<div style="background:#111827;border:1px solid #334155;border-radius:12px;padding:18px;width:580px;max-width:92%;max-height:78vh;display:flex;flex-direction:column;">'
+                + '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">'
+                + '<div style="color:#f1f1f5;font-size:15px;font-weight:600;"><i class="fas fa-music" style="color:#a78bfa;"></i> 为「' + escHtml(name) + '」选择音色</div>'
+                + '<button class="btn" id="voiceLibClose">关闭</button></div>'
+                + '<div style="display:flex;gap:8px;align-items:center;margin-bottom:10px;">'
+                + '<span style="font-size:12px;color:#94a3b8;">分类</span>'
+                + '<select id="voiceLibCat" style="background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:12px;padding:6px 8px;">'
+                + '<option value="">全部</option><option value="动漫">动漫</option><option value="游戏">游戏</option>'
+                + '<option value="写实">写实</option><option value="仙侠">仙侠</option></select>'
+                + '<span id="voiceLibCatTip" style="font-size:11px;color:#64748b;"></span></div>'
+                + '<input id="voiceLibSearch" placeholder="搜索音色名 / 标签 / 备注" style="width:100%;box-sizing:border-box;padding:8px 10px;background:#0f172a;border:1px solid #334155;border-radius:6px;color:#e2e8f0;font-size:13px;margin-bottom:12px;">'
+                + '<div id="voiceLibList" style="color:#94a3b8;font-size:13px;overflow:auto;">加载中…</div></div>');
+            $("body").append(mask);
+            mask.on("click", function (e) { if (e.target === this) mask.remove(); });
+            mask.find("#voiceLibClose").on("click", function () { mask.remove(); });
+            var timer = null;
+            mask.find("#voiceLibSearch").on("input", function () {
+                clearTimeout(timer);
+                timer = setTimeout(function () { renderVoiceLibList(name, mask); }, 250);
+            });
+            mask.find("#voiceLibCat").on("change", function () { renderVoiceLibList(name, mask); });
+            // 默认按当前项目的资产库类型（动漫/游戏/写实/仙侠）过滤，省得每次手动切
+            $.get("/api/project/" + currentProjectId, function (p) {
+                if (p && p.libraryCategory) {
+                    mask.find("#voiceLibCat").val(p.libraryCategory);
+                    mask.find("#voiceLibCatTip").text("已按本项目类型「" + p.libraryCategory + "」筛选");
+                }
+            }).always(function () { renderVoiceLibList(name, mask); });
+        }
+
+        function renderVoiceLibList(name, mask) {
+            var q = mask.find("#voiceLibSearch").val() || "";
+            var cat = mask.find("#voiceLibCat").val() || "";
+            $.get("/api/voice-library", { search: q, category: cat }, function (d) {
+                var items = (d && d.items) || [];
+                var box = mask.find("#voiceLibList").empty();
+                if (!items.length) {
+                    box.html('<div style="padding:16px;text-align:center;">没有匹配的音色。<a href="voice-library.html" target="_blank" style="color:#a78bfa;">去音色库添加 →</a></div>');
+                    return;
+                }
+                for (var i = 0; i < items.length; i++) {
+                    var v = items[i];
+                    var row = $('<div style="display:flex;align-items:center;gap:10px;padding:8px;border-bottom:1px solid rgba(148,163,184,0.15);"></div>');
+                    row.append('<div style="flex:1;min-width:0;">'
+                        + '<div style="color:#e2e8f0;font-size:13px;font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">'
+                        + escHtml(v.name)
+                        + (v.category ? ' <span style="font-size:11px;color:#38bdf8;">' + escHtml(v.category) + '</span>' : '')
+                        + (v.tag ? ' <span style="font-size:11px;color:#a78bfa;">' + escHtml(v.tag) + '</span>' : '') + '</div>'
+                        + (v.note ? '<div style="font-size:11px;color:#94a3b8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + escHtml(v.note) + '</div>' : '')
+                        + '<audio controls preload="none" src="' + escHtml(v.audioUrl) + '" style="height:28px;max-width:220px;margin-top:4px;"></audio></div>');
+                    row.append('<button class="btn btn-primary btn-lib-pick" data-id="' + v.id + '" data-vname="' + escHtml(v.name) + '">用这个</button>');
+                    box.append(row);
+                }
+                box.find(".btn-lib-pick").on("click", function () {
+                    bindVoiceFromLibrary(name, parseInt($(this).attr("data-id"), 10), $(this).attr("data-vname") || "", mask);
+                });
+            }).fail(function () {
+                mask.find("#voiceLibList").html('<div style="color:#f87171;">读取音色库失败</div>');
+            });
+        }
+
+        // 绑定时后端会复制一份音频到项目音色目录，所以以后删库里的音色不影响这里
+        function bindVoiceFromLibrary(name, libraryId, voiceName, mask) {
+            $.ajax({
+                url: "/api/project/" + currentProjectId + "/video/voices/from-library",
+                type: "POST", contentType: "application/json",
+                data: JSON.stringify({ characterName: name, libraryId: libraryId })
+            }).done(function () {
+                mask.remove();
+                voicePendingMsg = '<span style="color:#34d399;">已从音色库把「' + escHtml(voiceName) + '」绑定给 ' + escHtml(name)
+                    + '。<b>下一步：</b>重新生成该镜头的 H3 提示词，音色才会写进去。</span>';
+                loadVoiceRefs();
+            }).fail(function (xhr) {
+                var msg = "绑定失败";
+                try { msg = xhr.responseJSON.message || msg } catch (e) { }
+                alert(msg);
+            });
+        }
+
         function deleteVoice(voiceId, name) {
             if (!confirm("确定删除角色「" + name + "」的音色参考音频？")) return;
             $.ajax({ url: "/api/project/" + currentProjectId + "/video/voices/" + voiceId, type: "DELETE" })
@@ -2386,7 +2556,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
             });
             $(document).on("click", "#btnH3FailHide", function () { window._h3FailedShots = []; window._h3Failures = []; refreshRetryH3Button(); });
             // Generate stage
-            $(document).on("click", "#btnGenerate", function () { var btn = $(this); var sn = currentStage; if (!confirm("确定生成\xab" + getStageName(sn) + "\xbb？")) return; btn.prop("disabled", true).html("<i class='fas fa-spinner fa-spin'></i> 生成中..."); if (sn === 9) { startStage9Poll(btn) } if (sn === 5) { startStage5Poll(btn, { requireProcessing: true }) } $.post("/api/project/" + currentProjectId + "/stage/" + sn + "/process").done(function (r) { stopStage9Poll(); stopStage5Poll(); $("#stageProgressWrap").hide(); if (sn === 5) { finishStage5ProgressModal("已完成", "#34d399", "分镜脚本生成完成") } btn.html("<i class='fas fa-bolt'></i> 生成").prop("disabled", false); loadStagesAndShow(sn) }).fail(function (x) { stopStage9Poll(); stopStage5Poll(); $("#stageProgressWrap").hide(); if (sn === 5) { finishStage5ProgressModal("失败", "#ef4444", "生成失败：" + (x.responseJSON?.message || x.statusText)) } btn.html("<i class='fas fa-bolt'></i> 生成").prop("disabled", false); alert("生成失败: " + (x.responseJSON?.message || x.statusText)) }) });
+            $(document).on("click", "#btnGenerate", function () { var btn = $(this); var sn = currentStage; if (!confirm("确定生成\xab" + getStageName(sn) + "\xbb？")) return; btn.prop("disabled", true).html("<i class='fas fa-spinner fa-spin'></i> 生成中..."); if (sn === 9) { startStage9Poll(btn) } if (sn === 5) { startStage5Poll(btn, { requireProcessing: true }) } $.post("/api/project/" + currentProjectId + "/stage/" + sn + "/process?force=true").done(function (r) { stopStage9Poll(); stopStage5Poll(); $("#stageProgressWrap").hide(); if (sn === 5) { finishStage5ProgressModal("已完成", "#34d399", "分镜脚本生成完成") } btn.html("<i class='fas fa-bolt'></i> 生成").prop("disabled", false); loadStagesAndShow(sn) }).fail(function (x) { stopStage9Poll(); stopStage5Poll(); $("#stageProgressWrap").hide(); if (sn === 5) { finishStage5ProgressModal("失败", "#ef4444", "生成失败：" + (x.responseJSON?.message || x.statusText)) } btn.html("<i class='fas fa-bolt'></i> 生成").prop("disabled", false); alert("生成失败: " + (x.responseJSON?.message || x.statusText)) }) });
 
             // Edit stage
             $(document).on("click", "#btnEditStage", function () { $("#stageResult").hide(); $("#stageEditor").show(); $("#stageActions").hide(); $("#stageActions2").show() });
@@ -2398,7 +2568,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
             $(document).on("click", "#btnCancelEdit", function () { $("#stageResult").show(); $("#stageEditor").hide(); $("#stageActions").show(); $("#stageActions2").hide() });
 
             // Save episode count
-            $(document).on("click", "#btnSetEpCount", function () { var n = parseInt($("#episodeCount").val()) || 12; $.ajax({ url: "/api/project/" + currentProjectId + "/episode-count", method: "PUT", contentType: "application/json", data: JSON.stringify({ count: n }), success: function () { alert("已更新") }, error: function (x) { alert("更新失败: " + (x.responseJSON?.message || x.statusText)) } }) });
+            $(document).on("click", "#btnSetEpCount", function () { var n = parseInt($("#episodeCount").val()) || 1; $.ajax({ url: "/api/project/" + currentProjectId + "/episode-count", method: "PUT", contentType: "application/json", data: JSON.stringify({ count: n }), success: function () { alert("已更新") }, error: function (x) { alert("更新失败: " + (x.responseJSON?.message || x.statusText)) } }) });
 
             // Target duration (Stage 4)
             $(document).on("click", "#btnSetTargetDuration", function () { saveTargetDuration($("#targetDurationInput").val()) });
@@ -2409,7 +2579,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
 
             // Menu final
             $(document).on("click", "#menuFinal", function () { showFinalResult() });
-            $(document).on("click", "#btnBatchVideo", function () { var btn = $(this); var ratio = $("#vidRatio").val() || "16:9"; var wm = $("#vidWatermark").is(":checked"); var aud = $("#vidAudio").is(":checked"); var res = $("#vidResolution").val() || "720p"; var over = (window.promptData || []).filter(function (x) { return x && promptEffLen(x.promptText) > 2000; }); if (over.length > 0 && !confirm("有 " + over.length + " 条提示词超过 2000 字（官方建议不超过 500 字），过长可能导致模型忽略细节，是否继续批量生成？")) return; btn.prop("disabled", true).html("<i class='fas fa-spinner fa-spin'></i> 提交中..."); $.ajax({ url: "/api/project/" + currentProjectId + "/video/batch-generate", method: "POST", contentType: "application/json", data: JSON.stringify({ settings: { ratio: ratio, watermark: wm, generateAudio: aud, resolution: res } }), success: function (r) { var m = r.message || "完成"; if (r.failures && r.failures.length > 0) { m += "\n\n失败 " + r.failures.length + " 个：\n" + r.failures.map(function (f) { return "提示词ID " + f.promptId + "：" + String(f.error || "未知错误").slice(0, 120); }).join("\n"); } alert(m); btn.html("<i class='fas fa-film'></i> 批量生成视频").prop("disabled", false); loadPrompts() }, error: function (x) { btn.html("<i class='fas fa-film'></i> 批量生成视频").prop("disabled", false); alert("批量提交失败: " + (x.responseJSON?.message || x.statusText)) } }) });
+            $(document).on("click", "#btnBatchVideo", function () { var btn = $(this); var ratio = $("#vidRatio").val() || "16:9"; var wm = $("#vidWatermark").is(":checked"); var aud = $("#vidAudio").is(":checked"); var res = $("#vidResolution").val() || "720p"; var over = (window.promptData || []).filter(function (x) { return x && promptEffLen(x.promptText) > 2000; }); if (over.length > 0 && !confirm("有 " + over.length + " 条提示词超过 2000 字（官方建议不超过 500 字），过长可能导致模型忽略细节，是否继续批量生成？")) return; btn.prop("disabled", true).html("<i class='fas fa-spinner fa-spin'></i> 提交中..."); $.ajax({ url: "/api/project/" + currentProjectId + "/video/batch-generate", method: "POST", contentType: "application/json", data: JSON.stringify({ settings: { ratio: ratio, watermark: wm, generateAudio: aud, resolution: res, megapixels: parseFloat($("#vidMp").val()) || 1 } }), success: function (r) { var m = r.message || "完成"; if (r.failures && r.failures.length > 0) { m += "\n\n失败 " + r.failures.length + " 个：\n" + r.failures.map(function (f) { return "提示词ID " + f.promptId + "：" + String(f.error || "未知错误").slice(0, 120); }).join("\n"); } alert(m); btn.html("<i class='fas fa-film'></i> 批量生成视频").prop("disabled", false); loadPrompts() }, error: function (x) { btn.html("<i class='fas fa-film'></i> 批量生成视频").prop("disabled", false); alert("批量提交失败: " + (x.responseJSON?.message || x.statusText)) } }) });
         });
     </script>
     <!-- Stage5 progress modal -->
@@ -3013,6 +3183,58 @@ function closeAssetLib() { $("#assetLibModal").hide() }
 
 function saveEdit() { var txt = $("#editText").val(); var h3 = $("#editTextH3").val(); $.ajax({ url: "/api/project/" + currentProjectId + "/prompt/" + editingPromptId, method: "PUT", contentType: "application/json", data: JSON.stringify({ promptText: txt, promptTextH3: h3 }), success: function () { closeEdit(); loadPrompts() }, error: function (x) { alert("保存失败: " + (x.responseJSON?.message || x.statusText)) } }) }
     
+        // ======== 资产卡「自动绑定图片」 ========
+        // 画布里出好图「存资源库」时，标签选的是项目名、文件名默认就是节点标题（也就是资产名）。
+        // 这里反过来：按项目名过滤资源库 → 按资产名匹配图片名 → 写回资产卡的 ImageUrl。
+        // 匹配规则（打分阈值）在后端 AssetImageAutoBinder，前端只负责触发和展示结果。
+        function autoBindAssetImages(btn, cat) {
+            var overwrite = $("#autoBindOverwrite").is(":checked");
+            var catName = ({ characters: "角色", props: "道具", environments: "环境", effects: "特效" })[cat] || cat;
+            var tip = "将为「" + catName + "」分类的资产自动绑定资源库图片：\n\n"
+                + "1. 按项目名过滤资源库（标签 = 本项目名的图片）\n"
+                + "2. 按资产名匹配图片名，取最像的一张\n"
+                + "3. 写回资产卡的 ImageUrl\n\n"
+                + (overwrite ? "已勾选「覆盖已有」：已有图的资产也会被替换。" : "已有图的资产会跳过（想换图请勾选「覆盖已有」）。");
+            if (!confirm(tip)) return;
+
+            var $b = $(btn), old = $b.html();
+            $b.prop("disabled", true).html("<i class='fas fa-spinner fa-spin'></i> 匹配中...");
+            $.ajax({
+                url: "/api/project/" + currentProjectId + "/asset/auto-bind",
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify({ category: cat, overwrite: !!overwrite })
+            }).done(function (r) {
+                $b.prop("disabled", false).html(old);
+                var lines = [];
+                lines.push("项目：" + (r.projectName || "-"));
+                lines.push("过滤标签：" + (r.filterTag || "-") + "，库内可用图片 " + (r.libraryCount || 0) + " 张");
+                lines.push("");
+                lines.push("成功绑定 " + ((r.bound || []).length) + " 条：");
+                (r.bound || []).forEach(function (b) {
+                    lines.push("  ✓ " + b.assetName + " ← " + b.fileName + (b.replaced ? "（替换旧图）" : ""));
+                });
+                if ((r.skipped || []).length) {
+                    lines.push("");
+                    lines.push("跳过 " + r.skipped.length + " 条（已有图片）：");
+                    r.skipped.forEach(function (b) { lines.push("  - " + b.assetName); });
+                }
+                if ((r.unmatched || []).length) {
+                    lines.push("");
+                    lines.push("没匹配上 " + r.unmatched.length + " 条：");
+                    r.unmatched.forEach(function (b) { lines.push("  × " + b.assetName + "：" + (b.reason || "")); });
+                    lines.push("");
+                    lines.push("在画布里出图后点图片上的「存资源库」，标签选本项目名、文件名用资产名，就能绑上。");
+                }
+                if (r.warning) { lines.push(""); lines.push("⚠ " + r.warning); }
+                showCopyDialog("自动绑定图片", lines.join("\n"));
+                loadAssets(window._currentAssetStage || 6);
+            }).fail(function (x) {
+                $b.prop("disabled", false).html(old);
+                alert("自动绑定失败: " + ((x.responseJSON && x.responseJSON.message) || x.statusText));
+            });
+        }
+
         // ======== 可复制信息弹窗 ========
         function showCopyDialog(title, text) {
             $("#copyDialogTitle").html("<i class='fas fa-clipboard-list' style='margin-right:6px;'></i>" + (title || "提示信息"));

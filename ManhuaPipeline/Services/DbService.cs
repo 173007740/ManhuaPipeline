@@ -383,17 +383,134 @@ ORDER BY p.ProjectId";
         if (r.Read()) return ReadProject(r);
         return null;
     }
-    public int CreateProject(int userId, int dramaId, string title, string? description, string? scriptContent)
+    public int CreateProject(int userId, int dramaId, string title, string? description, string? scriptContent, string? projectType = "drama")
     {
         using var conn = GetConn();
         conn.Open();
-        using var cmd = new SqlCommand("INSERT INTO Projects(UserId,DramaId,Title,Description,ScriptContent,EpisodeCount) OUTPUT INSERTED.ProjectId VALUES(@uid,@did,@t,@d,@s,12)", conn);
+        using var cmd = new SqlCommand("INSERT INTO Projects(UserId,DramaId,Title,Description,ScriptContent,EpisodeCount,ProjectType) OUTPUT INSERTED.ProjectId VALUES(@uid,@did,@t,@d,@s,1,@pt)", conn);
         cmd.Parameters.AddWithValue("@uid", userId);
         cmd.Parameters.AddWithValue("@did", dramaId);
         cmd.Parameters.AddWithValue("@t", title);
         cmd.Parameters.AddWithValue("@d", (object?)description ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@s", (object?)scriptContent ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@pt", NormalizeProjectType(projectType));
         return (int)cmd.ExecuteScalar();
+    }
+
+    /// <summary>项目内容类型白名单归一：drama（默认）/ ad / mv，其余一律归为 drama。</summary>
+    public static string NormalizeProjectType(string? projectType)
+    {
+        var t = (projectType ?? "").Trim().ToLowerInvariant();
+        return t is "ad" or "mv" ? t : "drama";
+    }
+
+    /// <summary>取项目内容类型；项目不存在或缺列时返回 drama（保持改造前行为）。</summary>
+    public string GetProjectType(int projectId)
+    {
+        if (projectId <= 0) return "drama";
+        try
+        {
+            using var conn = GetConn();
+            conn.Open();
+            using var cmd = new SqlCommand("SELECT TOP 1 ProjectType FROM Projects WHERE ProjectId=@id", conn);
+            cmd.Parameters.AddWithValue("@id", projectId);
+            var v = cmd.ExecuteScalar();
+            return v == null || v == DBNull.Value ? "drama" : NormalizeProjectType(v as string);
+        }
+        catch
+        {
+            return "drama";
+        }
+    }
+
+    public void UpdateProjectType(int projectId, string projectType)
+    {
+        using var conn = GetConn();
+        conn.Open();
+        using var cmd = new SqlCommand("UPDATE Projects SET ProjectType=@pt, UpdatedAt=GETDATE() WHERE ProjectId=@id", conn);
+        cmd.Parameters.AddWithValue("@pt", NormalizeProjectType(projectType));
+        cmd.Parameters.AddWithValue("@id", projectId);
+        cmd.ExecuteNonQuery();
+    }
+
+    // ========== MV 歌词轨 ==========
+
+    public List<ProjectLyricLine> GetLyricLines(int projectId)
+    {
+        var list = new List<ProjectLyricLine>();
+        if (projectId <= 0) return list;
+        try
+        {
+            using var conn = GetConn();
+            conn.Open();
+            using var cmd = new SqlCommand("SELECT LineId,ProjectId,LineIndex,StartSec,EndSec,[Text] FROM ProjectLyricLines WHERE ProjectId=@id ORDER BY LineIndex", conn);
+            cmd.Parameters.AddWithValue("@id", projectId);
+            using var r = cmd.ExecuteReader();
+            while (r.Read())
+            {
+                list.Add(new ProjectLyricLine
+                {
+                    LineId = (int)r["LineId"],
+                    ProjectId = (int)r["ProjectId"],
+                    LineIndex = (int)r["LineIndex"],
+                    StartSec = (decimal)r["StartSec"],
+                    EndSec = (decimal)r["EndSec"],
+                    Text = (string)r["Text"]
+                });
+            }
+        }
+        catch
+        {
+            // 表未建或读取失败时按无歌词处理，不阻断主流程
+        }
+        return list;
+    }
+
+    /// <summary>整轨覆盖写入歌词（先清后插）。</summary>
+    public void ReplaceLyricLines(int projectId, IEnumerable<ProjectLyricLine> lines)
+    {
+        using var conn = GetConn();
+        conn.Open();
+        using var tx = conn.BeginTransaction();
+        try
+        {
+            using (var del = new SqlCommand("DELETE FROM ProjectLyricLines WHERE ProjectId=@id", conn, tx))
+            {
+                del.Parameters.AddWithValue("@id", projectId);
+                del.ExecuteNonQuery();
+            }
+            var i = 0;
+            foreach (var l in lines)
+            {
+                if (string.IsNullOrWhiteSpace(l.Text)) continue;
+                using var ins = new SqlCommand("INSERT INTO ProjectLyricLines(ProjectId,LineIndex,StartSec,EndSec,[Text]) VALUES(@p,@i,@s,@e,@t)", conn, tx);
+                ins.Parameters.AddWithValue("@p", projectId);
+                ins.Parameters.AddWithValue("@i", i++);
+                ins.Parameters.AddWithValue("@s", l.StartSec);
+                ins.Parameters.AddWithValue("@e", l.EndSec > l.StartSec ? l.EndSec : l.StartSec + 5m);
+                ins.Parameters.AddWithValue("@t", l.Text.Trim());
+                ins.ExecuteNonQuery();
+            }
+            tx.Commit();
+        }
+        catch
+        {
+            tx.Rollback();
+            throw;
+        }
+    }
+
+    /// <summary>渲染成注入提示词的【歌词时间轨】文本；无歌词返回空串。</summary>
+    public string GetLyricTrackText(int projectId)
+    {
+        var lines = GetLyricLines(projectId);
+        if (lines.Count == 0) return "";
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("【歌词时间轨（真歌实际时间戳，时长取档的最高优先级依据）】");
+        sb.AppendLine("下列每句歌词的起止秒数取自真歌。镜头时长与切点必须服从它，禁止按说话语速的字数上限去压缩：");
+        foreach (var l in lines)
+            sb.AppendLine($"- {l.StartSec:0.00}s ~ {l.EndSec:0.00}s（时长 {(l.EndSec - l.StartSec):0.00}s）：{l.Text}");
+        return sb.ToString();
     }
 
     public void UpdateProjectBatch(int projectId, int batchNumber)
@@ -493,7 +610,7 @@ WHERE ProjectId=@id AND UserId=@uid AND Status<>N'deleted'", conn);
         Description = r["Description"] == DBNull.Value ? null : (string)r["Description"],
         ScriptContent = r["ScriptContent"] == DBNull.Value ? null : (string)r["ScriptContent"],
         CurrentStage = (int)r["CurrentStage"],
-        EpisodeCount = r["EpisodeCount"] == DBNull.Value ? 12 : (int)r["EpisodeCount"],
+        EpisodeCount = r["EpisodeCount"] == DBNull.Value ? 1 : (int)r["EpisodeCount"],
         Status = (string)r["Status"],
         CreatedAt = (DateTime)r["CreatedAt"],
         UpdatedAt = (DateTime)r["UpdatedAt"],
@@ -503,10 +620,12 @@ WHERE ProjectId=@id AND UserId=@uid AND Status<>N'deleted'", conn);
         VideoWatermark = r["VideoWatermark"] != DBNull.Value && (bool)r["VideoWatermark"],
         VideoAudio = r["VideoAudio"] == DBNull.Value || (bool)r["VideoAudio"],
         VideoResolution = r["VideoResolution"] == DBNull.Value ? "720p" : (string)r["VideoResolution"],
+        VideoMegapixels = r["VideoMegapixels"] == DBNull.Value ? 1 : Convert.ToDouble(r["VideoMegapixels"]),
         CurrentBatch = r["CurrentBatch"] == DBNull.Value ? 1 : (int)r["CurrentBatch"],
         Tags = r["Tags"] == DBNull.Value ? null : (string)r["Tags"],
         LibraryCategory = r["LibraryCategory"] == DBNull.Value ? null : (string)r["LibraryCategory"],
-        TargetDurationText = r["TargetDurationText"] == DBNull.Value ? null : (string)r["TargetDurationText"]
+        TargetDurationText = r["TargetDurationText"] == DBNull.Value ? null : (string)r["TargetDurationText"],
+        ProjectType = r["ProjectType"] == DBNull.Value ? "drama" : (string)r["ProjectType"]
     };
 
     // ========== �׶����� ==========
@@ -1540,6 +1659,34 @@ END", conn);
     }
 
     // ========== ��ʾ�� ==========
+    /// <summary>分镜帧表里的镜头数（权威来源：提示词就是按这些帧逐条生成的）。</summary>
+    public int CountStoryboardFrames(int projectId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT COUNT(*) FROM StoryboardFrames WHERE ProjectId=@pid", conn);
+        cmd.Parameters.AddWithValue("@pid", projectId);
+        var v = cmd.ExecuteScalar();
+        return v == null || v == DBNull.Value ? 0 : Convert.ToInt32(v);
+    }
+
+    /// <summary>
+    /// 阶段 9 顶部统计：已生成多少条提示词、其中视频已成功多少条。
+    /// 分镜总数不在这里算 —— 那要从分镜脚本文本里数镜头，由 Controller 用 StoryboardFrameParser 解析。
+    /// </summary>
+    public (int PromptTotal, int VideoDone) GetPromptStats(int projectId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+SELECT COUNT(*) AS PromptTotal,
+       SUM(CASE WHEN ISNULL(VideoUrl,'') <> '' OR ISNULL(LocalVideoUrl,'') <> ''
+                  OR Status IN ('completed','succeeded') THEN 1 ELSE 0 END) AS VideoDone
+FROM SeedancePrompts WHERE ProjectId=@pid", conn);
+        cmd.Parameters.AddWithValue("@pid", projectId);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return (0, 0);
+        return (r.IsDBNull(0) ? 0 : r.GetInt32(0), r.IsDBNull(1) ? 0 : r.GetInt32(1));
+    }
+
     public List<SeedancePrompt> GetPrompts(int projectId)
     {
         var list = new List<SeedancePrompt>();
@@ -2539,6 +2686,219 @@ SELECT SCOPE_IDENTITY();", conn);
         return null;
     }
 
+    // ==================== 出图渠道（可配多个并存、可指定默认） ====================
+    //
+    // 出图（Provider='image'）不再限死一条：表上那个 (UserId, Provider) 唯一索引已经改成
+    // 筛选索引（Provider <> 'image'），所以这里能存多条渠道，用户在配置页增删、在画布里挑。
+    // 「默认」= IsActive=1 的那条：画布节点没单独指定时用它，资产库出图也用它。
+    // 其余 provider（deepseek / qwen / gpt / 视频…）仍然是每个用户一条，走老的 GetActiveConfig。
+
+    private static LLMConfig MapLLMConfig(Microsoft.Data.SqlClient.SqlDataReader r) => new()
+    {
+        ConfigId = (int)r["ConfigId"],
+        UserId = (int)r["UserId"],
+        Provider = (string)r["Provider"],
+        ApiKey = r["ApiKey"] == DBNull.Value ? "" : (string)r["ApiKey"],
+        ApiUrl = r["ApiUrl"] == DBNull.Value ? null : (string)r["ApiUrl"],
+        ModelName = r["ModelName"] == DBNull.Value ? null : (string)r["ModelName"],
+        ThinkingMode = r["ThinkingMode"] == DBNull.Value ? null : (string)r["ThinkingMode"],
+        IsActive = (bool)r["IsActive"],
+        AutoEnhance = r["AutoEnhance"] == DBNull.Value ? false : (bool)r["AutoEnhance"],
+        DisplayName = r["DisplayName"] == DBNull.Value ? null : (string)r["DisplayName"],
+        SortOrder = r["SortOrder"] == DBNull.Value ? 0 : (int)r["SortOrder"]
+    };
+
+    /// <summary>列出该用户配的全部出图渠道，顺序即配置页上的顺序。</summary>
+    public List<LLMConfig> GetImageConfigs(int userId)
+    {
+        var list = new List<LLMConfig>();
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(
+            "SELECT * FROM LLMConfigs WHERE UserId=@uid AND Provider='image' ORDER BY SortOrder, ConfigId", conn);
+        cmd.Parameters.AddWithValue("@uid", userId);
+        using var r = cmd.ExecuteReader();
+        while (r.Read()) list.Add(MapLLMConfig(r));
+        return list;
+    }
+
+    /// <summary>
+    /// 取指定的一条出图渠道。不是本人的、或不是出图渠道的一律返回 null ——
+    /// 这条会被拿去真的出图，必须挡住「拿别人的配置 / 拿视频配置当出图配置」两种情况。
+    /// </summary>
+    public LLMConfig? GetImageConfig(int userId, int configId)
+    {
+        if (configId <= 0) return null;
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(
+            "SELECT TOP 1 * FROM LLMConfigs WHERE ConfigId=@id AND UserId=@uid AND Provider='image'", conn);
+        cmd.Parameters.AddWithValue("@id", configId);
+        cmd.Parameters.AddWithValue("@uid", userId);
+        using var r = cmd.ExecuteReader();
+        return r.Read() ? MapLLMConfig(r) : null;
+    }
+
+    /// <summary>
+    /// 取出图默认渠道：IsActive=1 那条；一条都没标默认时就取排序最前的那条
+    /// （老数据迁移过来往往没标过默认，不能因为没标就出不了图）。
+    /// </summary>
+    public LLMConfig? GetDefaultImageConfig(int userId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(
+            "SELECT TOP 1 * FROM LLMConfigs WHERE UserId=@uid AND Provider='image' " +
+            "ORDER BY CASE WHEN IsActive=1 THEN 0 ELSE 1 END, SortOrder, ConfigId", conn);
+        cmd.Parameters.AddWithValue("@uid", userId);
+        using var r = cmd.ExecuteReader();
+        return r.Read() ? MapLLMConfig(r) : null;
+    }
+
+    /// <summary>
+    /// 新增或更新一条出图渠道，返回 ConfigId；指定更新但那条不存在（别人的或已删）返回 0。
+    /// API Key 留空 = 不改（改名字/地址时不用重新填一遍 Key），所以只有新增时才必须填。
+    /// 新增的是第一条时自动设为默认，省得配完还得再点一次「设为默认」。
+    /// </summary>
+    public int SaveImageModel(LLMConfig c)
+    {
+        using var conn = GetConn(); conn.Open();
+
+        if (c.ConfigId > 0)
+        {
+            using var cmd = new SqlCommand(
+                "UPDATE LLMConfigs SET DisplayName=@dn, SortOrder=@so, ApiUrl=@u, ModelName=@m, " +
+                "ApiKey=CASE WHEN NULLIF(@k,'') IS NULL THEN ApiKey ELSE @k END, UpdatedAt=GETDATE() " +
+                "WHERE ConfigId=@id AND UserId=@uid AND Provider='image'", conn);
+            cmd.Parameters.AddWithValue("@dn", (object?)c.DisplayName ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@so", c.SortOrder);
+            cmd.Parameters.AddWithValue("@u", (object?)c.ApiUrl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@m", (object?)c.ModelName ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@k", c.ApiKey ?? "");
+            cmd.Parameters.AddWithValue("@id", c.ConfigId);
+            cmd.Parameters.AddWithValue("@uid", c.UserId);
+            // 一条都没更新到：要么是别人的、要么已经删了。这里不偷偷给它新增一条
+            return cmd.ExecuteNonQuery() > 0 ? c.ConfigId : 0;
+        }
+
+        int count;
+        using (var cnt = new SqlCommand("SELECT COUNT(*) FROM LLMConfigs WHERE UserId=@uid AND Provider='image'", conn))
+        {
+            cnt.Parameters.AddWithValue("@uid", c.UserId);
+            count = Convert.ToInt32(cnt.ExecuteScalar());
+        }
+
+        using var ins = new SqlCommand(
+            "INSERT INTO LLMConfigs(UserId,Provider,ApiKey,ApiUrl,ModelName,ThinkingMode,IsActive,AutoEnhance,DisplayName,SortOrder) " +
+            "VALUES(@uid,'image',ISNULL(@k,''),@u,@m,NULL,@a,0,@dn,@so); SELECT SCOPE_IDENTITY();", conn);
+        ins.Parameters.AddWithValue("@uid", c.UserId);
+        ins.Parameters.AddWithValue("@k", c.ApiKey ?? "");
+        ins.Parameters.AddWithValue("@u", (object?)c.ApiUrl ?? DBNull.Value);
+        ins.Parameters.AddWithValue("@m", (object?)c.ModelName ?? DBNull.Value);
+        ins.Parameters.AddWithValue("@a", count == 0);      // 第一条 = 默认
+        ins.Parameters.AddWithValue("@dn", (object?)c.DisplayName ?? DBNull.Value);
+        ins.Parameters.AddWithValue("@so", c.SortOrder > 0 ? c.SortOrder : count + 1);
+        return Convert.ToInt32(ins.ExecuteScalar());
+    }
+
+    /// <summary>
+    /// 删掉一条出图渠道。删的正好是默认那条时，把剩下的第一条顶上 ——
+    /// 否则会变成「没有任何默认渠道」，画布和资产库就都出不了图了。
+    /// </summary>
+    public bool DeleteImageModel(int userId, int configId)
+    {
+        using var conn = GetConn(); conn.Open();
+
+        bool wasDefault;
+        using (var chk = new SqlCommand(
+                   "SELECT IsActive FROM LLMConfigs WHERE ConfigId=@id AND UserId=@uid AND Provider='image'", conn))
+        {
+            chk.Parameters.AddWithValue("@id", configId);
+            chk.Parameters.AddWithValue("@uid", userId);
+            var v = chk.ExecuteScalar();
+            if (v == null || v == DBNull.Value) return false;
+            wasDefault = Convert.ToBoolean(v);
+        }
+
+        using (var del = new SqlCommand(
+                   "DELETE FROM LLMConfigs WHERE ConfigId=@id AND UserId=@uid AND Provider='image'", conn))
+        {
+            del.Parameters.AddWithValue("@id", configId);
+            del.Parameters.AddWithValue("@uid", userId);
+            del.ExecuteNonQuery();
+        }
+
+        if (wasDefault)
+        {
+            using var fix = new SqlCommand(
+                "UPDATE LLMConfigs SET IsActive=1 WHERE ConfigId=(SELECT TOP 1 ConfigId FROM LLMConfigs " +
+                "WHERE UserId=@uid AND Provider='image' ORDER BY SortOrder, ConfigId)", conn);
+            fix.Parameters.AddWithValue("@uid", userId);
+            fix.ExecuteNonQuery();
+        }
+        return true;
+    }
+
+    /// <summary>把某条设为默认出图渠道（同用户其它出图渠道一律取消默认）。</summary>
+    public bool SetDefaultImageModel(int userId, int configId)
+    {
+        using var conn = GetConn(); conn.Open();
+
+        using (var chk = new SqlCommand(
+                   "SELECT COUNT(*) FROM LLMConfigs WHERE ConfigId=@id AND UserId=@uid AND Provider='image'", conn))
+        {
+            chk.Parameters.AddWithValue("@id", configId);
+            chk.Parameters.AddWithValue("@uid", userId);
+            if (Convert.ToInt32(chk.ExecuteScalar()) == 0) return false;
+        }
+
+        using var cmd = new SqlCommand(
+            "UPDATE LLMConfigs SET IsActive=CASE WHEN ConfigId=@id THEN 1 ELSE 0 END, UpdatedAt=GETDATE() " +
+            "WHERE UserId=@uid AND Provider='image'", conn);
+        cmd.Parameters.AddWithValue("@id", configId);
+        cmd.Parameters.AddWithValue("@uid", userId);
+        cmd.ExecuteNonQuery();
+        return true;
+    }
+
+    // ==================== 出图参数（页面可配：比例 / 质量 / 张数 / 背景 / 格式） ====================
+
+    /// <summary>取出图参数；没配过就给一份合法默认值（不会返回 null，调用方直接用）。</summary>
+    public ImageGenOptions GetImageGenOptions(int userId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT TOP 1 * FROM ImageGenOptions WHERE UserId=@uid", conn);
+        cmd.Parameters.AddWithValue("@uid", userId);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return new ImageGenOptions { UserId = userId }.Normalized();
+
+        return new ImageGenOptions
+        {
+            UserId = userId,
+            AspectRatio = r["AspectRatio"] == DBNull.Value ? "16:9" : (string)r["AspectRatio"],
+            Quality = r["Quality"] == DBNull.Value ? "high" : (string)r["Quality"],
+            ImageCount = r["ImageCount"] == DBNull.Value ? 1 : (int)r["ImageCount"],
+            Background = r["Background"] == DBNull.Value ? "opaque" : (string)r["Background"],
+            OutputFormat = r["OutputFormat"] == DBNull.Value ? "png" : (string)r["OutputFormat"]
+        }.Normalized();
+    }
+
+    /// <summary>保存出图参数（按用户一条，已存在则更新）。入库前先归一化，脏值不会落库。</summary>
+    public void SaveImageGenOptions(ImageGenOptions o)
+    {
+        o.UserId = o.UserId;
+        o.Normalized();
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(
+            "IF EXISTS(SELECT 1 FROM ImageGenOptions WHERE UserId=@uid) " +
+            "UPDATE ImageGenOptions SET AspectRatio=@ar, Quality=@q, ImageCount=@n, Background=@bg, OutputFormat=@fmt, UpdatedAt=GETDATE() WHERE UserId=@uid " +
+            "ELSE INSERT INTO ImageGenOptions(UserId,AspectRatio,Quality,ImageCount,Background,OutputFormat,UpdatedAt) VALUES(@uid,@ar,@q,@n,@bg,@fmt,GETDATE())", conn);
+        cmd.Parameters.AddWithValue("@uid", o.UserId);
+        cmd.Parameters.AddWithValue("@ar", o.AspectRatio);
+        cmd.Parameters.AddWithValue("@q", o.Quality);
+        cmd.Parameters.AddWithValue("@n", o.ImageCount);
+        cmd.Parameters.AddWithValue("@bg", o.Background);
+        cmd.Parameters.AddWithValue("@fmt", o.OutputFormat);
+        cmd.ExecuteNonQuery();
+    }
+
     public void SaveLLMConfig(LLMConfig config)
     {
         using var conn = GetConn(); conn.Open();
@@ -3052,14 +3412,16 @@ WHERE p.Status = 'completed'
         cmd.ExecuteNonQuery();
     }
 
-    public void UpdateProjectVideoSettings(int projectId, string ratio, bool watermark, bool audio, string resolution)
+    public void UpdateProjectVideoSettings(int projectId, string ratio, bool watermark, bool audio, string resolution, double megapixels = 1)
     {
         using var conn = GetConn(); conn.Open();
-        using var cmd = new SqlCommand("UPDATE Projects SET VideoRatio=@ratio, VideoWatermark=@wm, VideoAudio=@aud, VideoResolution=@res, UpdatedAt=GETDATE() WHERE ProjectId=@id", conn);
+        using var cmd = new SqlCommand("UPDATE Projects SET VideoRatio=@ratio, VideoWatermark=@wm, VideoAudio=@aud, VideoResolution=@res, VideoMegapixels=@mp, UpdatedAt=GETDATE() WHERE ProjectId=@id", conn);
         cmd.Parameters.AddWithValue("@ratio", ratio);
         cmd.Parameters.AddWithValue("@wm", watermark);
         cmd.Parameters.AddWithValue("@aud", audio);
         cmd.Parameters.AddWithValue("@res", resolution);
+        // 像素档只认 0.5/1/1.5/2，页面传别的（或历史脏数据）一律按 1MP 存
+        cmd.Parameters.AddWithValue("@mp", megapixels is >= 0.5 and <= 2 ? megapixels : 1.0);
         cmd.Parameters.AddWithValue("@id", projectId);
         cmd.ExecuteNonQuery();
     }
@@ -3070,6 +3432,67 @@ WHERE p.Status = 'completed'
         StyleName = (string)r["StyleName"],
         StylePrompt = (string)r["StylePrompt"],
         IsDefault = r["IsDefault"] == DBNull.Value ? false : (bool)r["IsDefault"],
+        CreatedAt = (DateTime)r["CreatedAt"],
+        UpdatedAt = (DateTime)r["UpdatedAt"]
+    };
+
+    // ========== 图片风格库（画布节点「图片风格」下拉的数据源）==========
+    public List<ImageStyle> GetImageStyles()
+    {
+        var list = new List<ImageStyle>();
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT * FROM ImageStyles ORDER BY StyleId ASC", conn);
+        using var r = cmd.ExecuteReader();
+        while (r.Read()) list.Add(ReadImageStyle(r));
+        return list;
+    }
+
+    public ImageStyle? GetImageStyle(int styleId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT * FROM ImageStyles WHERE StyleId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", styleId);
+        using var r = cmd.ExecuteReader();
+        return r.Read() ? ReadImageStyle(r) : null;
+    }
+
+    public int SaveImageStyle(int? styleId, string styleName, string styleDesc, string? styleImageUrl)
+    {
+        using var conn = GetConn(); conn.Open();
+        if (styleId.HasValue && styleId.Value > 0)
+        {
+            using var cmd = new SqlCommand(
+                @"UPDATE ImageStyles SET StyleName=@n, StyleDesc=@d, StyleImageUrl=@u,
+                  UpdatedAt=SYSDATETIME() WHERE StyleId=@id", conn);
+            cmd.Parameters.AddWithValue("@n", styleName);
+            cmd.Parameters.AddWithValue("@d", styleDesc);
+            cmd.Parameters.AddWithValue("@u", (object?)styleImageUrl ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", styleId.Value);
+            cmd.ExecuteNonQuery();
+            return styleId.Value;
+        }
+        using var ins = new SqlCommand(
+            "INSERT INTO ImageStyles(StyleName,StyleDesc,StyleImageUrl) OUTPUT INSERTED.StyleId VALUES(@n,@d,@u)", conn);
+        ins.Parameters.AddWithValue("@n", styleName);
+        ins.Parameters.AddWithValue("@d", styleDesc);
+        ins.Parameters.AddWithValue("@u", (object?)styleImageUrl ?? DBNull.Value);
+        return (int)ins.ExecuteScalar();
+    }
+
+    public void DeleteImageStyle(int styleId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("DELETE FROM ImageStyles WHERE StyleId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", styleId);
+        cmd.ExecuteNonQuery();
+    }
+
+    private static ImageStyle ReadImageStyle(SqlDataReader r) => new ImageStyle
+    {
+        StyleId = (int)r["StyleId"],
+        StyleName = (string)r["StyleName"],
+        StyleDesc = (string)r["StyleDesc"],
+        StyleImageUrl = r["StyleImageUrl"] == DBNull.Value ? null : (string?)r["StyleImageUrl"],
         CreatedAt = (DateTime)r["CreatedAt"],
         UpdatedAt = (DateTime)r["UpdatedAt"]
     };

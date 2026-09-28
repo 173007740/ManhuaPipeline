@@ -3,6 +3,7 @@ using System.Text;
 using System.Text.Json;
 using System.Text.RegularExpressions;
 using Microsoft.Extensions.Logging;
+using ManhuaPipeline.Models;
 
 namespace ManhuaPipeline.Services;
 
@@ -71,12 +72,108 @@ public class ImageService
     public const string AssetImageSize = "1280x720";
 
     /// <summary>
+    /// 出图质量档位（gpt-image-2.5：low / medium / high / xhigh / max）。
+    /// 2.5 重新分过档：它的 high 只等于上一代的 medium，max 才等于旧 high，
+    /// 所以继续传 high 会整整掉一档——人脸五官、手部、材质细节最先糊，这里统一走 xhigh。
+    /// 说明：max 更细但耗时逼近 10 分钟超时（我们 HttpClient 给的是 600 秒），不划算。
+    /// 部分中转站不认这个字段会直接 4xx，出图时会自动降级成不带 quality 重试一次。
+    /// </summary>
+    public const string ImageQuality = "xhigh";
+
+    // ==================== 火山方舟（ark.cn-beijing.volces.com）适配 ====================
+    // 方舟的图像接口跟 OpenAI 兼容协议有三处不一样，所以单独走一套分支：
+    //   ① 尺寸只认固定档位（2048x1152 这类），传 1280x720 会被拒；
+    //   ② 图生图不是 multipart /images/edits，而是同一个 /images/generations 带 image 数组（data URI）；
+    //   ③ 响应可以要 b64_json 或 url，url 只有 24 小时有效期，优先要 b64 免得再下载一次。
+
+    /// <summary>方舟 16:9 档位：2560x1440（369 万像素）。seedream-5.0-lite 的下限就是 3686400 像素，
+    /// 传更小的 2048x1152 会被拒（size not valid），所以这里必须取到 2K；且正好 16:9，落盘画幅对齐不会裁掉画面。</summary>
+    public const string ArkSizeLandscape = "2560x1440";
+
+    /// <summary>方舟正方形档位（同为 ≥369 万像素档）。</summary>
+    public const string ArkSizeSquare = "2048x2048";
+
+    /// <summary>方舟竖版档位。</summary>
+    public const string ArkSizePortrait = "1440x2560";
+
+    /// <summary>地址指向火山方舟（ark.*.volces.com）时为 true。</summary>
+    public static bool IsArkApi(string? apiUrl) =>
+        !string.IsNullOrWhiteSpace(apiUrl) && apiUrl.Contains("volces.com", StringComparison.OrdinalIgnoreCase);
+
+    /// <summary>
+    /// 把我们的尺寸（如 1280x720）映射成方舟认的档位。按宽高比就近取，
+    /// 认不出来时按 16:9 处理——资产卡本来就是 16:9。
+    /// </summary>
+    public static string MapArkSize(string? size)
+    {
+        var m = Regex.Match(size ?? "", @"^(\d{3,4})\s*[xX*]\s*(\d{3,4})$");
+        if (!m.Success) return ArkSizeLandscape;
+        var w = int.Parse(m.Groups[1].Value);
+        var h = int.Parse(m.Groups[2].Value);
+        if (h <= 0) return ArkSizeLandscape;
+        var ratio = (double)w / h;
+        return ratio >= 1.6 ? ArkSizeLandscape : ratio <= 0.63 ? ArkSizePortrait : ArkSizeSquare;
+    }
+
+    /// <summary>
     /// 画幅约束，写进提示词让模型自己就按 16:9 横向构图。
     /// 模型并不保证听话（实测图生图会跟随参考图比例，回了 1214x1295 的近方形），
     /// 所以落盘时还有 <see cref="ImageAspect.AlignTo16By9"/> 居中裁切兜底；
     /// 提示词这层的作用是让主体待在画面中间的「安全区」，把裁切损失降到最低。
     /// </summary>
-    public const string AspectPromptHint = "画面规格：16:9 横向宽幅（1280x720），主体完整居中，上下边缘留出安全边距（不要让主体顶到画面上下缘），不要方形或竖版构图。";
+    public const string AspectPromptHint = "画面规格：16:9 横向宽幅（2560x1440），主体完整居中，上下边缘留出安全边距（不要让主体顶到画面上下缘），不要方形或竖版构图。";
+
+    // ---------------------------------------------------------------------------------
+    // 方舟出图前的提示词预处理
+    //
+    // ① 剥离负面词：我们的提示词里有一段「负面提示词（画面中禁止出现）：真人、cosplay、低幼Q版…」，
+    //    这段是给能理解否定式指令的模型写的。Seedream 拿到中文长句里的「低幼Q版」这类词反而会被激活，
+    //    真就给你画个 Q 版出来。所以出图前把这段切出来，走方舟自己的 negative_prompt 字段，
+    //    正面 prompt 只保留「该画什么」。
+    //
+    // ② 钉死头身比：二次元/萌系项目（星穹铁道 PV 风这类）模型默认很容易把人画成 chibi 大头，
+    //    这里显式写成年人体型与头身比，只在提示词确实涉及人物时追加，避免给空镜头/道具图凭空招来人物。
+    // ---------------------------------------------------------------------------------
+
+    /// <summary>匹配提示词末尾那段「负面提示词（…）：xxx。」。</summary>
+    private static readonly Regex ArkNegativeBlock = new(
+        @"负面提示词[（(][^）)]*[)）]\s*[:：]\s*(?<neg>.+?)\s*[。.]\s*$",
+        RegexOptions.Singleline | RegexOptions.Compiled);
+
+    private const string ArkFigureHint =
+        "人物比例：成年人体型，正常头身比（约 7 头身），五官与身体比例正常协调；不要 Q 版、不要 chibi 大头娃娃比例、不要幼儿化。";
+
+    private static readonly Regex NoFigure = new(
+        "没有人|无人物|空镜头|不含人物|没有人物的|不包含人物", RegexOptions.Compiled);
+
+    private static readonly Regex HasFigure = new(
+        "角色|人物|女孩|少女|少年|男孩|女人|男人|女生|男生|肖像|半身|全身|站姿|coser",
+        RegexOptions.Compiled);
+
+    /// <summary>方舟专用：切出负面词段，并按需要补一条人物比例约束。</summary>
+    private static (string Prompt, string? Negative) PrepareArkPrompt(string prompt)
+    {
+        var p = (prompt ?? "").Trim();
+        string? negative = null;
+
+        var m = ArkNegativeBlock.Match(p);
+        if (m.Success)
+        {
+            var neg = m.Groups["neg"].Value.Trim().TrimEnd('。', '.');
+            var body = p[..m.Index].Trim();
+            // 只剩负面词一条的情况下不要把正文清空，宁可原样发出去
+            if (body.Length > 0 && neg.Length > 0)
+            {
+                p = body;
+                negative = neg;
+            }
+        }
+
+        if (!NoFigure.IsMatch(p) && HasFigure.IsMatch(p))
+            p += "\n" + ArkFigureHint;
+
+        return (p, negative);
+    }
 
     public static bool IsValidSize(string? size) =>
         !string.IsNullOrWhiteSpace(size) && Regex.IsMatch(size.Trim(), @"^\d{3,4}\s*[xX*]\s*\d{3,4}$");
@@ -118,7 +215,9 @@ public class ImageService
                 sb.Append("角色设定参考图：").Append(name).Append('。');
                 if (desc.Length > 0) sb.Append(desc).Append('。');
                 if (attr.Length > 0) sb.Append("形态/属性：").Append(attr).Append('。');
-                sb.Append("要求：单人全身正面站姿，纯色干净背景，五官与服装细节清晰完整，构图居中；不要文字、不要水印、不要多视图拼贴。");
+                // 1280x720 的全身构图里脸只占很小一块，不点名强调的话模型很容易糊脸/五官跑偏，
+                // 所以这里显式约束面部质量与构图留白。
+                sb.Append("要求：单人全身正面站姿，纯色干净背景，人物面部清晰写实、五官对称不变形、皮肤质感真实，手部结构正常，服装细节清晰完整，构图居中、头部上方留白；不要文字、不要水印、不要多视图拼贴、不要面部畸变或糊脸。");
                 break;
 
             case "environments":
@@ -330,44 +429,73 @@ public class ImageService
     /// 调中转接口出图。prompt 由 <see cref="BuildAssetImagePrompt"/> 生成；
     /// apiUrl/apiKey/model 来自 LLMConfigs(Provider='image')。
     /// </summary>
+    /// <param name="options">页面可配的出图参数（质量 / 背景 / 输出格式；比例已在调用方转成 size）。
+    /// 传 null 时退化为原来的「只带 quality」行为。</param>
     public async Task<ImageResult> GenerateAsync(
-        string prompt, string? apiUrl, string apiKey, string model, string size, CancellationToken ct = default)
+        string prompt, string? apiUrl, string apiKey, string model, string size,
+        CancellationToken ct = default, ImageGenOptions? options = null)
     {
+        // 火山方舟协议不一样，单独走一套，别混进 OpenAI 兼容那两条路径。
+        if (IsArkApi(apiUrl))
+            return await ArkGenerateAsync(prompt, apiUrl, apiKey, model, size, ct);
+
         var errors = new List<string>();
         var imagesEndpoint = BuildEndpoint(apiUrl, "images/generations");
         var chatEndpoint = BuildEndpoint(apiUrl, "chat/completions");
         if (imagesEndpoint.Length == 0 && chatEndpoint.Length == 0)
             return new ImageResult(false, null, null, "文生图接口地址无效，请到「API 配置 → 文生图（中转）」检查（例如 https://your-relay.com/v1）");
 
+        var quality = string.IsNullOrWhiteSpace(options?.Quality) ? ImageQuality : options!.Quality!.Trim();
+
         // ① 标准文生图接口
         if (imagesEndpoint.Length > 0)
         {
-            try
+            // quality / background / output_format 都是「各家中转认不认不一定」的字段：
+            // 先全带上，撞到 4xx 就逐级往下摘（只留 quality → 全部去掉），
+            // 免得换了个中转站就整站出不了图。
+            var level = 0;
+            var maxLevel = options == null ? 1 : 2;
+            while (true)
             {
-                var body = JsonSerializer.Serialize(new Dictionary<string, object?>
+                try
                 {
-                    ["model"] = model,
-                    ["prompt"] = prompt,
-                    ["n"] = 1,
-                    ["size"] = size
-                });
-                using var resp = await PostJsonAsync(imagesEndpoint, apiKey, body, ct);
-                var text = await resp.Content.ReadAsStringAsync(ct);
-                if (resp.IsSuccessStatusCode)
-                {
-                    var (url, b64) = ParseImageData(text);
-                    var got = await MaterializeAsync(url, b64, ct);
-                    if (got != null) return got;
-                    errors.Add($"/images/generations 返回成功但没解析出图片：{Truncate(text)}");
+                    var payload = new Dictionary<string, object?>
+                    {
+                        ["model"] = model,
+                        ["prompt"] = prompt,
+                        ["n"] = 1,
+                        ["size"] = size
+                    };
+                    if (level <= 1) payload["quality"] = quality;
+                    if (level == 0 && options != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(options.Background))
+                            payload["background"] = options.Background.Trim();
+                        if (!string.IsNullOrWhiteSpace(options.OutputFormat))
+                            payload["output_format"] = options.OutputFormat.Trim();
+                    }
+
+                    using var resp = await PostJsonAsync(imagesEndpoint, apiKey, JsonSerializer.Serialize(payload), ct);
+                    var text = await resp.Content.ReadAsStringAsync(ct);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var (url, b64) = ParseImageData(text);
+                        var got = await MaterializeAsync(url, b64, ct);
+                        if (got != null) return got;
+                        errors.Add($"/images/generations 返回成功但没解析出图片：{Truncate(text)}");
+                        break;
+                    }
+
+                    var code = (int)resp.StatusCode;
+                    errors.Add($"/images/generations HTTP {code}(参数级别{level})：{Truncate(text)}");
+                    if (level >= maxLevel || code is < 400 or >= 500) break;
+                    level++;
                 }
-                else
+                catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
                 {
-                    errors.Add($"/images/generations HTTP {(int)resp.StatusCode}：{Truncate(text)}");
+                    errors.Add($"/images/generations 请求异常：{NetErrorText.Describe(ex)}");
+                    break;
                 }
-            }
-            catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
-            {
-                errors.Add($"/images/generations 请求异常：{ex.Message}");
             }
         }
 
@@ -379,7 +507,10 @@ public class ImageService
                 var body = JsonSerializer.Serialize(new Dictionary<string, object?>
                 {
                     ["model"] = model,
-                    ["messages"] = new object[] { new { role = "user", content = prompt } }
+                    ["messages"] = new object[] { new { role = "user", content = prompt } },
+                    // gemini-*-image / nano-banana 这类只挂在对话接口上的图像模型，
+                    // 不显式声明输出模态的话它只会回一段文字，拿不到图。多余的字段中转站一般会忽略。
+                    ["modalities"] = new[] { "image", "text" }
                 });
                 using var resp = await PostJsonAsync(chatEndpoint, apiKey, body, ct);
                 var text = await resp.Content.ReadAsStringAsync(ct);
@@ -397,7 +528,7 @@ public class ImageService
             }
             catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
             {
-                errors.Add($"/chat/completions 请求异常：{ex.Message}");
+                errors.Add($"/chat/completions 请求异常：{NetErrorText.Describe(ex)}");
             }
         }
 
@@ -412,14 +543,20 @@ public class ImageService
     /// 参考图的先后顺序有意义，会在提示词里以「第一张/第二张」表述，调用方需按约定顺序传入。
     /// </summary>
     /// <param name="imagePaths">本地图片路径，支持 /uploads/xxx 这类站内相对路径，也支持绝对路径。</param>
+    /// <param name="imageLabels">与 imagePaths 一一对应的图片名（节点标题等）。走对话接口时会写成每张图前面的
+    /// 标签，让「[图N]」在请求里就地绑定，而不是只在末尾说明里口头约定。</param>
     public async Task<ImageResult> GenerateWithImagesAsync(
         string prompt, IReadOnlyList<string> imagePaths,
         string? apiUrl, string apiKey, string model, string size,
-        CancellationToken ct = default)
+        CancellationToken ct = default, IReadOnlyList<string>? imageLabels = null,
+        ImageGenOptions? options = null)
     {
         var files = new List<(byte[] Data, string Ext, string Mime)>();
-        foreach (var path in imagePaths ?? Array.Empty<string>())
+        var labels = new List<string>();
+        var pathList = imagePaths ?? Array.Empty<string>();
+        for (var pi = 0; pi < pathList.Count; pi++)
         {
+            var path = pathList[pi];
             if (string.IsNullOrWhiteSpace(path)) continue;
             try
             {
@@ -429,6 +566,7 @@ public class ImageService
                 if (data.Length == 0) continue;
                 var ext = DetectExt(data);
                 files.Add((data, ext, MimeFor(ext)));
+                labels.Add(imageLabels != null && pi < imageLabels.Count ? (imageLabels[pi] ?? "") : "");
             }
             catch (Exception ex) when (ex is IOException or UnauthorizedAccessException)
             {
@@ -438,47 +576,71 @@ public class ImageService
         if (files.Count == 0)
             return new ImageResult(false, null, null, "没有可用的参考图（文件不存在或读取失败）");
 
+        // 同上：参考图出图在方舟上是 /images/generations 带 image 数组，不是 multipart /images/edits。
+        if (IsArkApi(apiUrl))
+            return await ArkGenerateWithImagesAsync(prompt, files, apiUrl, apiKey, model, size, ct);
+
         var errors = new List<string>();
         var editsEndpoint = BuildEndpoint(apiUrl, "images/edits");
         var chatEndpoint = BuildEndpoint(apiUrl, "chat/completions");
         if (editsEndpoint.Length == 0 && chatEndpoint.Length == 0)
             return new ImageResult(false, null, null, "文生图接口地址无效，请到「API 配置 → 文生图（中转）」检查（例如 https://your-relay.com/v1）");
 
+        var quality = string.IsNullOrWhiteSpace(options?.Quality) ? ImageQuality : options!.Quality!.Trim();
+
         // ① 主路径：图片编辑接口。多张参考图 = 重复的 image[] 字段（OpenAI 的图生图约定）。
         if (editsEndpoint.Length > 0)
         {
-            try
+            // 与文生图同理：先带齐 quality / background / output_format，
+            // 被中转以 4xx 拒绝时逐级往下摘（只留 quality → 全部去掉）。
+            var level = 0;
+            var maxLevel = options == null ? 1 : 2;
+            while (true)
             {
-                using var form = new MultipartFormDataContent();
-                form.Add(new StringContent(model, Encoding.UTF8), "model");
-                form.Add(new StringContent(prompt, Encoding.UTF8), "prompt");
-                form.Add(new StringContent(size, Encoding.UTF8), "size");
-                for (var i = 0; i < files.Count; i++)
+                try
                 {
-                    var part = new ByteArrayContent(files[i].Data);
-                    part.Headers.ContentType = new MediaTypeHeaderValue(files[i].Mime);
-                    // 文件名固定用 ASCII：中转站是按重复的 image[] 收集图片的，不依赖原始文件名，
-                    // 而中文名在某些中转的 multipart 解析里会被当成非法编码直接丢掉。
-                    form.Add(part, "image[]", $"image{i}{files[i].Ext}");
-                }
+                    using var form = new MultipartFormDataContent();
+                    form.Add(new StringContent(model, Encoding.UTF8), "model");
+                    form.Add(new StringContent(prompt, Encoding.UTF8), "prompt");
+                    form.Add(new StringContent(size, Encoding.UTF8), "size");
+                    if (level <= 1) form.Add(new StringContent(quality, Encoding.UTF8), "quality");
+                    if (level == 0 && options != null)
+                    {
+                        if (!string.IsNullOrWhiteSpace(options.Background))
+                            form.Add(new StringContent(options.Background.Trim(), Encoding.UTF8), "background");
+                        if (!string.IsNullOrWhiteSpace(options.OutputFormat))
+                            form.Add(new StringContent(options.OutputFormat.Trim(), Encoding.UTF8), "output_format");
+                    }
+                    for (var i = 0; i < files.Count; i++)
+                    {
+                        var part = new ByteArrayContent(files[i].Data);
+                        part.Headers.ContentType = new MediaTypeHeaderValue(files[i].Mime);
+                        // 文件名固定用 ASCII：中转站是按重复的 image[] 收集图片的，不依赖原始文件名，
+                        // 而中文名在某些中转的 multipart 解析里会被当成非法编码直接丢掉。
+                        form.Add(part, "image[]", $"image{i}{files[i].Ext}");
+                    }
 
-                using var resp = await PostMultipartAsync(editsEndpoint, apiKey, form, ct);
-                var text = await resp.Content.ReadAsStringAsync(ct);
-                if (resp.IsSuccessStatusCode)
-                {
-                    var (url, b64) = ParseImageData(text);
-                    var got = await MaterializeAsync(url, b64, ct);
-                    if (got != null) return got;
-                    errors.Add($"/images/edits 返回成功但没解析出图片：{Truncate(text)}");
+                    using var resp = await PostMultipartAsync(editsEndpoint, apiKey, form, ct);
+                    var text = await resp.Content.ReadAsStringAsync(ct);
+                    if (resp.IsSuccessStatusCode)
+                    {
+                        var (url, b64) = ParseImageData(text);
+                        var got = await MaterializeAsync(url, b64, ct);
+                        if (got != null) return got;
+                        errors.Add($"/images/edits 返回成功但没解析出图片：{Truncate(text)}");
+                        break;
+                    }
+
+                    var code = (int)resp.StatusCode;
+                    errors.Add($"/images/edits HTTP {code}(参数级别{level})：{Truncate(text)}");
+                    if (level >= maxLevel || code is < 400 or >= 500) break;
+                    level++;
                 }
-                else
+                catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
                 {
-                    errors.Add($"/images/edits HTTP {(int)resp.StatusCode}：{Truncate(text)}");
+                    errors.Add($"/images/edits 请求异常：{NetErrorText.Describe(ex)}");
+                    break;
                 }
-            }
-            catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
-            {
-                errors.Add($"/images/edits 请求异常：{ex.Message}");
             }
         }
 
@@ -487,14 +649,25 @@ public class ImageService
         {
             try
             {
-                var content = new List<object> { new { type = "text", text = prompt } };
-                foreach (var f in files)
-                    content.Add(new { type = "image_url", image_url = new { url = ToDataUri(f.Data, f.Mime) } });
+                // 结构：每张图前面先挂一个「[图N] 名字」的文本标签，图全部给完后再给一次完整指令。
+                // 之前是「一大段文本 + 一串没标签的图」，模型只能靠末尾一句说明去猜哪张是 [图1]，
+                // 换人/换装这类主次任务经常搞反（表现为只换了衣服、人没换）。就地绑定后编号不会漂。
+                var content = new List<object>();
+                for (var i = 0; i < files.Count; i++)
+                {
+                    var name = i < labels.Count ? (labels[i] ?? "").Trim() : "";
+                    var tag = "[图" + (i + 1) + "]" + (name.Length > 0 ? "：" + name : "");
+                    content.Add(new { type = "text", text = tag });
+                    content.Add(new { type = "image_url", image_url = new { url = ToDataUri(files[i].Data, files[i].Mime) } });
+                }
+                content.Add(new { type = "text", text = prompt });
 
                 var body = JsonSerializer.Serialize(new Dictionary<string, object?>
                 {
                     ["model"] = model,
-                    ["messages"] = new object[] { new { role = "user", content = content.ToArray() } }
+                    ["messages"] = new object[] { new { role = "user", content = content.ToArray() } },
+                    // 同上：走对话接口的图像模型需要显式声明要输出图片
+                    ["modalities"] = new[] { "image", "text" }
                 });
                 using var resp = await PostJsonAsync(chatEndpoint, apiKey, body, ct);
                 var text = await resp.Content.ReadAsStringAsync(ct);
@@ -512,13 +685,127 @@ public class ImageService
             }
             catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
             {
-                errors.Add($"/chat/completions 请求异常：{ex.Message}");
+                errors.Add($"/chat/completions 请求异常：{NetErrorText.Describe(ex)}");
             }
         }
 
         var message = errors.Count > 0 ? string.Join("；", errors) : "未拿到图片";
         _logger.LogWarning("[ImageService] 参考图出图失败 model={Model} size={Size} 参考图={Count}张: {Message}",
             model, size, files.Count, message);
+        return new ImageResult(false, null, null, message);
+    }
+
+    /// <summary>
+    /// 火山方舟文生图：POST /api/v3/images/generations。
+    /// 先要 b64_json（省一次外网下载，也绕开 url 的 24 小时有效期），被拒时退回 url。
+    /// </summary>
+    private async Task<ImageResult> ArkGenerateAsync(
+        string prompt, string? apiUrl, string apiKey, string model, string size, CancellationToken ct)
+    {
+        var endpoint = BuildEndpoint(apiUrl, "images/generations");
+        if (endpoint.Length == 0)
+            return new ImageResult(false, null, null, "火山方舟接口地址无效，ApiUrl 应为 https://ark.cn-beijing.volces.com/api/v3");
+
+        var arkSize = MapArkSize(size);
+        var (arkPrompt, arkNegative) = PrepareArkPrompt(prompt);
+        var errors = new List<string>();
+        foreach (var fmt in new[] { "b64_json", "url" })
+        {
+            try
+            {
+                var payload = new Dictionary<string, object?>
+                {
+                    ["model"] = model,
+                    ["prompt"] = arkPrompt,
+                    ["size"] = arkSize,
+                    ["response_format"] = fmt,
+                    ["watermark"] = false
+                };
+                if (!string.IsNullOrWhiteSpace(arkNegative)) payload["negative_prompt"] = arkNegative;
+                using var resp = await PostJsonAsync(endpoint, apiKey, JsonSerializer.Serialize(payload), ct);
+                var text = await resp.Content.ReadAsStringAsync(ct);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var (url, b64) = ParseImageData(text);
+                    var got = await MaterializeAsync(url, b64, ct);
+                    if (got != null) return got;
+                    errors.Add($"方舟出图成功但没解析出图片（{fmt}）：{Truncate(text)}");
+                    continue;
+                }
+
+                var code = (int)resp.StatusCode;
+                errors.Add($"方舟 /images/generations HTTP {code}（{fmt}）：{Truncate(text)}");
+                if (code is >= 400 and < 500) continue;   // 换响应格式再试一次
+                break;
+            }
+            catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
+            {
+                errors.Add($"方舟 /images/generations 请求异常：{NetErrorText.Describe(ex)}");
+                break;
+            }
+        }
+
+        var message = errors.Count > 0 ? string.Join("；", errors) : "未拿到图片";
+        _logger.LogWarning("[ImageService] 方舟出图失败 model={Model} size={Size}→{ArkSize}: {Message}", model, size, arkSize, message);
+        return new ImageResult(false, null, null, message);
+    }
+
+    /// <summary>
+    /// 火山方舟图生图：同一个 /api/v3/images/generations，参考图以 data URI 放进 image 数组。
+    /// Seedream 4.x/5.x 与 seededit 都吃这个字段，所以模型名沿用配置里的那个即可。
+    /// </summary>
+    private async Task<ImageResult> ArkGenerateWithImagesAsync(
+        string prompt, IReadOnlyList<(byte[] Data, string Ext, string Mime)> files,
+        string? apiUrl, string apiKey, string model, string size, CancellationToken ct)
+    {
+        var endpoint = BuildEndpoint(apiUrl, "images/generations");
+        if (endpoint.Length == 0)
+            return new ImageResult(false, null, null, "火山方舟接口地址无效，ApiUrl 应为 https://ark.cn-beijing.volces.com/api/v3");
+
+        var arkSize = MapArkSize(size);
+        var (arkPrompt, arkNegative) = PrepareArkPrompt(prompt);
+        var images = files.Select(f => ToDataUri(f.Data, f.Mime)).ToArray();
+        var errors = new List<string>();
+        foreach (var fmt in new[] { "b64_json", "url" })
+        {
+            try
+            {
+                var payload = new Dictionary<string, object?>
+                {
+                    ["model"] = model,
+                    ["prompt"] = arkPrompt,
+                    ["image"] = images,
+                    ["size"] = arkSize,
+                    ["response_format"] = fmt,
+                    ["watermark"] = false
+                };
+                if (!string.IsNullOrWhiteSpace(arkNegative)) payload["negative_prompt"] = arkNegative;
+                using var resp = await PostJsonAsync(endpoint, apiKey, JsonSerializer.Serialize(payload), ct);
+                var text = await resp.Content.ReadAsStringAsync(ct);
+                if (resp.IsSuccessStatusCode)
+                {
+                    var (url, b64) = ParseImageData(text);
+                    var got = await MaterializeAsync(url, b64, ct);
+                    if (got != null) return got;
+                    errors.Add($"方舟参考图出图成功但没解析出图片（{fmt}）：{Truncate(text)}");
+                    continue;
+                }
+
+                var code = (int)resp.StatusCode;
+                errors.Add($"方舟 /images/generations(图生图) HTTP {code}（{fmt}）：{Truncate(text)}");
+                if (code is >= 400 and < 500) continue;
+                break;
+            }
+            catch (Exception ex) when ((ex is HttpRequestException or TaskCanceledException or JsonException) && !ct.IsCancellationRequested)
+            {
+                errors.Add($"方舟 /images/generations(图生图) 请求异常：{NetErrorText.Describe(ex)}");
+                break;
+            }
+        }
+
+        var message = errors.Count > 0 ? string.Join("；", errors) : "未拿到图片";
+        _logger.LogWarning("[ImageService] 方舟参考图出图失败 model={Model} size={Size}→{ArkSize} 参考图={Count}张: {Message}",
+            model, size, arkSize, files.Count, message);
         return new ImageResult(false, null, null, message);
     }
 

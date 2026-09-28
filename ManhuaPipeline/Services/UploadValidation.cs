@@ -12,6 +12,12 @@ public static class UploadValidation
         ".jpg", ".jpeg", ".png", ".webp", ".gif"
     };
 
+    /// <summary>
+    /// 头部扫描窗口。JPEG 前面可能挂很长的元数据段（EXIF / ICC / XMP），实测 SOF 会被推到 38KB 之后，
+    /// 只扫 8KB 会把一张正常图片误判成「文件内容与图片扩展名不匹配」。
+    /// </summary>
+    private const int HeaderScanBytes = 256 * 1024;
+
     private static readonly HashSet<string> VideoExtensions = new(StringComparer.OrdinalIgnoreCase)
     {
         ".mp4", ".mov", ".webm", ".mkv", ".avi"
@@ -23,7 +29,7 @@ public static class UploadValidation
         if (!TryValidateCommon(file, maxBytes, ImageExtensions, extension, out error))
             return false;
 
-        var header = ReadHeader(file!, 8192);
+        var header = ReadHeader(file!, HeaderScanBytes);
         var valid = extension switch
         {
             ".jpg" or ".jpeg" => IsValidJpeg(header),
@@ -44,7 +50,7 @@ public static class UploadValidation
         if (!TryValidateCommon(file, maxBytes, VideoExtensions, extension, out error))
             return false;
 
-        var header = ReadHeader(file!, 8192);
+        var header = ReadHeader(file!, HeaderScanBytes);
         var valid = extension switch
         {
             ".mp4" or ".mov" => IsValidMp4(header),

@@ -1,0 +1,2260 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1.0">
+    <title>无限画布 - 漫创引擎</title>
+    <link rel="stylesheet" href="/lib/material-icons/material-icons.css">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        /* 画布页：把 body → container → #canvasStage 变成一条有确定高度的纵向 flex 链。
+           链打通之后 .canvas-wrap 就能老实用 height:100%，不用再去猜 calc(100vh - 220px) 里那个头部高度 */
+        body {
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+            /* 顶栏按内容高度来，别让 flex 把它压扁 */
+            body > nav {
+                flex: 0 0 auto;
+            }
+
+        #canvasContainer {
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            max-width: none;
+            padding: 16px 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        #canvasStage {
+            flex: 1 1 auto;
+            min-height: 0;
+            position: relative;
+        }
+
+        /* 工具栏下拉框：这个类原本只在 asset-library 页里定义过，画布页引用了类名却没带样式，
+           所以一直是浏览器默认外观（又矮又窄）。这里补上，高度按 .btn 的 40px 对齐 */
+        .action-bar-select {
+            background-color: #1e293b;
+            /* appearance:none 会把原生下拉箭头干掉，用内联 SVG 补一个回来，否则看不出是下拉框 */
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
+            background-repeat: no-repeat;
+            background-position: right 12px center;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 0 34px 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            height: 40px;
+            box-sizing: border-box;
+            -webkit-appearance: none;
+            appearance: none;
+            cursor: pointer;
+        }
+
+            .action-bar-select:focus {
+                outline: none;
+                border-color: var(--primary);
+            }
+
+        /* 输入框跟上面的下拉框保持同一套尺寸（40px 高、8px 圆角、同色边框），
+           排在一行才不会一个高一个矮 */
+        .action-bar-input {
+            background-color: #1e293b;
+            color: #e2e8f0;
+            border: 1px solid #475569;
+            border-radius: 8px;
+            padding: 0 12px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            height: 40px;
+            box-sizing: border-box;
+            width: 100%;
+        }
+
+            .action-bar-input::placeholder {
+                color: #64748b;
+                font-weight: 400;
+            }
+
+            .action-bar-input:focus {
+                outline: none;
+                border-color: var(--primary);
+            }
+
+        /* 提示词框上方的参考图小图条：点一下把 [图N] 插到光标处 */
+        .ref-chips {
+            display: flex;
+            gap: 6px;
+            flex-wrap: wrap;
+            margin-bottom: 6px;
+        }
+
+            .ref-chips:empty {
+                display: none;
+            }
+
+        .ref-chip {
+            position: relative;
+            width: 46px;
+            height: 46px;
+            flex: 0 0 auto;
+            border: 1px solid #475569;
+            border-radius: 6px;
+            overflow: hidden;
+            cursor: pointer;
+            background: #0f172a;
+        }
+
+            .ref-chip:hover {
+                border-color: var(--primary);
+            }
+
+            .ref-chip img {
+                width: 100%;
+                height: 100%;
+                object-fit: cover;
+                display: block;
+            }
+
+            .ref-chip span {
+                position: absolute;
+                left: 0;
+                bottom: 0;
+                padding: 0 3px;
+                background: rgba(0, 0, 0, .65);
+                color: #e2e8f0;
+                font-size: 10px;
+                line-height: 14px;
+                border-top-right-radius: 4px;
+            }
+
+        /* 画布选择框给个底宽，标题短的时候不至于缩成一小条 */
+        #boardSelect {
+            min-width: 240px;
+        }
+
+        .canvas-wrap {
+            position: relative;
+            height: 100%;
+            min-height: 320px;
+            overflow: hidden;
+            border: 1px solid var(--border);
+            border-radius: var(--radius-sm);
+            background: #0b1220;
+            background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+            background-size: 24px 24px;
+            cursor: grab;
+        }
+
+            .canvas-wrap.panning {
+                cursor: grabbing;
+            }
+
+        /* 全屏：整块提到最上层铺满窗口，工具栏和右侧面板跟着一起进来 */
+        .canvas-fullscreen {
+            position: fixed;
+            left: 0;
+            right: 0;
+            top: 0;
+            bottom: 0;
+            z-index: 60;
+            background: var(--bg);
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden;
+        }
+
+            /* 全屏时画布吃掉工具栏以外的全部高度（#canvasStage 的 flex:1 在全屏下同样生效） */
+            .canvas-fullscreen .canvas-wrap {
+                height: 100%;
+                min-height: 0;
+            }
+
+        /* 视口：所有内容都在这层里，平移缩放只改它的 transform */
+        #viewport {
+            position: absolute;
+            left: 0;
+            top: 0;
+            transform-origin: 0 0;
+            will-change: transform;
+        }
+
+        /* 连线层：用 1px + overflow:visible 的 svg，坐标直接用画布坐标（允许负值） */
+        #edgeLayer {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 1px;
+            height: 1px;
+            overflow: visible;
+            pointer-events: none;
+        }
+
+            #edgeLayer path {
+                fill: none;
+                stroke: #38bdf8;
+                stroke-width: 2;
+                pointer-events: stroke;
+                cursor: pointer;
+            }
+
+                #edgeLayer path:hover {
+                    stroke: #f87171;
+                    stroke-width: 3;
+                }
+
+        #nodeLayer {
+            position: absolute;
+            left: 0;
+            top: 0;
+        }
+
+        .cnode {
+            position: absolute;
+            width: 380px;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 14px rgba(0, 0, 0, .35);
+            font-size: 12px;
+            user-select: none;
+        }
+
+            .cnode.selected {
+                border-color: var(--primary);
+                box-shadow: 0 0 0 2px rgba(56, 189, 248, .35);
+            }
+
+        .cnode-head {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 7px 10px;
+            border-bottom: 1px solid var(--border);
+            cursor: move;
+            border-radius: 8px 8px 0 0;
+            background: rgba(56, 189, 248, .07);
+        }
+
+            .cnode-head .t {
+                flex: 1;
+                color: #e2e8f0;
+                font-weight: 600;
+                overflow: hidden;
+                text-overflow: ellipsis;
+                white-space: nowrap;
+            }
+
+        .st {
+            font-size: 10px;
+            padding: 1px 6px;
+            border-radius: 8px;
+            background: #334155;
+            color: #cbd5e1;
+            white-space: nowrap;
+        }
+
+            .st.queued {
+                background: #1d4ed8;
+                color: #fff;
+            }
+
+            .st.running {
+                background: #b45309;
+                color: #fff;
+            }
+
+            .st.done {
+                background: #15803d;
+                color: #fff;
+            }
+
+            .st.failed {
+                background: #b91c1c;
+                color: #fff;
+            }
+
+        .cnode-body {
+            padding: 8px;
+        }
+
+        .cnode-img {
+            width: 100%;
+            height: 190px;
+            object-fit: cover;
+            border-radius: 4px;
+            background: #1e293b;
+            display: block;
+        }
+
+        /* 出图结果上的悬浮操作条：默认藏起来，鼠标移到图上才浮出来，
+           免得每张图都顶着两个按钮挡画面 */
+        .cnode-imgwrap {
+            position: relative;
+        }
+
+        .cnode-imgacts {
+            position: absolute;
+            top: 6px;
+            right: 6px;
+            display: flex;
+            gap: 4px;
+            opacity: 0;
+            transition: opacity .15s;
+        }
+
+            .cnode-imgwrap:hover .cnode-imgacts,
+            .cnode.selected .cnode-imgacts {
+                opacity: 1;
+            }
+
+        .iabtn {
+            width: 26px;
+            height: 26px;
+            border-radius: 4px;
+            border: 1px solid #475569;
+            background: rgba(15, 23, 42, .92);
+            color: #e2e8f0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+            .iabtn:hover {
+                background: var(--primary);
+                color: #0b1220;
+            }
+
+            .iabtn .material-icons {
+                font-size: 16px;
+            }
+
+            /* 一次出多张时的候选切换条 */
+            .cnode-cands {
+                display: flex;
+                align-items: center;
+                justify-content: center;
+                gap: 8px;
+                margin-top: 4px;
+                font-size: 11px;
+                color: #94a3b8;
+            }
+
+            .cnode-cands .candbtn {
+                background: #1e293b;
+                border: 1px solid #334155;
+                color: #cbd5e1;
+                border-radius: 4px;
+                padding: 0 8px;
+                line-height: 18px;
+                cursor: pointer;
+                font-size: 14px;
+            }
+
+            .cnode-cands .candbtn:hover {
+                background: #334155;
+                color: #e2e8f0;
+            }
+
+            /* 右侧面板的出图历史：历次重跑留下的图，点一张就设成这个节点的当前图 */
+            .hist-grid {
+                display: grid;
+                grid-template-columns: repeat(3, 1fr);
+                gap: 6px;
+            }
+
+            .hist-item {
+                position: relative;
+                border: 1px solid #334155;
+                border-radius: 6px;
+                overflow: hidden;
+                cursor: pointer;
+                background: rgba(255, 255, 255, .04);
+            }
+
+            .hist-item img {
+                display: block;
+                width: 100%;
+                aspect-ratio: 16 / 9;
+                object-fit: cover;
+            }
+
+            .hist-item:hover {
+                border-color: #64748b;
+            }
+
+            .hist-item.cur {
+                border-color: #0891b2;
+                box-shadow: inset 0 0 0 1px #0891b2;
+            }
+
+            .hist-item .hist-no {
+                position: absolute;
+                left: 3px;
+                top: 3px;
+                background: rgba(0, 0, 0, .6);
+                color: #e2e8f0;
+                font-size: 10px;
+                padding: 1px 4px;
+                border-radius: 4px;
+            }
+
+            .hist-item .hist-new {
+                position: absolute;
+                right: 3px;
+                top: 3px;
+                background: #0891b2;
+                color: #fff;
+                font-size: 10px;
+                padding: 1px 4px;
+                border-radius: 4px;
+            }
+
+        .cnode-empty {
+            width: 100%;
+            height: 190px;
+            border-radius: 4px;
+            background: #1e293b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #64748b;
+            font-size: 11px;
+        }
+
+        .cnode textarea {
+            width: 100%;
+            height: 58px;
+            margin-top: 6px;
+            resize: none;
+            background: #0f172a;
+            color: #e2e8f0;
+            border: 1px solid #334155;
+            border-radius: 4px;
+            padding: 6px;
+            font-size: 11px;
+            box-sizing: border-box;
+            font-family: inherit;
+        }
+
+        /* 端口：连线用的小圆点 */
+        .port {
+            position: absolute;
+            width: 13px;
+            height: 13px;
+            border-radius: 50%;
+            background: #38bdf8;
+            border: 2px solid #0b1220;
+            cursor: crosshair;
+            z-index: 2;
+        }
+
+            .port.in {
+                left: -7px;
+                top: 46px;
+                background: #a78bfa;
+            }
+
+            .port.out {
+                right: -7px;
+                top: 46px;
+            }
+
+            .port:hover, .port.linking {
+                transform: scale(1.35);
+            }
+
+        /* 节点编号：报问题时直接说「#123」，不用截图猜是哪个 */
+        .cnode-head .nid {
+            flex: 0 0 auto;
+            color: #64748b;
+            font-size: 10px;
+            font-family: ui-monospace, Consolas, monospace;
+            background: rgba(148, 163, 184, .12);
+            border-radius: 3px;
+            padding: 0 4px;
+            line-height: 15px;
+        }
+
+        /* 节点头部「+ 参考图」按钮：不拖端口也能连参考图 */
+        .cnode-pickref {
+            flex: 0 0 auto;
+            border: 1px solid #475569;
+            background: #1e293b;
+            color: #cbd5e1;
+            border-radius: 4px;
+            font-size: 11px;
+            line-height: 18px;
+            padding: 0 6px;
+            cursor: pointer;
+        }
+
+            .cnode-pickref:hover {
+                background: var(--primary);
+                color: #0b1220;
+            }
+
+        .side-panel {
+            position: absolute;
+            right: 12px;
+            top: 12px;
+            width: 360px;
+            max-height: calc(100% - 24px);
+            overflow-y: auto;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
+            padding: 12px;
+            font-size: 12px;
+            z-index: 5;
+            box-shadow: var(--shadow-lg);
+        }
+
+            .side-panel label {
+                display: block;
+                color: #94a3b8;
+                margin: 8px 0 4px;
+            }
+
+            .side-panel textarea, .side-panel select {
+                width: 100%;
+                box-sizing: border-box;
+                background: #0f172a;
+                color: #e2e8f0;
+                border: 1px solid #334155;
+                border-radius: 4px;
+                padding: 6px;
+                font-size: 12px;
+                font-family: inherit;
+            }
+
+            .side-panel textarea {
+                height: 90px;
+                resize: vertical;
+            }
+
+        .toolbar {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-bottom: 12px;
+            flex-wrap: wrap;
+        }
+
+        .hint {
+            color: #64748b;
+            font-size: 11px;
+            margin-left: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+    <div style="position:relative;z-index:1;">
+        <nav class="navbar">
+            <div class="nav-inner">
+                <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                    <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+                    <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+                </a>
+                <div class="nav-links" id="navLinks">
+                    <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+                    <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                    <a href="canvas.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
+                    <a href="system-config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
+                    <span id="navUser" style="display:none;">
+                        <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+                        <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+                    </span>
+                    <span id="navGuest" style="display:none;">
+                        <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+                        <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+                    </span>
+                </div>
+            </div>
+        </nav>
+
+        <div class="container" id="canvasContainer">
+            <div class="toolbar">
+                <select id="boardSelect" class="action-bar-select"></select>
+                <button class="btn" onclick="newBoard()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建画布</button>
+                <button class="btn" onclick="renameBoard()" title="给当前这块画布改名（左上角那个下拉选的就是它）"><span class="material-icons" style="font-size:inherit;vertical-align:middle">edit</span> 改名</button>
+                <span style="width:1px;height:22px;background:var(--border);display:inline-block;margin:0 4px;"></span>
+                <button class="btn btn-primary" onclick="addNodeAtCenter('text2image')"><span class="material-icons" style="font-size:inherit;vertical-align:middle">image</span> 文生图</button>
+                <button class="btn btn-primary" onclick="addNodeAtCenter('image2image')"><span class="material-icons" style="font-size:inherit;vertical-align:middle">auto_awesome</span> 图生图</button>
+                <button class="btn btn-primary" onclick="runAll()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">play_arrow</span> 运行全部</button>
+                <button class="btn btn-primary" onclick="openAssetPicker()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 素材</button>
+
+                <button class="btn" onclick="deleteBoard()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button>
+                <button class="btn" onclick="fitView()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">fit_screen</span> 适应画布</button>
+                <button class="btn" id="fsBtn" onclick="toggleFullscreen()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">fullscreen</span> 全屏</button>
+                <span id="zoomLabel" style="color:#94a3b8;font-size:12px;">100%</span>
+                <span class="hint">滚轮缩放 · 空白处拖动平移 · 拖端口连线 · 点「+ 参考图」选图连线 · 点连线删除</span>
+            </div>
+
+            <div id="canvasStage" style="position:relative;">
+                <div class="canvas-wrap" id="canvasWrap">
+                    <div id="viewport">
+                        <svg id="edgeLayer"></svg>
+                        <div id="nodeLayer"></div>
+                    </div>
+                </div>
+
+                <div id="bulkBar" style="display:none;position:absolute;left:50%;bottom:14px;transform:translateX(-50%);background:var(--bg-card);border:1px solid var(--border);border-radius:8px;padding:6px 10px;z-index:8;align-items:center;gap:8px;">
+                    <span id="bulkCount" style="color:#e2e8f0;font-size:12px;"></span>
+                    <button class="btn btn-primary" style="padding:4px 10px;font-size:12px;" onclick="runBulk()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">play_arrow</span> 批量生成</button>
+                    <button class="btn" style="padding:4px 10px;font-size:12px;" onclick="deleteBulk()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 批量删除</button>
+                    <button class="btn" style="padding:4px 10px;font-size:12px;" onclick="clearBulk()">取消</button>
+                </div>
+
+                <div class="side-panel" id="sidePanel" style="display:none;">
+                    <div style="display:flex;align-items:center;justify-content:space-between;">
+                        <strong id="spTitle" style="color:#e2e8f0;">节点</strong>
+                        <button class="btn" style="padding:2px 6px;font-size:11px;" onclick="closePanel()">关闭</button>
+                    </div>
+                    <div id="spType" style="color:#64748b;font-size:11px;margin-top:2px;"></div>
+                    <label>节点标题（就是这张图的名字）</label>
+                    <input id="spNodeTitle" class="action-bar-input" maxlength="100" style="width:100%;box-sizing:border-box;"
+                        placeholder="给这张图起个名字，双击节点标题栏也能改">
+                    <div style="color:#64748b;font-size:11px;margin-top:4px;">
+                        下载文件名、存入资源库的名字、当参考图时提示词里的叫法，都用这个标题
+                        <span id="spTitleCount" style="float:right;"></span>
+                    </div>
+                    <label>提示词</label>
+                    <div id="spRefChips" class="ref-chips"></div>
+                    <textarea id="spPrompt"></textarea>
+                    <label>画幅</label>
+                    <select id="spSize" class="action-bar-select" style="width:100%;"></select>
+                    <div id="spSizeInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+
+                    <div id="spGenWrap">
+                        <div style="color:#94a3b8;font-size:11px;margin:12px 0 2px;border-top:1px solid #334155;padding-top:10px;">
+                            出图参数（只作用于这个节点）
+                        </div>
+                        <label>出图模型</label>
+                        <select id="spModel" class="action-bar-select" style="width:100%;"></select>
+                        <div id="spModelInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <label>画质</label>
+                        <select id="spQuality" class="action-bar-select" style="width:100%;"></select>
+                        <label>一次出几张</label>
+                        <input id="spCount" type="number" min="1" max="10" step="1" class="action-bar-input" style="width:100%;box-sizing:border-box;">
+                        <div id="spCountInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <label>背景</label>
+                        <select id="spBackground" class="action-bar-select" style="width:100%;"></select>
+                        <label>输出格式</label>
+                        <select id="spFormat" class="action-bar-select" style="width:100%;"></select>
+                        <div id="spFmtNote" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <label>图片风格</label>
+                        <select id="spStyle" class="action-bar-select" style="width:100%;"></select>
+                        <input id="spStyleText" class="action-bar-input" style="width:100%;box-sizing:border-box;display:none;margin-top:6px;" placeholder="自定义风格，如：水墨国风，留白多，线条简练">
+                        <div id="spStyleInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                    </div>
+
+                    <div id="spHistoryWrap" style="display:none;">
+                        <div style="color:#94a3b8;font-size:11px;margin:12px 0 2px;border-top:1px solid #334155;padding-top:10px;">
+                            出图历史（点一张把它设为当前图）
+                        </div>
+                        <div id="spHistory" class="hist-grid"></div>
+                        <div id="spHistoryInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                    </div>
+
+                    <div id="spRefs" style="color:#94a3b8;font-size:11px;margin-top:8px;"></div>
+                    <div style="display:flex;gap:6px;margin-top:12px;">
+                        <button class="btn btn-primary" style="flex:1;" onclick="runSelected()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">play_arrow</span> 生成</button>
+                        <button class="btn" style="flex:1;" onclick="deleteSelected()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button>
+                    </div>
+                    <div style="display:flex;gap:6px;margin-top:6px;">
+                        <button class="btn" style="flex:1;" onclick="downloadNodeImage(selectedId)"><span class="material-icons" style="font-size:inherit;vertical-align:middle">download</span> 下载</button>
+                        <button class="btn" style="flex:1;" onclick="openSaveLibModal(selectedId)"><span class="material-icons" style="font-size:inherit;vertical-align:middle">library_add</span> 存资源库</button>
+                    </div>
+                    <div id="spError" style="color:#f87171;font-size:11px;margin-top:8px;display:none;"></div>
+                </div>
+            </div>
+        </div>
+
+        <div id="assetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:50;overflow:auto;">
+            <div style="margin:60px auto;width:80%;max-width:1600px;max-height:78vh;overflow:auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;">
+                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+                    <strong style="color:#e2e8f0;">选择素材（点一张加进画布，当图生图的参考图源）</strong>
+                    <button class="btn" onclick="closeAssetPicker()">关闭</button>
+                </div>
+                <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
+                    <div style="width:140px;">
+                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">来源</label>
+                        <select id="assetSourceSel" class="action-bar-select" style="width:100%;box-sizing:border-box;" onchange="onAssetSourceChange()">
+                            <option value="library">我的资产库</option>
+                            <option value="project">项目资产</option>
+                        </select>
+                    </div>
+                    <div id="assetTagWrap" style="flex:1;min-width:180px;">
+                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">标签</label>
+                        <select id="assetTagSel" class="action-bar-select" style="width:100%;box-sizing:border-box;" onchange="renderLibraryFiltered()"></select>
+                    </div>
+                    <div id="assetSearchWrap" style="width:150px;">
+                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">名称</label>
+                        <input id="assetSearchInput" class="action-bar-input" placeholder="搜名称…" oninput="renderLibraryFiltered()">
+                    </div>
+                    <div id="assetProjectWrap" style="flex:1;min-width:180px;display:none;">
+                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">项目</label>
+                        <select id="assetProjectSel" class="action-bar-select" style="width:100%;box-sizing:border-box;" onchange="loadAssetGrid()"></select>
+                    </div>
+                </div>
+                <div id="assetGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin-top:12px;"></div>
+            </div>
+        </div>
+
+        <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+        <script src="../js/app.js?v=2"></script>
+        <script>
+            // ===================== 状态 =====================
+            var boardId = 0, board = null, nodes = [], edges = [], types = [], sizeOpts = [];
+            var igOpts = {}, igDefaults = {};   // 出图参数：可选值 / 配置页默认值（新建节点时的初始值）
+            var imageModels = [], defaultModelId = 0;   // 出图渠道清单 + 全局默认那条（节点没挑就用它）
+
+            // 出图参数各选项的中文说明。值是接口要的原样字符串，显示时才套这个。
+            var QUALITY_TEXT = { auto: 'auto · 由模型决定', low: 'low · 低（最快、最省）', medium: 'medium · 中', high: 'high · 高', xhigh: 'xhigh · 超高（推荐）', max: 'max · 极致（最慢、最贵）' };
+            var BG_TEXT = { auto: 'auto · 自动', opaque: 'opaque · 不透明', transparent: 'transparent · 透明底' };
+            var FMT_TEXT = { png: 'png', jpeg: 'jpeg', webp: 'webp' };
+            var view = { x: 0, y: 0, s: 1 };
+            var selectedId = null, multi = [];
+            // 节点卡片尺寸，跟 CSS 里 .cnode 的 width 和实测高度对齐；
+            // 框选碰撞判定和「适应画布」都按这个算，改了 CSS 记得同步改这里
+            var NODE_W = 380, NODE_H = 320;
+            var saveViewTimer = null, saveNodeTimer = null;
+            var peId = null, peSrc = null;   // 大编辑区当前绑定的节点 id、以及触发它的那个小输入框
+            var evtSource = null;
+
+            var STATUS_TEXT = { idle: '待生成', queued: '排队中', running: '生成中', done: '已完成', failed: '失败' };
+
+            function esc(s) { return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;'); }
+            function nodeById(id) { for (var i = 0; i < nodes.length; i++) if (nodes[i].id === id) return nodes[i]; return null; }
+            function specOf(t) { for (var i = 0; i < types.length; i++) if (types[i].type === t) return types[i]; return null; }
+
+            // ===================== 画布高度 =====================
+            // 直接按实际位置量：从画布顶边一直撑到窗口底边。
+            // 比 CSS 百分比可靠——百分比要父级链一路都有高度才生效，
+            // 中间任何一层断了就塌成 min-height；这里只看真实渲染位置，跟链条无关。
+            function fitCanvasHeight() {
+                var el = document.getElementById('canvasWrap');
+                if (!el) return;
+                el.style.height = '';                        // 先清掉上次的设定再量，避免误差累积
+                // 顶边由前面的元素决定，跟画布自身高度无关；加上 scrollY 换算成文档坐标，
+                // 这样万一页面有滚动也不会把高度算超
+                var top = el.getBoundingClientRect().top + window.scrollY;
+                var h = Math.round(window.innerHeight - top - 16);   // 底部留 16px 余量
+                el.style.height = Math.max(320, h) + 'px';
+            }
+
+            $(window).on('resize', function () { fitCanvasHeight(); applyTransform(); });
+
+            // ===================== 载入 =====================
+            $(function () {
+                fitCanvasHeight();
+                setTimeout(fitCanvasHeight, 300);            // 字体/图片加载完可能让工具栏变高，补一次
+                $.get('/api/canvas/node-types', function (r) {
+                    types = r.types || []; sizeOpts = r.sizes || [];
+                    igOpts = r.imageOptions || {}; igDefaults = igOpts.defaults || {};
+                    imageModels = r.imageModels || []; defaultModelId = r.defaultImageConfigId || 0;
+                    fillImageModels();
+
+                    // 画幅下拉把「实际会出多大」直接写在选项里：中转把总像素锁在 ~1.573MP，
+                    // 请求值（1536x864）不等于出图值（1672x941），只写比例会让人以为能出 2K
+                    var $s = $('#spSize').empty();
+                    $.each(sizeOpts, function (_, o) {
+                        $s.append($('<option>').val(o.ratio).text(o.label + ' · 实际 ' + o.width + '×' + o.height));
+                    });
+                    fillOpt('#spQuality', igOpts.qualities || [], QUALITY_TEXT);
+                    fillOpt('#spBackground', igOpts.backgrounds || [], BG_TEXT);
+                    fillOpt('#spFormat', igOpts.formats || [], FMT_TEXT);
+                    $('#spCount').attr('max', igOpts.maxCount || 10);
+
+                    // 风格下拉的内容来自风格库，先把它拉下来再开画布，
+                    // 免得右侧面板先画出来、风格选项后补上
+                    loadImageStyles(loadBoards);
+                }).fail(function () { alert('节点类型加载失败，请确认已登录'); });
+            });
+
+            function fillOpt(sel, values, textMap) {
+                var $s = $(sel).empty();
+                $.each(values, function (_, v) { $s.append($('<option>').val(v).text(textMap[v] || v)); });
+            }
+
+            // 节点的出图参数存在 extraJson 里。没存过（老节点）就当空对象，
+            // 面板上用配置页的默认值顶上 —— 看到的仍然是「这个节点会用的一套具体值」。
+            function optOf(n) {
+                if (!n) return {};
+                try { return JSON.parse(n.extraJson || '{}') || {}; } catch (e) { return {}; }
+            }
+
+            // 改一项存一项：只把改动的那一项发给后端，后端按「打补丁」合并，
+            // 候选图列表之类由后端维护的字段不会被抹掉
+            function saveNodeOpt(patch) {
+                if (!selectedId) return;
+                var n = nodeById(selectedId); if (!n) return;
+                var o = optOf(n); $.extend(o, patch);
+                n.extraJson = JSON.stringify(o);
+                $.ajax({
+                    url: '/api/canvas/nodes/' + selectedId + '/content', method: 'PATCH',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ size: patch.aspectRatio, extraJson: JSON.stringify(patch) })
+                });
+            }
+
+            function refreshOptInfo() {
+                var r = $('#spSize').val(), o = null;
+                for (var i = 0; i < sizeOpts.length; i++) if (sizeOpts[i].ratio === r) o = sizeOpts[i];
+                $('#spSizeInfo').text(o ? ('实际输出 ' + o.width + '×' + o.height + '（请求值 ' + o.size + '）') : '');
+
+                var c = parseInt($('#spCount').val(), 10) || 1;
+                $('#spCountInfo').text(c > 1
+                    ? ('会连出 ' + c + ' 张，全部存下来，可以在节点上左右切换挑一张')
+                    : '只出 1 张');
+
+                $('#spFmtNote').text('透明底只有 png 才有效；当前中转固定回 PNG，选 jpeg/webp 也仍按 PNG 落盘');
+            }
+
+            // 出图渠道下拉：第一条永远是「跟随全局默认」（= 配置页标了默认的那条），
+            // 后面逐个列出具体渠道。不同渠道能出的分辨率差很远（gpt-image 够不到 1080p、
+            // 方舟是 2K），所以把「实际出图约多少」也写进选项里，挑的时候一眼看得见。
+            function fillImageModels() {
+                var $m = $('#spModel').empty(), defName = '';
+                $.each(imageModels, function (_, m) { if (m.isDefault || m.configId === defaultModelId) defName = m.name; });
+                $m.append($('<option>').val(0).text(defName ? '跟随全局默认（当前：' + defName + '）' : '跟随全局默认'));
+                $.each(imageModels, function (_, m) {
+                    var t = m.name;
+                    if (m.modelName && m.modelName !== m.name) t += ' · ' + m.modelName;
+                    if (m.resolutionHint) t += ' · 实际 ' + m.resolutionHint;
+                    $m.append($('<option>').val(m.configId).text(t));
+                });
+            }
+
+            function refreshModelInfo() {
+                var id = parseInt($('#spModel').val(), 10) || 0;
+                var m = null;
+                $.each(imageModels, function (_, x) { if (x.configId === id) m = x; });
+                if (!m) {
+                    $('#spModelInfo').text('跟随全局默认：配置页换默认渠道，这个节点跟着变。');
+                    return;
+                }
+                $('#spModelInfo').text('这个节点固定用「' + m.name + '」' +
+                    (m.resolutionHint ? '，实际出图约 ' + m.resolutionHint : '') + '。');
+            }
+
+            // 图片风格：gpt-image 没有 style 参数，风格只能是「一段拼进提示词的文本」。
+            // 这里决定拼哪一段：风格库里那条的描述 / 不套 / 自定义，并显示出来，
+            // 免得不知道实际套了什么风格。
+            var imageStyles = [];        // 图片风格库，进页面拉一次就够
+
+            function loadImageStyles(then) {
+                $.get('/api/image-style', function (list) {
+                    imageStyles = list || [];
+                    fillStyleOptions();
+                    if (then) then();
+                }).fail(function () {
+                    imageStyles = [];
+                    fillStyleOptions();
+                    if (then) then();
+                });
+            }
+
+            // 下拉 = 「不套用」+ 风格库里每一条；value 用 style:{id} 记住挑的是哪条
+            function fillStyleOptions() {
+                var $s = $('#spStyle').empty();
+                $s.append($('<option>').val('none').text('不套用（只按提示词出）'));
+                if (imageStyles.length) {
+                    var $g = $('<optgroup>').attr('label', '我的图片风格');
+                    $.each(imageStyles, function (_, st) {
+                        $g.append($('<option>').val('style:' + st.styleId).text(st.styleName));
+                    });
+                    $s.append($g);
+                } else {
+                    $s.append($('<option>').val('__empty')
+                        .text('（风格库还是空的 → 系统配置 / 图片风格 里加一条）').prop('disabled', true));
+                }
+            }
+
+            function styleValueOf(o) {
+                if (o.styleMode === 'library' && o.styleId > 0) return 'style:' + o.styleId;
+                if (o.styleMode === 'custom') return 'custom';      // 老节点上留下的自定义风格
+                return 'none';
+            }
+
+            function refreshStyleInfo() {
+                var v = $('#spStyle').val();
+                if (v === 'custom') {
+                    $('#spStyleInfo').text('自定义：出图时把上面这段拼到提示词末尾。').css('color', '#64748b');
+                    return;
+                }
+                if (typeof v === 'string' && v.indexOf('style:') === 0) {
+                    var id = parseInt(v.slice(6), 10), st = null;
+                    for (var i = 0; i < imageStyles.length; i++)
+                        if (imageStyles[i].styleId === id) { st = imageStyles[i]; break; }
+                    if (!st) {
+                        // 选的那条被删了：说清楚这次按不套用出，别让人以为风格还在
+                        $('#spStyleInfo').text('这条风格在库里找不到了（可能已被删除）→ 本次按「不套用」出图。')
+                            .attr('title', '').css('color', '#b45309');
+                        return;
+                    }
+                    var d = st.styleDesc || '';
+                    var t = d.length > 60 ? d.slice(0, 60) + '…' : d;
+                    $('#spStyleInfo').text('出图时拼进提示词：' + t).attr('title', d).css('color', '#64748b');
+                    return;
+                }
+                $('#spStyleInfo').text('不套用：完全按提示词出图。想要风格就去「系统配置 → 图片风格」加一条。')
+                    .attr('title', '').css('color', '#64748b');
+            }
+
+            // 风格来自独立的「图片风格」表，跟项目无关，所以换画布只需要重刷提示文案
+            function invalidateStyle() { refreshStyleInfo(); }
+
+            function loadBoards() {
+                $.get('/api/canvas/boards', function (list) {
+                    var $sel = $('#boardSelect').empty();
+                    var qid = parseInt(new URLSearchParams(location.search).get('id') || '0', 10);
+                    $.each(list || [], function (_, b) { $sel.append($('<option>').val(b.id).text(b.title)); });
+                    if (list && list.length) {
+                        var target = qid && list.some(function (b) { return b.id === qid; }) ? qid : list[0].id;
+                        $sel.val(target);
+                        openBoard(target);
+                    } else {
+                        newBoard(true);
+                    }
+                });
+            }
+
+            function openBoard(id) {
+                boardId = id;
+                invalidateStyle();   // 换画布了，风格提示刷新一下
+                $.get('/api/canvas/boards/' + id, function (r) {
+                    board = r.board; nodes = r.nodes || []; edges = r.edges || [];
+                    view = { x: board.viewportX || 0, y: board.viewportY || 0, s: board.viewportScale || 1 };
+                    render();
+                    connectEvents();
+                }).fail(function () { alert('画布加载失败'); });
+            }
+
+            function newBoard(silent) {
+                var t = silent ? '未命名画布' : (prompt('画布名称：', '未命名画布') || '未命名画布');
+                $.ajax({
+                    url: '/api/canvas/boards', method: 'POST', contentType: 'application/json',
+                    data: JSON.stringify({ title: t, projectId: null }),
+                    success: function (r) {
+                        $.get('/api/canvas/boards', function (list) {
+                            var $sel = $('#boardSelect').empty();
+                            $.each(list || [], function (_, b) { $sel.append($('<option>').val(b.id).text(b.title)); });
+                            $sel.val(r.id); openBoard(r.id);
+                        });
+                    }
+                });
+            }
+
+            // ===================== 渲染 =====================
+            function applyTransform() {
+                // 画布一平移/缩放，编辑框就跟原来的节点对不上了，先收起（没打开时内部直接返回）
+                closePromptEditor();
+                $('#viewport').css('transform', 'translate(' + view.x + 'px,' + view.y + 'px) scale(' + view.s + ')');
+                $('#zoomLabel').text(Math.round(view.s * 100) + '%');
+            }
+
+            function render() {
+                renderNodes();
+                renderEdges();
+                applyTransform();
+            }
+
+            function renderNodes() {
+                var $layer = $('#nodeLayer').empty();
+                $.each(nodes, function (_, n) {
+                    var spec = specOf(n.nodeType) || {};
+                    var img = n.imageUrl
+                        ? '<div class="cnode-imgwrap">' +
+                          '<img class="cnode-img" loading="lazy" src="' + esc(thumbUrl(n.imageUrl, 512)) + '" data-full="' + esc(n.imageUrl) + '" onclick="previewImg(\'' + esc(n.imageUrl) + '\')">' +
+                          '<div class="cnode-imgacts">' +
+                          '<button class="iabtn" data-act="download" data-id="' + n.id + '" title="下载原图"><span class="material-icons">download</span></button>' +
+                          '<button class="iabtn" data-act="savelib" data-id="' + n.id + '" title="存入资源库"><span class="material-icons">library_add</span></button>' +
+                          '</div></div>'
+                        : '<div class="cnode-empty">还没有图片</div>';
+                    // 一次出了多张：给条左右切换的候选条。切换只换展示的那张，不重新出图、不花钱。
+                    var nodeOpt = optOf(n), cands = nodeOpt.candidates || [];
+                    var candBar = cands.length > 1
+                        ? '<div class="cnode-cands">'
+                          + '<button class="candbtn" data-id="' + n.id + '" data-delta="-1" title="上一张">‹</button>'
+                          + '<span>' + ((nodeOpt.candidateIndex || 0) + 1) + ' / ' + cands.length + ' 张</span>'
+                          + '<button class="candbtn" data-id="' + n.id + '" data-delta="1" title="下一张">›</button>'
+                          + '</div>'
+                        : '';
+                    var editable = spec.promptEditable;
+                    var hasRefIn = (spec.inputs || []).length > 0;
+                    var $n = $('<div class="cnode' + (n.id === selectedId ? ' selected' : '') + '" data-id="' + n.id + '" style="left:' + n.x + 'px;top:' + n.y + 'px;">' +
+                        '<div class="cnode-head"><span class="material-icons" style="font-size:15px;">' + (spec.icon || 'crop_square') + '</span>' +
+                        '<span class="nid">#' + n.id + '</span>' +
+                        '<span class="t">' + esc(n.title || spec.label) + '</span>' +
+                        '<span class="st ' + n.status + '">' + (STATUS_TEXT[n.status] || n.status) + '</span>' +
+                        (hasRefIn ? '<button class="cnode-pickref" data-id="' + n.id + '" title="不用拖线：直接选一张图连成本节点的参考图">+ 参考图</button>' : '') +
+                        '</div>' +
+                        '<div class="cnode-body">' + img + candBar +
+                        (editable ? '<textarea class="nprompt" placeholder="描述你想生成的画面…">' + esc(n.prompt || '') + '</textarea>' : '') +
+                        '</div>' +
+                        ((spec.inputs || []).length ? '<div class="port in" data-port="ref" title="参考图输入"></div>' : '') +
+                        ((spec.outputs || []).length ? '<div class="port out" data-port="out" title="图片输出"></div>' : '') +
+                        '</div>');
+                    // 缩略图没出来自救一次：退回原始图地址
+                    $n.find('img.cnode-img').on('error', function () {
+                        var el = this;
+                        if (n.imageUrl && el.src.indexOf('/api/media/thumb') >= 0) { $(el).off('error'); el.src = n.imageUrl; }
+                    });
+                    $layer.append($n);
+                });
+            }
+
+            // 端口坐标：节点坐标 + 端口在节点内的相对位置（用 DOM 实测，不用猜）
+            function portPos(nodeId, port) {
+                var n = nodeById(nodeId); if (!n) return { x: 0, y: 0 };
+                var el = document.querySelector('.cnode[data-id="' + nodeId + '"] .port.' + (port === 'out' ? 'out' : 'in'));
+                var ox = 6, oy = 52;
+                if (el) { ox = el.offsetLeft + el.offsetWidth / 2; oy = el.offsetTop + el.offsetHeight / 2; }
+                return { x: n.x + ox, y: n.y + oy };
+            }
+
+            function bezier(a, b) {
+                var dx = Math.max(40, Math.abs(b.x - a.x) * 0.5);
+                return 'M ' + a.x + ' ' + a.y + ' C ' + (a.x + dx) + ' ' + a.y + ', ' + (b.x - dx) + ' ' + b.y + ', ' + b.x + ' ' + b.y;
+            }
+
+            function renderEdges() {
+                var $svg = $('#edgeLayer').empty();
+                $.each(edges, function (_, e) {
+                    var a = portPos(e.fromNodeId, 'out'), b = portPos(e.toNodeId, 'in');
+                    var p = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    p.setAttribute('d', bezier(a, b));
+                    p.setAttribute('data-edge', e.id);
+                    p.addEventListener('click', function (ev) {
+                        ev.stopPropagation();
+                        if (confirm('删除这条连线？')) deleteEdge(e.id);
+                    });
+                    $svg.append(p);
+                });
+                if (window._tempEdge) {
+                    var t = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                    t.setAttribute('d', bezier(window._tempEdge.a, window._tempEdge.b));
+                    t.setAttribute('style', 'stroke:#facc15;stroke-dasharray:4 3;');
+                    $svg.append(t);
+                }
+            }
+
+            // ===================== 交互：平移 / 缩放 =====================
+            function screenToCanvas(sx, sy) {
+                var r = $('#canvasWrap')[0].getBoundingClientRect();
+                return { x: (sx - r.left - view.x) / view.s, y: (sy - r.top - view.y) / view.s };
+            }
+
+            function scheduleSaveView() {
+                clearTimeout(saveViewTimer);
+                saveViewTimer = setTimeout(function () {
+                    $.ajax({
+                        url: '/api/canvas/boards/' + boardId + '/viewport', method: 'PATCH',
+                        contentType: 'application/json', data: JSON.stringify({ x: view.x, y: view.y, scale: view.s })
+                    });
+                }, 400);
+            }
+
+            $('#canvasWrap').on('mousedown', function (e) {
+                // 点在节点、端口、连线上都不算拖画布
+                if ($(e.target).closest('.cnode').length || $(e.target).closest('.port').length) return;
+                if (e.shiftKey) { startMarquee(e); return; }   // Shift + 拖 = 框选
+                var start = { x: e.clientX, y: e.clientY }, v0 = { x: view.x, y: view.y };
+                $(this).addClass('panning');
+                $(document).on('mousemove.canvaspan', function (ev) {
+                    view.x = v0.x + (ev.clientX - start.x);
+                    view.y = v0.y + (ev.clientY - start.y);
+                    applyTransform();
+                });
+                $(document).one('mouseup', function () {
+                    $(document).off('mousemove.canvaspan');
+                    $('#canvasWrap').removeClass('panning');
+                    scheduleSaveView();
+                });
+            });
+
+            $('#canvasWrap').on('wheel', function (e) {
+                e.preventDefault();
+                // deltaY 只在原生事件上有，jQuery 的事件对象不复制它。
+                // 之前直接读 e.deltaY 恒为 undefined，"undefined < 0" 永远是 false，
+                // 方向判断每次都落进缩小分支——表现就是只能缩小、不能放大。
+                var oe = e.originalEvent || e;
+                var dy = typeof oe.deltaY === 'number' ? oe.deltaY : 0;
+                var r = this.getBoundingClientRect();
+                var mx = e.clientX - r.left, my = e.clientY - r.top;
+                var factor = dy < 0 ? 1.12 : 1 / 1.12;
+                var ns = Math.min(4, Math.max(0.1, view.s * factor));
+                // 以光标为锚点：让光标下的画布点保持不动
+                view.x = mx - (mx - view.x) * (ns / view.s);
+                view.y = my - (my - view.y) * (ns / view.s);
+                view.s = ns;
+                applyTransform();
+                scheduleSaveView();
+            });
+
+            // ===================== 交互：节点拖拽 =====================
+            $(document).on('mousedown', '.cnode-head', function (e) {
+                closePromptEditor();     // 拖节点时编辑框会跟丢，先收起
+                var $n = $(this).closest('.cnode'), id = parseInt($n.attr('data-id'), 10);
+                var n = nodeById(id); if (!n) return;
+                var start = { x: e.clientX, y: e.clientY }, n0 = { x: n.x, y: n.y };
+                var moved = false;
+                $(document).on('mousemove.nodedrag', function (ev) {
+                    var dx = (ev.clientX - start.x) / view.s, dy = (ev.clientY - start.y) / view.s;
+                    if (Math.abs(dx) > 2 || Math.abs(dy) > 2) moved = true;
+                    n.x = n0.x + dx; n.y = n0.y + dy;
+                    $n.css({ left: n.x + 'px', top: n.y + 'px' });
+                    renderEdges();
+                });
+                $(document).one('mouseup', function () {
+                    $(document).off('mousemove.nodedrag');
+                    if (!moved) return;
+                    $.ajax({
+                        url: '/api/canvas/nodes/' + id + '/position', method: 'PATCH',
+                        contentType: 'application/json', data: JSON.stringify({ x: n.x, y: n.y })
+                    });
+                });
+            });
+
+            // 选中节点 → 右侧面板
+            $(document).on('mousedown', '.cnode', function (e) {
+                // 点图片上的下载/存库按钮时不要顺带把节点选中（会弹右侧面板挡住弹窗）
+                if ($(e.target).closest('.port').length || $(e.target).is('textarea')
+                    || $(e.target).closest('.cnode-imgacts').length) return;
+                selectNode(parseInt($(this).attr('data-id'), 10));
+            });
+
+            // 候选图切换：一次出了多张时，在这几张之间来回切，挑一张当这个节点的结果
+            $(document).on('click', '.candbtn', function (e) {
+                e.stopPropagation();                       // 别顺带把节点选中，右侧面板会跳出来挡住
+                var id = parseInt($(this).attr('data-id'), 10);
+                switchCandidate(id, $(this).attr('data-delta') === '-1' ? -1 : 1);
+            });
+
+            // 直接切到第 idx 张。重跑过的节点候选里既有本次的也有历次的，
+            // 切哪张只是换展示的那张，不重新出图、不花钱
+            function switchCandidateTo(id, idx) {
+                var n = nodeById(id); if (!n) return;
+                var o = optOf(n), list = o.candidates || [];
+                if (!list.length) return;
+                idx = Math.max(0, Math.min(idx, list.length - 1));
+
+                $.ajax({
+                    url: '/api/canvas/nodes/' + id + '/candidate', method: 'PATCH',
+                    contentType: 'application/json', data: JSON.stringify({ index: idx }),
+                    success: function (r) {
+                        o.candidateIndex = r.index;
+                        n.extraJson = JSON.stringify(o);
+                        n.imageUrl = r.imageUrl;
+                        renderNodes();     // 节点数量不多，整体重画比单独替换图片省事
+                        renderEdges();
+                        if (selectedId === id) renderHistory(n);   // 面板开着就顺手把高亮刷一下
+                    },
+                    error: function (x) {
+                        alert((x.responseJSON && x.responseJSON.message) || '切换失败');
+                    }
+                });
+            }
+
+            function switchCandidate(id, delta) {
+                var n = nodeById(id); if (!n) return;
+                var o = optOf(n), list = o.candidates || [];
+                if (list.length < 2) return;
+
+                var idx = (o.candidateIndex || 0) + delta;
+                if (idx < 0) idx = list.length - 1;
+                if (idx >= list.length) idx = 0;
+                switchCandidateTo(id, idx);
+            }
+
+            // 右侧面板的「出图历史」：这个节点历次跑出来的图全在这儿（重跑是追加，不是覆盖）。
+            // 点一张就把它设成节点的当前图 —— 想回头用上一次那张，不用再出一次
+            function renderHistory(n) {
+                var $w = $('#spHistoryWrap'), $g = $('#spHistory').empty();
+                var spec = specOf(n.nodeType) || {};
+                var o = optOf(n), list = o.candidates || [];
+                // 素材节点本身不出图，没有历史可言
+                if (!spec.generates || list.length === 0) { $w.hide(); return; }
+                $w.show();
+
+                var cur = o.candidateIndex || 0;
+                $.each(list, function (i, url) {
+                    var $it = $('<div>')
+                        .addClass('hist-item' + (i === cur ? ' cur' : ''))
+                        .attr('data-idx', i)
+                        .attr('title', '点一下把这张设为节点当前图')
+                        .append($('<img>').attr('src', thumbUrl(url, 256)).attr('loading', 'lazy'))
+                        .append($('<span>').addClass('hist-no').text('#' + (i + 1)));
+                    if (i === list.length - 1) $it.append($('<span>').addClass('hist-new').text('最新'));
+                    $it.on('click', function () { switchCandidateTo(n.id, i); });
+                    $g.append($it);
+                });
+
+                $('#spHistoryInfo').text('共 ' + list.length + ' 张：每次重跑都追加进来，最多留最近 20 张；'
+                    + '当前是第 ' + (cur + 1) + ' 张。');
+            }
+
+            function selectNode(id) {
+                selectedId = id;
+                multi = [id]; updateBulkBar();
+                $('.cnode').removeClass('selected');
+                $('.cnode[data-id="' + id + '"]').addClass('selected');
+                var n = nodeById(id); if (!n) return closePanel();
+                var spec = specOf(n.nodeType) || {};
+                $('#sidePanel').show();
+                $('#spTitle').text(n.title || spec.label || '节点');
+                // 正在输入就别覆盖（出图时 SSE 会频繁 reload，否则光标中的内容会被冲掉）
+                if (!$('#spNodeTitle').is(':focus')) $('#spNodeTitle').val(n.title || '');
+                $('#spType').text('#' + id + ' · ' + (spec.label || n.nodeType) + (spec.generates ? '' : ' · 不出图'));
+                $('#spPrompt').val(n.prompt || '').prop('disabled', !spec.promptEditable);
+                var ratio = n.size || spec.defaultSize;
+                for (var i = 0; i < sizeOpts.length; i++) if (sizeOpts[i].size === ratio) ratio = sizeOpts[i].ratio;
+
+                // 出图参数：节点上存过的用节点上的，没存过（老节点）用配置页默认值顶上
+                var o = optOf(n);
+                $('#spSize').val(o.aspectRatio || ratio);
+                if (!$('#spSize').val()) $('#spSize').val('16:9');   // 老画幅值不在选项里，退回 16:9
+                $('#spGenWrap').toggle(!!spec.generates);            // 素材节点不出图，给它看这些没意义
+                if (spec.generates) {
+                    $('#spModel').val(o.configId || 0);      // 0 = 跟随全局默认
+                    refreshModelInfo();
+                    $('#spQuality').val(o.quality || igDefaults.quality || 'high');
+                    $('#spCount').val(o.imageCount || igDefaults.imageCount || 1);
+                    $('#spBackground').val(o.background || igDefaults.background || 'opaque');
+                    $('#spFormat').val(o.outputFormat || igDefaults.outputFormat || 'png');
+                    // 风格只有两种来源：不套用、风格库里某一条。
+                    // 老节点上还留着「自定义」的，给它临时补个选项，别让它凭空消失
+                    var sv = styleValueOf(o);
+                    if (sv === 'custom' && !$('#spStyle option[value="custom"]').length)
+                        $('#spStyle').append($('<option>').val('custom').text('自定义…'));
+                    $('#spStyle').val(sv);
+                    $('#spStyleText').val(o.styleText || '').toggle(sv === 'custom');
+                    refreshStyleInfo();
+                    refreshOptInfo();
+                    renderHistory(n);
+                }
+                renderRefList(id);
+                renderRefChips(id);
+                $('#spError').toggle(!!n.errorMsg && n.status === 'failed').text(n.errorMsg || '');
+            }
+
+            // 右侧面板的参考图列表：顺序跟后端 ResolveUpstreamImages 一致（按连线创建先后），
+            // 所以这里看到的 1、2、3 就是实际送进接口的先后顺序，某一张可以直接断开
+            // 本节点的参考图连线，按连线创建先后排 —— 编号 1、2、3 就按这个来，跟后端一致
+            function refEdgesOf(id) {
+                return edges.filter(function (e) {
+                    return e.toNodeId === id && String(e.toPort || 'ref').toLowerCase() === 'ref';
+                }).sort(function (a, b) { return a.id - b.id; });
+            }
+
+            function renderRefList(id) {
+                var $box = $('#spRefs');
+                var list = refEdgesOf(id);
+                // 不拖线的入口：只给「有参考图输入」的节点，没有输入端口的节点连了也没用
+                var nSelf = nodeById(id);
+                var pickBtn = (nSelf && ((specOf(nSelf.nodeType) || {}).inputs || []).length)
+                    ? '<button class="btn" style="margin-top:6px;font-size:11px;padding:2px 8px;" data-pick-ref="' + id + '" '
+                      + 'title="不用拖端口：直接选画布上的图连成参考图">+ 选择参考图</button>'
+                    : '';
+
+                if (!list.length) {
+                    $box.html('<div style="color:#94a3b8;font-size:11px;">参考图：未连接（将按文生图出图）</div>' + pickBtn);
+                    return;
+                }
+
+                var html = '<div style="color:#94a3b8;font-size:11px;margin-bottom:6px;">'
+                    + '参考图 · 共 ' + list.length + ' 张，按连线先后一起送进接口</div>'
+                    + '<div style="display:flex;flex-direction:column;gap:6px;">';
+
+                var seq = 0;   // 只对真正会送进接口的图标号，跟后端 usable 的顺序严格对齐
+                $.each(list, function (i, e) {
+                    var up = nodeById(e.fromNodeId);
+                    var ok = !!up && !!up.imageUrl && String(up.status || '').toLowerCase() === 'done';
+                    if (ok) seq++;
+                    var name = up ? (up.title || up.nodeType) : '（节点已删除）';
+                    var img = up && up.imageUrl ? thumbUrl(up.imageUrl, 120) : '';
+                    var sub = ok ? '已出图，参与本次出图'
+                        : (up ? (STATUS_TEXT[String(up.status || '').toLowerCase()] || up.status || '未出图') : '节点不存在') + '，出图时会跳过';
+
+                    html += '<div style="display:flex;align-items:center;gap:8px;background:#0f172a;'
+                        + 'border:1px solid #334155;border-radius:6px;padding:6px;' + (ok ? '' : 'opacity:.6;') + '">'
+                        + '<span style="width:18px;height:18px;flex:0 0 18px;border-radius:50%;background:#334155;'
+                        + 'color:#cbd5e1;font-size:11px;line-height:18px;text-align:center;">' + (ok ? seq : '—') + '</span>'
+                        + (img
+                            ? '<img src="' + esc(img) + '" style="width:44px;height:44px;object-fit:cover;border-radius:4px;flex:0 0 44px;">'
+                            : '<div style="width:44px;height:44px;border-radius:4px;background:#1e293b;flex:0 0 44px;"></div>')
+                        + '<div style="flex:1;min-width:0;">'
+                        + '<div style="color:#e2e8f0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(name)
+                          + (up ? ' <span style="color:#64748b;font-size:10px;">#' + up.id + '</span>' : '') + '</div>'
+                        + '<div style="color:#94a3b8;font-size:11px;">' + esc(sub) + '</div>'
+                        + '</div>'
+                        + '<button class="btn" style="padding:2px 6px;font-size:11px;flex:0 0 auto;" data-del-edge="' + e.id + '" '
+                        + 'title="断开这条连线（这张图不再作为参考）">×</button>'
+                        + '</div>';
+                });
+
+                $box.html(html + '</div>' + pickBtn);
+            }
+
+            // 提示词框上方的参考图小图：点一下把「[图N]」插到光标处。
+            // 出图时后端会自动补一行编号说明，所以这里插的 [图N] 模型认得是哪张
+            function renderRefChips(id) {
+                var html = '', n = 0;
+                $.each(refEdgesOf(id), function (i, e) {
+                    var up = nodeById(e.fromNodeId);
+                    // 没出图的既不送进接口也不占编号，跟后端 usable 的顺序保持一致
+                    if (!up || !up.imageUrl || String(up.status || '').toLowerCase() !== 'done') return;
+                    n++;
+                    html += '<div class="ref-chip" data-idx="' + n + '" title="'
+                        + esc((up.title || '') + '（点击插入 [图' + n + ']）') + '">'
+                        + '<img src="' + esc(thumbUrl(up.imageUrl, 120)) + '" alt="">'
+                        + '<span>图' + n + '</span></div>';
+                });
+                $('#spRefChips, #peRefChips').html(html);
+            }
+
+            // 往输入框光标处插指代标记；插完触发 input/change，让面板和大编辑区各自的保存逻辑跑起来
+            function insertRefToken($ta, idx) {
+                if (!$ta.length || $ta.prop('disabled')) return;
+                var el = $ta[0], token = '[图' + idx + ']', v = el.value;
+                var s = el.selectionStart == null ? v.length : el.selectionStart;
+                var e2 = el.selectionEnd == null ? s : el.selectionEnd;
+                el.value = v.slice(0, s) + token + v.slice(e2);
+                var pos = s + token.length;
+                try { el.setSelectionRange(pos, pos); } catch (err) { }
+                el.focus();
+                $ta.trigger('input').trigger('change');
+            }
+
+            $(document).on('click', '#spRefChips .ref-chip', function (e) {
+                e.preventDefault();
+                insertRefToken($('#spPrompt'), $(this).data('idx'));
+            });
+            $(document).on('click', '#peRefChips .ref-chip', function (e) {
+                e.preventDefault();
+                insertRefToken($('#peText'), $(this).data('idx'));
+            });
+
+            // 点 × 断开某一条参考图连线：后端 DELETE /api/canvas/edges/{id} 已有
+            $(document).on('click', '#spRefs [data-del-edge]', function (e) {
+                e.stopPropagation();
+                var edgeId = parseInt($(this).attr('data-del-edge'), 10);
+                if (!edgeId || !confirm('断开这条参考图连线？')) return;
+                $.ajax({
+                    url: '/api/canvas/edges/' + edgeId, method: 'DELETE',
+                    success: function () { reload(); },
+                    error: function (x) { alert((x.responseJSON && x.responseJSON.message) || '断开失败'); }
+                });
+            });
+
+            function closePanel() { selectedId = null; $('.cnode').removeClass('selected'); $('#sidePanel').hide(); }
+
+            // 节点内提示词改动 → 防抖保存
+            $(document).on('input', '.cnode textarea.nprompt', function () {
+                var id = parseInt($(this).closest('.cnode').attr('data-id'), 10);
+                var n = nodeById(id); if (!n) return;
+                n.prompt = $(this).val();
+                clearTimeout(saveNodeTimer);
+                saveNodeTimer = setTimeout(function () {
+                    $.ajax({
+                        url: '/api/canvas/nodes/' + id + '/content', method: 'PATCH',
+                        contentType: 'application/json', data: JSON.stringify({ prompt: n.prompt })
+                    });
+                }, 600);
+                if (peId === id && peSrc !== this) $('#peText').val(n.prompt);   // 直接改小框时同步大编辑区
+            });
+
+            // ===================== 提示词大编辑区 =====================
+            // 节点里那个输入框只有一行多高，写长提示词太憋屈。
+            // 点它就在这下面弹出一块大的，双向同步，走的还是同一个保存接口。
+            function openPromptEditor(srcEl) {
+                var $src = $(srcEl), id = parseInt($src.closest('.cnode').attr('data-id'), 10);
+                var n = nodeById(id); if (!n) return;
+                peId = id; peSrc = srcEl;
+                $('#promptEditor').data('id', id);   // 在 DOM 上再存一份，peId 意外被清也能兜底保存
+
+                var $pe = $('#promptEditor');
+                $('#peTitle').text((specOf(n.nodeType) || {}).label || '提示词');
+                $('#peText').val(n.prompt || '');
+                renderRefChips(id);
+                setPeStatus('', '');
+                $pe.show();
+
+                // 贴着小框的下沿放；下面放不下就翻到小框上方去
+                var r = srcEl.getBoundingClientRect();
+                var w = $pe.outerWidth(), h = $pe.outerHeight();
+                // 水平：以触发它的小输入框为中心居中；垂直还是贴着下沿，放不下再翻到上方
+                var left = r.left + r.width / 2 - w / 2;
+                left = Math.min(Math.max(8, left), window.innerWidth - w - 8);   // 夹进窗口，别跑出屏幕
+                var top = r.bottom + 6;
+                if (top + h > window.innerHeight - 8) top = Math.max(8, r.top - h - 6);
+                $pe.css({ left: left + 'px', top: top + 'px' });
+                $('#peText').focus();
+            }
+
+            function closePromptEditor() {
+                var id = peId || $('#promptEditor').data('id');
+                if (id) flushPrompt(id);        // 收起前先落库，不等防抖
+                peId = null; peSrc = null;
+                $('#promptEditor').removeData('id').hide();
+            }
+
+            // 立即保存一次：按 id 把大框当前内容写回，成功失败都在弹层底部给出提示
+            function flushPrompt(id) {
+                id = id || peId || $('#promptEditor').data('id');
+                if (!id) return;
+                var v = $('#peText').val();
+                var n = nodeById(id); if (n) n.prompt = v;
+                clearTimeout(saveNodeTimer);
+                savePromptAjax(id, v, true);
+            }
+
+            function savePromptAjax(id, v, alertOnFail) {
+                setPeStatus('保存中…', '#94a3b8');
+                $.ajax({
+                    url: '/api/canvas/nodes/' + id + '/content', method: 'PATCH',
+                    contentType: 'application/json', data: JSON.stringify({ prompt: v })
+                }).done(function () {
+                    setPeStatus('已保存', '#4ade80');
+                }).fail(function (x) {
+                    var msg = '保存失败（HTTP ' + (x.status || '?') + '）' +
+                        ((x.responseJSON && x.responseJSON.message) ? '：' + x.responseJSON.message : '');
+                    setPeStatus(msg, '#f87171');
+                    if (alertOnFail) alert('提示词' + msg);   // 弹层马上要关了，只能弹窗告知
+                });
+            }
+
+            function setPeStatus(text, color) {
+                $('#peStatus').text(text || '改完自动保存，点别处或按 Esc 收起').css('color', color || '#94a3b8');
+            }
+
+            $(document).on('focus', '.cnode textarea.nprompt', function () { openPromptEditor(this); });
+
+            $('#peText').on('input', function () {
+                var id = peId || $('#promptEditor').data('id');
+                if (!id) return;
+                var v = $(this).val();
+                var n = nodeById(id); if (n) n.prompt = v;
+                if (peSrc) $(peSrc).val(v);     // 小框跟着变，收起后看到的就是新内容
+                setPeStatus('未保存…', '#fbbf24');
+                clearTimeout(saveNodeTimer);
+                saveNodeTimer = setTimeout(function () { savePromptAjax(id, v, false); }, 600);
+            });
+
+            // 焦点离开也存一次，防着防抖还没走完就切走了（这里不弹窗，收起时那次才弹）
+            $('#peText').on('blur', function () {
+                var id = peId; if (!id) return;
+                clearTimeout(saveNodeTimer);
+                savePromptAjax(id, $('#peText').val(), false);
+            });
+
+            // 点别处收起。点小框自己不算——否则刚 focus 打开就被这里关掉了
+            $(document).on('mousedown', function (e) {
+                if (!peId) return;
+                if ($(e.target).closest('#promptEditor').length) return;
+                if ($(e.target).hasClass('nprompt')) return;
+                closePromptEditor();
+            });
+
+            $(document).on('keydown', function (e) {
+                if (e.key === 'Escape' && peId) closePromptEditor();
+            });
+
+            // ===================== 交互：连线 =====================
+            $(document).on('mousedown', '.port.out', function (e) {
+                e.stopPropagation();
+                var id = parseInt($(this).closest('.cnode').attr('data-id'), 10);
+                var a = portPos(id, 'out');
+                $(this).addClass('linking');
+                $(document).on('mousemove.link', function (ev) {
+                    window._tempEdge = { a: a, b: screenToCanvas(ev.clientX, ev.clientY) };
+                    renderEdges();
+                });
+                $(document).one('mouseup', function (ev) {
+                    $(document).off('mousemove.link');
+                    $('.port').removeClass('linking');
+                    window._tempEdge = null;
+                    var el = document.elementFromPoint(ev.clientX, ev.clientY);
+                    var $in = $(el).closest('.port.in');
+                    if ($in.length) {
+                        var toId = parseInt($in.closest('.cnode').attr('data-id'), 10);
+                        createEdge(id, toId);
+                    } else { renderEdges(); }
+                });
+            });
+
+            function createEdge(from, to) {
+                $.ajax({
+                    url: '/api/canvas/boards/' + boardId + '/edges', method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ fromNodeId: from, toNodeId: to, fromPort: 'out', toPort: 'ref' }),
+                    success: function () { reload(); },
+                    error: function (x) { alert((x.responseJSON && x.responseJSON.message) || '连线失败'); renderEdges(); }
+                });
+            }
+
+            function deleteEdge(id) {
+                $.ajax({
+                    url: '/api/canvas/edges/' + id, method: 'DELETE',
+                    success: function () { reload(); }
+                });
+            }
+
+            // ===== 不拖线也能连：点节点上的「+ 参考图」或面板按钮，选一张图直接连线 =====
+            // 圆点太小不好点，这里给一条等价通路：选源节点 → 后台建同一条 edge，效果跟拖线完全一致
+            var refPickTargetId = null;
+
+            function openRefPicker(toId) {
+                refPickTargetId = toId;
+                var $m = $('#refPickModal');
+                if (!$m.length) {
+                    $m = $('<div id="refPickModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;overflow:auto;">' +
+                        '<div style="margin:60px auto;width:70%;max-width:1100px;max-height:78vh;overflow:auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;">' +
+                        '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
+                        '<strong style="color:#e2e8f0;">选择参考图（点一张就连到该节点，不用拖端口）</strong>' +
+                        '<button class="btn" id="refPickClose">关闭</button></div>' +
+                        '<div id="refPickGrid" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px;"></div>' +
+                        '</div></div>').appendTo(document.body);
+                    $m.on('click', '#refPickClose', function () { closeRefPicker(); });
+                    $m.on('click', function (ev) { if (ev.target === this) closeRefPicker(); });
+                }
+                $m.show();
+                renderRefPickGrid();
+            }
+
+            function closeRefPicker() { $('#refPickModal').hide(); refPickTargetId = null; }
+
+            function renderRefPickGrid() {
+                var toId = refPickTargetId;
+                var $g = $('#refPickGrid').empty();
+                var linked = {};
+                $.each(refEdgesOf(toId), function (_, e) { linked[e.fromNodeId] = true; });
+
+                var cands = nodes.filter(function (n) {
+                    if (n.id === toId) return false;
+                    var s = specOf(n.nodeType) || {};
+                    return (s.outputs || []).length > 0;
+                });
+                if (!cands.length) {
+                    $g.html('<div style="color:#94a3b8;grid-column:1/-1;">画布上还没有可当参考源的节点（先建个素材节点，或从「素材库」加一张进来）</div>');
+                    return;
+                }
+
+                // 已出图的排前面；已连接的标绿，点了就当关闭（不重复连）
+                var ready = [], notReady = [];
+                $.each(cands, function (_, n) {
+                    (n.imageUrl && String(n.status || '').toLowerCase() === 'done' ? ready : notReady).push(n);
+                });
+
+                $.each(ready.concat(notReady), function (_, n) {
+                    var ok = !!n.imageUrl && String(n.status || '').toLowerCase() === 'done';
+                    var isLinked = !!linked[n.id];
+                    var title = n.title || (specOf(n.nodeType) || {}).label || n.nodeType;
+                    var thumb = n.imageUrl ? '<img src="' + esc(thumbUrl(n.imageUrl, 200)) + '" style="width:100%;height:88px;object-fit:cover;border-radius:4px;background:#1e293b;">'
+                        : '<div style="width:100%;height:88px;border-radius:4px;background:#1e293b;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:11px;">还没有图片</div>';
+                    var $c = $('<div data-id="' + n.id + '" style="cursor:pointer;border:1px solid ' + (isLinked ? '#10b981' : 'var(--border)')
+                        + ';border-radius:6px;padding:4px;' + (ok ? '' : 'opacity:.6;') + '">'
+                        + thumb
+                        + '<div style="font-size:11px;color:#cbd5e1;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(title) + '</div>'
+                        + '<div style="font-size:10px;color:#64748b;">#' + n.id + ' · ' + (isLinked ? '已连接（再点一次关闭）' : (ok ? '已出图' : '未出图，出图时会跳过')) + '</div>'
+                        + '</div>');
+                    $c.find('img').on('error', function () {
+                        var el = this;
+                        if (n.imageUrl && el.src.indexOf('/api/media/thumb') >= 0) { $(el).off('error'); el.src = n.imageUrl; }
+                        else el.style.opacity = '.3';
+                    });
+                    $c.on('click', function () {
+                        var from = parseInt($(this).attr('data-id'), 10);
+                        if (linked[from]) { closeRefPicker(); if (toId) selectNode(toId); return; }
+                        $.ajax({
+                            url: '/api/canvas/boards/' + boardId + '/edges', method: 'POST',
+                            contentType: 'application/json',
+                            data: JSON.stringify({ fromNodeId: from, toNodeId: toId, fromPort: 'out', toPort: 'ref' }),
+                            success: function () { closeRefPicker(); reload(); if (toId) selectNode(toId); },
+                            error: function (x) { alert((x.responseJSON && x.responseJSON.message) || '连线失败'); }
+                        });
+                    });
+                    $g.append($c);
+                });
+            }
+
+            // 节点头上的按钮：mousedown 要挡掉，否则会被当成拖节点
+            $(document).on('mousedown', '.cnode-pickref', function (e) { e.stopPropagation(); });
+            $(document).on('click', '.cnode-pickref', function (e) {
+                e.stopPropagation();
+                openRefPicker(parseInt($(this).attr('data-id'), 10));
+            });
+            // 右侧面板里的同一个入口
+            $(document).on('click', '#spRefs [data-pick-ref]', function (e) {
+                e.stopPropagation();
+                openRefPicker(parseInt($(this).attr('data-pick-ref'), 10));
+            });
+
+            // ===================== 节点增删改 =====================
+            function addNodeAtCenter(type) {
+                var r = $('#canvasWrap')[0].getBoundingClientRect();
+                var p = screenToCanvas(r.left + r.width / 2 - NODE_W / 2, r.top + r.height / 2 - NODE_H / 2);
+                $.ajax({
+                    url: '/api/canvas/boards/' + boardId + '/nodes', method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ nodeType: type, x: p.x, y: p.y }),
+                    success: function () { reload(); }
+                });
+            }
+
+            function runSelected() { if (selectedId) runNode(selectedId); }
+
+            function runNode(id) {
+                $.post('/api/canvas/nodes/' + id + '/run', function () { reload(); })
+                    .fail(function (x) { alert((x.responseJSON && x.responseJSON.message) || '提交失败'); });
+            }
+
+            function runAll() {
+                $.post('/api/canvas/boards/' + boardId + '/run', function (r) {
+                    reload();
+                    if (!r.queued) alert('没有可运行的节点（上游还没出图，或都在跑）');
+                }).fail(function (x) { alert((x.responseJSON && x.responseJSON.message) || '提交失败'); });
+            }
+
+            function deleteSelected() {
+                if (!selectedId || !confirm('删除这个节点？')) return;
+                $.ajax({
+                    url: '/api/canvas/nodes/' + selectedId, method: 'DELETE',
+                    success: function () { closePanel(); reload(); }
+                });
+            }
+
+            $('#boardSelect').on('change', function () { openBoard(parseInt($(this).val(), 10)); });
+            $('#spPrompt').on('change', function () {
+                if (!selectedId) return;
+                var n = nodeById(selectedId); n.prompt = $(this).val();
+                $.ajax({
+                    url: '/api/canvas/nodes/' + selectedId + '/content', method: 'PATCH',
+                    contentType: 'application/json', data: JSON.stringify({ prompt: n.prompt })
+                });
+            });
+            $('#spModel').on('change', function () { saveNodeOpt({ configId: parseInt($(this).val(), 10) || 0 }); refreshModelInfo(); });
+            $('#spSize').on('change', function () { saveNodeOpt({ aspectRatio: $(this).val() }); refreshOptInfo(); });
+            $('#spQuality').on('change', function () { saveNodeOpt({ quality: $(this).val() }); });
+            $('#spCount').on('change', function () { saveNodeOpt({ imageCount: parseInt($(this).val(), 10) || 1 }); refreshOptInfo(); });
+            $('#spBackground').on('change', function () { saveNodeOpt({ background: $(this).val() }); });
+            $('#spFormat').on('change', function () { saveNodeOpt({ outputFormat: $(this).val() }); });
+            $('#spStyle').on('change', function () {
+                var v = $(this).val();
+                $('#spStyleText').toggle(v === 'custom');
+                if (v === 'custom') saveNodeOpt({ styleMode: 'custom' });
+                else if (v === 'none') saveNodeOpt({ styleMode: 'none', styleId: 0 });   // 0 = 清空，退回不套用
+                else saveNodeOpt({ styleMode: 'library', styleId: parseInt(v.slice(6), 10) || 0 });
+                refreshStyleInfo();
+            });
+            $('#spStyleText').on('change', function () { saveNodeOpt({ styleText: $(this).val() }); });
+
+            // ===== 节点标题（图片标题）=====
+            // Title 字段一直存在，只是没有编辑入口。改完立刻反映到节点头上，防抖落库。
+            // 后端 PATCH content 对 null 是「不改」，所以这里只传 title，不会动提示词和出图参数。
+            var titleTimer = null;
+
+            function applyTitleToNode(id, v) {
+                var n = nodeById(id);
+                var fallback = (n && ((specOf(n.nodeType) || {}).label)) || '节点';
+                if (n) n.title = v;
+                $('.cnode[data-id="' + id + '"] .t').text(v || fallback);
+                $('#spTitle').text(v || fallback);
+                // 库里 Title 是 NVARCHAR(100)，超了会直接报截断错误，这里提前拦住并提示剩余
+                $('#spTitleCount').text((v || '').length + '/100');
+            }
+
+            function saveNodeTitle(id, v) {
+                clearTimeout(titleTimer); titleTimer = null;
+                applyTitleToNode(id, v);
+                $.ajax({
+                    url: '/api/canvas/nodes/' + id + '/content', method: 'PATCH',
+                    contentType: 'application/json', data: JSON.stringify({ title: v }),
+                    error: function (x) { alert('标题保存失败（HTTP ' + (x.status || '?') + '）'); }
+                });
+            }
+
+            $(document).on('input', '#spNodeTitle', function () {
+                var id = selectedId; if (!id) return;
+                var v = $(this).val();
+                applyTitleToNode(id, v);                 // 先改界面，不等请求
+                clearTimeout(titleTimer);
+                titleTimer = setTimeout(function () { saveNodeTitle(id, v); }, 600);
+            });
+
+            // 失焦/回车立刻存，别让防抖那 600ms 卡在切走的瞬间
+            $(document).on('blur', '#spNodeTitle', function () {
+                var id = selectedId; if (!id) return;
+                if (titleTimer) saveNodeTitle(id, $(this).val());
+            });
+            $(document).on('keydown', '#spNodeTitle', function (e) {
+                if (e.key === 'Enter') { $(this).blur(); }
+            });
+
+            // ===== 双击改标题的小弹层（居中，替代原生 prompt） =====
+            var titleEditId = null;
+
+            function openTitleEditor(id) {
+                var n = nodeById(id); if (!n) return;
+                titleEditId = id;
+                var $m = $('#titleEditModal');
+                if (!$m.length) {
+                    $m = $('<div id="titleEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:130;align-items:center;justify-content:center;">' +
+                        '<div style="width:420px;max-width:92%;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.5);">' +
+                        '<div style="color:#e2e8f0;font-size:14px;font-weight:600;margin-bottom:12px;">节点标题</div>' +
+                        '<input id="teInput" maxlength="100" class="action-bar-input" style="width:100%;box-sizing:border-box;" placeholder="给这张图起个名字">' +
+                        '<div style="color:#64748b;font-size:11px;margin-top:6px;">下载文件名、存资源库的名字、当参考图时的叫法，都用这个标题' +
+                        '<span id="teCount" style="float:right;"></span></div>' +
+                        '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">' +
+                        '<button class="btn" id="teCancel">取消</button>' +
+                        '<button class="btn btn-primary" id="teOk">确定</button>' +
+                        '</div></div></div>').appendTo(document.body);
+                    $m.on('click', function (ev) { if (ev.target === this) closeTitleEditor(); });
+                }
+                $m.css('display', 'flex');
+                $('#teInput').val(n.title || '');
+                $('#teCount').text((n.title || '').length + '/100');
+                setTimeout(function () { $('#teInput').focus().select(); }, 0);
+            }
+
+            function closeTitleEditor() {
+                $('#titleEditModal').hide();
+                titleEditId = null;
+            }
+
+            function commitTitleEditor() {
+                var id = titleEditId; if (!id) return;
+                var v = $('#teInput').val().trim();
+                saveNodeTitle(id, v);
+                if (id === selectedId) $('#spNodeTitle').val(v);
+                closeTitleEditor();
+            }
+
+            $(document).on('click', '#teOk', function () { commitTitleEditor(); });
+            $(document).on('click', '#teCancel', function () { closeTitleEditor(); });
+            $(document).on('input', '#teInput', function () { $('#teCount').text($(this).val().length + '/100'); });
+            $(document).on('keydown', '#teInput', function (e) {
+                if (e.key === 'Enter') { e.preventDefault(); commitTitleEditor(); }
+                else if (e.key === 'Escape') { e.preventDefault(); closeTitleEditor(); }
+            });
+
+            // 双击节点标题栏直接改：节点多的情况下不用每次都开右侧面板
+            $(document).on('dblclick', '.cnode-head', function (e) {
+                if ($(e.target).hasClass('cnode-pickref')) return;
+                openTitleEditor(parseInt($(this).closest('.cnode').attr('data-id'), 10));
+            });
+
+            function fitView() {
+                if (!nodes.length) { view = { x: 60, y: 60, s: 1 }; applyTransform(); scheduleSaveView(); return; }
+                var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+                $.each(nodes, function (_, n) {
+                    minX = Math.min(minX, n.x); minY = Math.min(minY, n.y);
+                    maxX = Math.max(maxX, n.x + NODE_W); maxY = Math.max(maxY, n.y + NODE_H);
+                });
+                var r = $('#canvasWrap')[0].getBoundingClientRect();
+                var s = Math.min(r.width / (maxX - minX + 80), r.height / (maxY - minY + 80), 1.5);
+                view.s = Math.max(0.1, s);
+                view.x = (r.width - (maxX - minX) * view.s) / 2 - minX * view.s;
+                view.y = (r.height - (maxY - minY) * view.s) / 2 - minY * view.s;
+                applyTransform(); scheduleSaveView();
+            }
+
+            // ===================== 素材节点（从素材库拿现成的图当参考源） =====================
+            // 缩略图接口只认 /uploads/ 开头的站内路径；外链或别的格式直接返回原地址
+            // （跟资产库页面的做法一致，否则非 /uploads/ 的图会被接口打回 400 变成裂图）
+            function thumbUrl(u, w) {
+                var s = String(u || '');
+                return s.indexOf('/uploads/') === 0
+                    ? '/api/media/thumb?path=' + encodeURIComponent(s) + '&w=' + (w || 200)
+                    : s;
+            }
+
+            var libAssets = [];   // 资产库全量：一次性拉来，标签/名称过滤都在本地做，切来切去不用反复请求
+
+            function openAssetPicker() {
+                $('#assetModal').show();
+                // 项目列表只给「项目资产」那条路用，它挂了也不影响资产库
+                $.get('/api/project', function (list) {
+                    var $s = $('#assetProjectSel').empty();
+                    // 项目模型的主键叫 ProjectId（不是 Id），取错了下拉就是一串 undefined
+                    $.each(list || [], function (_, p) {
+                        if (!p || !p.projectId) return;
+                        $s.append($('<option>').val(p.projectId).text(p.title));
+                    });
+                    if ($('#assetSourceSel').val() === 'project') loadAssetGrid();
+                }).fail(function () {
+                    if ($('#assetSourceSel').val() === 'project') $('#assetGrid').html('<div style="color:#f87171;">项目列表加载失败</div>');
+                });
+                onAssetSourceChange();
+            }
+
+            // 资产库按标签筛，项目资产按项目筛——两条路的筛选项不一样，切换时要跟着换
+            function onAssetSourceChange() {
+                var src = $('#assetSourceSel').val();
+                $('#assetTagWrap,#assetSearchWrap').toggle(src === 'library');
+                $('#assetProjectWrap').toggle(src === 'project');
+                if (src === 'project') {
+                    if ($('#assetProjectSel').val()) loadAssetGrid();
+                    else $('#assetGrid').html('<div style="color:#94a3b8;">还没有项目，先去工作台建一个</div>');
+                } else {
+                    loadLibrary();
+                }
+            }
+
+            // 资产库：标签是自由填的（逗号分隔），所以先拉全量，再按实际出现过的标签汇总成下拉
+            function loadLibrary() {
+                if (libAssets.length) { renderLibraryFiltered(); return; }
+                $('#assetGrid').html('<div style="color:#94a3b8;">加载中…</div>');
+                $.get('/api/reference/list', function (list) {
+                    libAssets = (list || []).filter(function (a) {
+                        // 只要图片：素材节点是拿来当参考图的
+                        return !!a.localPath && String(a.fileType || 'image').toLowerCase() === 'image';
+                    });
+                    var counts = {}, order = [];
+                    $.each(libAssets, function (_, a) {
+                        var ts = String(a.tags || '').split(',');
+                        $.each(ts, function (_, t) {
+                            t = String(t).trim(); if (!t) return;
+                            if (!(t in counts)) { counts[t] = 0; order.push(t); }
+                            counts[t]++;
+                        });
+                    });
+                    order.sort(function (a, b) { return counts[b] - counts[a]; });   // 用得多的排前面
+                    var $s = $('#assetTagSel').empty()
+                        .append($('<option>').val('').text('全部标签（' + libAssets.length + '）'));
+                    $.each(order, function (_, t) { $s.append($('<option>').val(t).text(t + '（' + counts[t] + '）')); });
+                    renderLibraryFiltered();
+                }).fail(function (x) {
+                    $('#assetGrid').html('<div style="color:#f87171;">资产库加载失败（HTTP ' + (x.status || '?') + '）</div>');
+                });
+            }
+
+            function renderLibraryFiltered() {
+                var tag = $('#assetTagSel').val() || '';
+                var kw = String($('#assetSearchInput').val() || '').trim().toLowerCase();
+                var items = [];
+                $.each(libAssets, function (_, a) {
+                    if (tag) {
+                        var ok = false, ts = String(a.tags || '').split(',');
+                        for (var i = 0; i < ts.length; i++) { if (String(ts[i]).trim() === tag) { ok = true; break; } }
+                        if (!ok) return;
+                    }
+                    if (kw && String(a.fileName || '').toLowerCase().indexOf(kw) < 0) return;
+                    items.push({
+                        name: a.fileName || String(a.localPath || '').split('/').pop(),
+                        url: a.localPath,
+                        cat: a.subCategory || a.category || '资产库',
+                        tags: a.tags || '',
+                        assetId: null    // 资产库和项目资产是两张表，id 不混着传给画布
+                    });
+                });
+                renderAssetGrid(items, '');
+            }
+
+            function closeAssetPicker() { $('#assetModal').hide(); }
+
+            // 四类素材一次性拉全，只收已经出过图的（没图的当参考源没意义）
+            function loadAssetGrid() {
+                var pid = $('#assetProjectSel').val();
+                if (!pid) return;
+                var cats = [['characters', '角色'], ['props', '道具'], ['environments', '场景'], ['effects', '特效']];
+                var items = [], done = 0, err = '';
+                $('#assetGrid').html('<div style="color:#94a3b8;">加载中…</div>');
+                $.each(cats, function (_, c) {
+                    // 路由是 /api/project/{项目id}/asset/{分类}，项目 id 在 asset 前面
+                    $.get('/api/project/' + pid + '/asset/' + c[0], function (list) {
+                        $.each(list || [], function (_, a) {
+                            if (a.imageUrl) items.push({ name: a.name, url: a.imageUrl, cat: c[1], assetId: a.assetId });
+                        });
+                    }).fail(function (x) {
+                        err = c[1] + '加载失败（HTTP ' + (x.status || '?') + '）';
+                    }).always(function () {
+                        done++;
+                        if (done === cats.length) renderAssetGrid(items, err);
+                    });
+                });
+            }
+
+            function renderAssetGrid(items, err) {
+                var $g = $('#assetGrid').empty();
+                if (err) { $g.html('<div style="color:#f87171;">' + esc(err) + '</div>'); return; }
+                if (!items.length) {
+                    var empty = $('#assetSourceSel').val() === 'library'
+                        ? '没有符合条件的资产（换个标签，或清掉名称搜索）'
+                        : '这个项目还没有出过图的素材，先去资产库出图';
+                    $g.html('<div style="color:#94a3b8;">' + empty + '</div>');
+                    return;
+                }
+                $.each(items, function (_, it) {
+                    var $c = $('<div style="cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:4px;">' +
+                        '<img src="' + esc(thumbUrl(it.url, 200)) + '" style="width:100%;height:88px;object-fit:cover;border-radius:4px;background:#1e293b;">' +
+                        '<div style="font-size:11px;color:#cbd5e1;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(it.name) + '</div>' +
+                        '<div style="font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc((it.cat || '') + (it.tags ? ' · ' + it.tags : '')) + '">' + esc(it.cat || '') + (it.tags ? ' · ' + esc(it.tags) : '') + '</div></div>');
+                    // 缩略图挂了先退回原图，再挂就压暗，别留个空白框让人以为没加载
+                    $c.find('img').on('error', function () {
+                        var el = this;
+                        if (el.src.indexOf('/api/media/thumb') >= 0) { $(el).off('error'); el.src = it.url; }
+                        else el.style.opacity = '.3';
+                    });
+                    $c.on('click', function () { addAssetNode(it); });
+                    $g.append($c);
+                });
+            }
+
+            // 新建素材节点时的默认标题：画布上已经有同名就往后加序号（玻吕茜亚 → 玻吕茜亚 2）。
+            // 只在新建这一刻算一次，之后用户改成什么都以他改的为准，不会再加后缀或重排。
+            function uniqueNodeTitle(base) {
+                var name = String(base || '').trim() || '素材';
+                var used = {};
+                $.each(nodes, function (_, n) {
+                    var t = String(n.title || '').trim();
+                    if (t) used[t.toLowerCase()] = true;
+                });
+                if (!used[name.toLowerCase()]) return name.slice(0, 100);
+                var i = 2, cand = '';
+                do { cand = name + ' ' + i; i++; } while (used[cand.toLowerCase()]);
+                return cand.slice(0, 100);   // 库里 Title 是 NVARCHAR(100)，别超
+            }
+
+            function addAssetNode(it) {
+                var r = $('#canvasWrap')[0].getBoundingClientRect();
+                var p = screenToCanvas(r.left + r.width / 2 - NODE_W / 2, r.top + r.height / 2 - NODE_H / 2);
+                $.ajax({
+                    url: '/api/canvas/boards/' + boardId + '/nodes', method: 'POST',
+                    contentType: 'application/json',
+                    data: JSON.stringify({ nodeType: 'asset', x: p.x, y: p.y, title: uniqueNodeTitle(it.name), imageUrl: it.url, assetId: it.assetId }),
+                    success: function () { closeAssetPicker(); reload(); },
+                    error: function (x) { alert((x.responseJSON && x.responseJSON.message) || '添加素材节点失败'); }
+                });
+            }
+
+            // ===================== 框选批量（Shift + 拖） =====================
+            function startMarquee(e) {
+                var r = $('#canvasWrap')[0].getBoundingClientRect();
+                var s = { x: e.clientX - r.left, y: e.clientY - r.top };
+                var $box = $('<div style="position:absolute;border:1px dashed #38bdf8;background:rgba(56,189,248,.12);z-index:20;pointer-events:none;"></div>');
+                $('#canvasWrap').append($box);
+                $(document).on('mousemove.marquee', function (ev) {
+                    var cx = ev.clientX - r.left, cy = ev.clientY - r.top;
+                    $box.css({ left: Math.min(s.x, cx), top: Math.min(s.y, cy), width: Math.abs(cx - s.x), height: Math.abs(cy - s.y) });
+                });
+                $(document).one('mouseup', function (ev) {
+                    $(document).off('mousemove.marquee');
+                    $box.remove();
+                    var cx = ev.clientX - r.left, cy = ev.clientY - r.top;
+                    // 框选矩形转回画布坐标，跟节点求相交
+                    var a = screenToCanvas(r.left + Math.min(s.x, cx), r.top + Math.min(s.y, cy));
+                    var b = screenToCanvas(r.left + Math.max(s.x, cx), r.top + Math.max(s.y, cy));
+                    multi = nodes.filter(function (n) {
+                        return n.x < b.x && n.x + NODE_W > a.x && n.y < b.y && n.y + NODE_H > a.y;
+                    }).map(function (n) { return n.id; });
+                    updateBulkBar();
+                });
+            }
+
+            function updateBulkBar() {
+                $('.cnode').removeClass('selected');
+                $.each(multi, function (_, id) { $('.cnode[data-id="' + id + '"]').addClass('selected'); });
+                if (multi.length > 1) { $('#bulkBar').css('display', 'flex'); $('#bulkCount').text('已选 ' + multi.length + ' 个节点'); }
+                else $('#bulkBar').hide();
+            }
+
+            function clearBulk() { multi = []; updateBulkBar(); }
+
+            function runBulk() {
+                $.each(multi.slice(), function (_, id) {
+                    $.post('/api/canvas/nodes/' + id + '/run', function () { reload(); })
+                        .fail(function (x) { alert((x.responseJSON && x.responseJSON.message) || '提交失败'); });
+                });
+            }
+
+            function deleteBulk() {
+                if (!multi.length || !confirm('删除选中的 ' + multi.length + ' 个节点？')) return;
+                var ids = multi.slice(), left = ids.length;
+                $.each(ids, function (_, id) {
+                    $.ajax({
+                        url: '/api/canvas/nodes/' + id, method: 'DELETE',
+                        complete: function () { if (--left === 0) { clearBulk(); closePanel(); reload(); } }
+                    });
+                });
+            }
+
+            // ===================== 画布改名 / 删除 =====================
+            function renameBoard() {
+                var t = prompt('画布名称：', board ? board.title : '');
+                if (!t || !t.trim()) return;
+                var nt = t.trim();
+                $.ajax({
+                    url: '/api/canvas/boards/' + boardId + '/title', method: 'PATCH',
+                    contentType: 'application/json', data: JSON.stringify({ title: nt }),
+                    // 就地改下拉里那一项就好，别整块 loadBoards：那边按 URL 的 ?id 重选画布，
+                    // 而 openBoard 从来不写 URL，改完名会跳到列表第一块画布上去
+                    success: function () {
+                        if (board) board.title = nt;
+                        $('#boardSelect').find('option[value="' + boardId + '"]').text(nt);
+                    }
+                });
+            }
+
+            function deleteBoard() {
+                if (!confirm('删除当前画布？它的节点和连线会一起删掉。')) return;
+                $.ajax({
+                    url: '/api/canvas/boards/' + boardId, method: 'DELETE',
+                    success: function () { loadBoards(); },
+                    error: function (x) { alert((x.responseJSON && x.responseJSON.message) || '删除失败'); }
+                });
+            }
+
+            // ===================== 全屏 =====================
+            // 页面布局铺满 + 顺带请求浏览器级全屏（两个都能单独失败，互不影响）
+            function toggleFullscreen() {
+                if ($('#canvasContainer').hasClass('canvas-fullscreen')) exitCanvasFull();
+                else enterCanvasFull();
+            }
+
+            function enterCanvasFull() {
+                $('#canvasContainer').addClass('canvas-fullscreen');
+                $('#fsBtn').html('<span class="material-icons" style="font-size:inherit;vertical-align:middle">fullscreen_exit</span> 退出全屏');
+                var d = document.documentElement;
+                if (d.requestFullscreen) { try { d.requestFullscreen().catch(function () { }); } catch (e) { } }
+                // 画布尺寸变了，重新按新的可视区域算一次
+                setTimeout(function () { fitCanvasHeight(); applyTransform(); }, 60);
+            }
+
+            function exitCanvasFull() {
+                $('#canvasContainer').removeClass('canvas-fullscreen');
+                $('#fsBtn').html('<span class="material-icons" style="font-size:inherit;vertical-align:middle">fullscreen</span> 全屏');
+                if (document.fullscreenElement && document.exitFullscreen) { try { document.exitFullscreen().catch(function () { }); } catch (e) { } }
+                setTimeout(function () { fitCanvasHeight(); applyTransform(); }, 60);
+            }
+
+            // 用户按 Esc 直接退出浏览器全屏时，页面布局也要跟着退出，不然会卡在铺满状态
+            $(document).on('fullscreenchange', function () {
+                if (!document.fullscreenElement && $('#canvasContainer').hasClass('canvas-fullscreen')) exitCanvasFull();
+            });
+
+            $(document).on('keydown', function (e) {
+                if (e.key === 'Escape' && $('#canvasContainer').hasClass('canvas-fullscreen')) exitCanvasFull();
+            });
+
+            function previewImg(url) { window.open(url, '_blank'); }
+
+            // ===================== 下载 / 存入资源库 =====================
+            // 图片都放在 wwwroot/uploads/canvas 下、跟页面同源，所以下载不用走后端，
+            // <a download> 直接就能存；存资源库则复用资产库已有的 /api/reference/upload。
+            function extOf(url) {
+                var m = String(url || '').match(/\.([a-zA-Z0-9]+)(?:\?|$)/);
+                return m ? ('.' + m[1].toLowerCase()) : '.png';
+            }
+
+            // 按文件头判断真实格式。上传接口是「按扩展名校验内容」，两者不一致就直接拒绝，
+            // 而地址里的后缀并不可信（历史上有 .png 名字其实是 jpg/webp 的图），所以以文件头为准
+            function extFromBytes(u8) {
+                if (u8.length >= 3 && u8[0] === 0xFF && u8[1] === 0xD8 && u8[2] === 0xFF) return '.jpg';
+                if (u8.length >= 4 && u8[0] === 0x89 && u8[1] === 0x50 && u8[2] === 0x4E && u8[3] === 0x47) return '.png';
+                if (u8.length >= 12 && u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46
+                    && u8[8] === 0x57 && u8[9] === 0x45 && u8[10] === 0x42 && u8[11] === 0x50) return '.webp';
+                if (u8.length >= 3 && u8[0] === 0x47 && u8[1] === 0x49 && u8[2] === 0x46) return '.gif';
+                return '';
+            }
+
+            function downloadNodeImage(id) {
+                var n = nodeById(id);
+                if (!n || !n.imageUrl) { alert('这个节点还没有图片'); return; }
+                var a = document.createElement('a');
+                a.href = n.imageUrl;                        // 用原图地址，不是缩略图
+                a.download = (n.title || ('node' + id)) + extOf(n.imageUrl);
+                document.body.appendChild(a);
+                a.click();
+                a.remove();
+            }
+
+            var _slId = 0;
+            var _slLastTag = '';
+
+            // 标签下拉框：选项就是当前用户的项目名，选中哪个项目名，它就作为这张图的标签存进资源库。
+            // 每次打开都重拉一次——新建的项目不用刷新页面就能在下拉里选到。
+            function loadProjectOptions(cb) {
+                // 跟上面「选素材」弹窗用同一个接口；项目对象是 projectId / title（驼峰）
+                $.getJSON('/api/project')
+                    .done(function (list) {
+                        var arr = Array.isArray(list) ? list : ((list && (list.data || list.items)) || []);
+                        var html = '<option value="">（不设标签）</option>';
+                        $.each(arr, function (i, p) {
+                            var name = String((p && (p.title || p.Title || p.name)) || '').trim();
+                            if (!name) return;
+                            html += '<option value="' + esc(name) + '">' + esc(name) + '</option>';
+                        });
+                        $('#slTags').html(html);
+                        cb && cb();
+                    })
+                    .fail(function () {
+                        $('#slTags').html('<option value="">（项目列表加载失败）</option>');
+                        cb && cb();
+                    });
+            }
+
+            function openSaveLibModal(id) {
+                var n = nodeById(id);
+                if (!n || !n.imageUrl) { alert('这个节点还没有图片'); return; }
+                _slId = id;
+                $('#slPreview').attr('src', thumbUrl(n.imageUrl, 320));
+                $('#slName').val((n.title || ('node' + id)) + extOf(n.imageUrl));
+                // 标签改由项目下拉决定，不再默认填节点标题；打开时恢复上次选过的项目，省得每次重选
+                loadProjectOptions(function () { $('#slTags').val(_slLastTag); });
+                $('#saveLibModal').show();
+            }
+
+            function closeSaveLibModal() { $('#saveLibModal').hide(); }
+
+            function doSaveLibrary() {
+                var n = nodeById(_slId);
+                if (!n || !n.imageUrl) { alert('这个节点还没有图片'); return; }
+                var name = $('#slName').val().trim();
+                if (!name) { alert('请填名称'); return; }
+                // 扩展名留到下面按文件内容补，这里先把名字自带的后缀剥掉（节点标题常常本身就带 .png）
+                name = name.replace(/\.(png|jpe?g|webp|gif)$/i, '');
+
+                var $btn = $('#slSaveBtn').prop('disabled', true).text('保存中…');
+                fetch(n.imageUrl)
+                    .then(function (r) {
+                        if (!r.ok) throw new Error('读取图片失败 HTTP ' + r.status);
+                        return r.blob();
+                    })
+                    .then(function (b) {
+                        return b.slice(0, 12).arrayBuffer().then(function (ab) {
+                            var ext = extFromBytes(new Uint8Array(ab)) || extOf(n.imageUrl);
+                            var fd = new FormData();
+                            fd.append('file', new File([b], name + ext, { type: b.type || 'image/png' }));
+                            fd.append('category', $('#slCategory').val());
+                            fd.append('subCategory', $('#slSubCategory').val());
+                            fd.append('tags', $('#slTags').val());
+                            return $.ajax({ url: '/api/reference/upload', method: 'POST', data: fd, processData: false, contentType: false });
+                        });
+                    })
+                    .then(function (r) {
+                        _slLastTag = $('#slTags').val() || '';
+                        closeSaveLibModal();
+                        alert('已存入资源库，可在「素材 → 我的资产库」里查看');
+                    })
+                    .catch(function (e) {
+                        var msg = (e && e.responseJSON && e.responseJSON.message) || (e && e.message) || '未知错误';
+                        alert('保存失败：' + msg);
+                    })
+                    .then(function () { $btn.prop('disabled', false).text('保存'); });
+            }
+
+            // 图片上的两个小按钮：下载、存资源库
+            $(document).on('click', '.cnode-imgacts .iabtn', function (e) {
+                e.stopPropagation();
+                var id = parseInt($(this).attr('data-id'), 10);
+                if ($(this).attr('data-act') === 'download') downloadNodeImage(id);
+                else openSaveLibModal(id);
+            });
+
+            // ===================== 重新加载 + SSE =====================
+            function reload() {
+                $.get('/api/canvas/boards/' + boardId, function (r) {
+                    board = r.board; nodes = r.nodes || []; edges = r.edges || [];
+                    render();
+                    if (selectedId) selectNode(selectedId);
+                });
+            }
+
+            function connectEvents() {
+                if (evtSource) evtSource.close();
+                evtSource = new EventSource('/api/canvas/boards/' + boardId + '/events');
+                evtSource.onmessage = function (ev) {
+                    var d = JSON.parse(ev.data);
+                    if (d.type !== 'node.status') return;
+                    var n = nodeById(d.nodeId);
+                    if (!n) return reload();
+                    n.status = d.status;
+                    if (d.imageUrl) n.imageUrl = d.imageUrl;
+                    if (d.error) n.errorMsg = d.error;
+
+                    // 出完后整块重新拉一次：一次出多张时，其余候选图都记在节点的 extraJson 里，
+                    // SSE 只带了状态和当前这张的地址，不补拉就看不到「第几张/共几张」的切换条
+                    if (d.status === 'done') { reload(); return; }
+
+                    render();
+                    if (selectedId === d.nodeId) selectNode(d.nodeId);
+                };
+            }
+        </script>
+    </div>
+
+    <!-- 提示词大编辑区：点节点上的小输入框时弹在它正下方。
+         用 position:fixed，既不受画布缩放影响，也不占布局空间（不会打乱画布的高度链） -->
+    <div id="promptEditor" style="display:none;position:fixed;z-index:80;width:560px;box-sizing:border-box;background:#111827;border:1px solid #475569;border-radius:10px;padding:12px;box-shadow:0 12px 32px rgba(0,0,0,.55);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:8px;">
+            <strong id="peTitle" style="color:#e2e8f0;font-size:13px;">提示词</strong>
+            <button class="btn btn-small" onclick="closePromptEditor()">收起</button>
+        </div>
+        <div id="peRefChips" class="ref-chips"></div>
+        <textarea id="peText" placeholder="描述你想生成的画面…" style="width:100%;height:180px;resize:vertical;box-sizing:border-box;background:#0b1220;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;font-family:inherit;outline:none;"></textarea>
+        <div id="peStatus" style="margin-top:6px;color:#94a3b8;font-size:12px;">改完自动保存，点别处或按 Esc 收起</div>
+    </div>
+    <!-- 存入资源库：画布出好的图，选好类型/子类型/标签后直接进「我的资产库」，
+         之后在「素材」弹窗的「我的资产库」里就能当参考图用 -->
+    <div id="saveLibModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:120;overflow:auto;">
+        <div style="margin:60px auto;width:400px;max-width:90%;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
+            <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
+                <strong style="color:#e2e8f0;font-size:15px;">存入资源库</strong>
+                <button class="btn" style="padding:2px 6px;font-size:11px;" onclick="closeSaveLibModal()">关闭</button>
+            </div>
+            <div style="text-align:center;margin-bottom:12px;">
+                <img id="slPreview" style="max-width:100%;max-height:180px;border-radius:6px;background:#0f172a;">
+            </div>
+            <div style="margin-bottom:12px;">
+                <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">名称</label>
+                <input id="slName" class="action-bar-input" style="width:100%;box-sizing:border-box;">
+            </div>
+            <div style="display:flex;gap:8px;margin-bottom:12px;">
+                <div style="flex:1;">
+                    <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">类型</label>
+                    <select id="slCategory" class="action-bar-select" style="width:100%;box-sizing:border-box;">
+                        <option value="动漫">动漫</option>
+                        <option value="写实">写实</option>
+                        <option value="游戏">游戏</option>
+                        <option value="仙侠">仙侠</option>
+                    </select>
+                </div>
+                <div style="flex:1;">
+                    <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">子类型</label>
+                    <select id="slSubCategory" class="action-bar-select" style="width:100%;box-sizing:border-box;">
+                        <option value="角色">角色</option>
+                        <option value="道具">道具</option>
+                        <option value="环境">环境</option>
+                        <option value="特效">特效</option>
+                        <option value="灵宠">灵宠</option>
+                    </select>
+                </div>
+            </div>
+            <div style="margin-bottom:14px;">
+                <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">标签（项目名称）</label>
+                <select id="slTags" class="action-bar-select" style="width:100%;box-sizing:border-box;"></select>
+            </div>
+            <div style="display:flex;gap:8px;justify-content:flex-end;">
+                <button class="btn" onclick="closeSaveLibModal()">取消</button>
+                <button class="btn btn-primary" id="slSaveBtn" onclick="doSaveLibrary()">保存</button>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

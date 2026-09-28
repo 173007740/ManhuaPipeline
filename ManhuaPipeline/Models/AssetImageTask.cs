@@ -32,6 +32,21 @@ public class AssetImageTask
     /// <summary>出图尺寸，空 = 按 ImageService.AssetImageSize（16:9）。</summary>
     public string? Size { get; set; }
 
+    // ---- 出图参数快照（入队时从页面/配置带进来，后台照原样执行） ----
+    // 全部为空 = 用该用户在「API 配置 → 出图参数」里的默认值。
+
+    /// <summary>质量档位：auto / low / medium / high / xhigh / max。</summary>
+    public string? Quality { get; set; }
+
+    /// <summary>一次出几张（1–10）。中转一次只回一张，由后台按次数循环出。</summary>
+    public int? ImageCount { get; set; }
+
+    /// <summary>背景：auto / opaque / transparent。</summary>
+    public string? Background { get; set; }
+
+    /// <summary>输出格式：png / jpeg / webp（当前中转恒返回 PNG）。</summary>
+    public string? OutputFormat { get; set; }
+
     // ---- 参考图派生（角色换装/换形态）：SourceImageUrl 非空即走「图生图」路径 ----
     // 五个字段全为空 = 原来的纯文生图路径，行为完全不变。
 

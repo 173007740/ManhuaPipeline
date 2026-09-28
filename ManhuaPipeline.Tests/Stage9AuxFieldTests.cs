@@ -104,7 +104,7 @@ public class Stage9AuxFieldTests
     {
         var method = typeof(AgentService).GetMethod("BuildSeedanceSystemPrompt", BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
-        var prompt = (string)method.Invoke(null, new object?[] { "风格", "技能", "打斗", "角色" })!;
+        var prompt = (string)method.Invoke(null, new object?[] { "风格", "技能", "打斗", "角色", null })!;
 
         Assert.Contains("禁止输出「负向提示词：」行", prompt);
         Assert.Contains("4K，24fps，浅景深，无字幕无BGM，人物比例自然、肢体完整", prompt);

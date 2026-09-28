@@ -82,7 +82,7 @@ public static class ActionChainBuilder
                     Kind = "Environment"
                 });
             }
-            AddParallelEvents(chain, primary, beat.Intensity);
+            AddParallelEvents(chain, primary, beat);
 
             chain.EndState = FirstNonEmpty(beat.Result, chain.EndState);
             chains.Add(chain);
@@ -92,14 +92,14 @@ public static class ActionChainBuilder
     }
 
     /// <summary>给每个 Beat 补充可并行发生的镜头/特效/环境反馈，提升单镜头信息密度。</summary>
-    private static void AddParallelEvents(ActionChain chain, string primary, string intensity)
+    private static void AddParallelEvents(ActionChain chain, string primary, CombatBeat beat)
     {
         chain.Actions.Add(new MicroAction
         {
             Id = "P" + chain.Actions.Count.ToString("00"),
             BeatId = chain.CombatBeatIds[^1],
             Actor = primary,
-            Action = "镜头跟随主体动作，保持连续机位",
+            Action = CameraCue(beat.ActionType, beat.Intensity),
             Kind = "Camera",
             IsParallel = true
         });
@@ -108,13 +108,42 @@ public static class ActionChainBuilder
             Id = "P" + (chain.Actions.Count + 1).ToString("00"),
             BeatId = chain.CombatBeatIds[^1],
             Actor = "环境",
-            Action = intensity is "高" or "极高" or "High" or "Extreme"
-                ? "气浪卷起尘土碎石，衣袍与发丝随冲击翻动"
-                : "衣袍随动作翻动，地面轻微震动",
+            Action = AirFeedback(beat.Intensity),
             Kind = "Environment",
             IsParallel = true
         });
     }
+
+    /// <summary>机位-动作语义绑定：运镜由动作类型决定，禁止所有 Beat 共用一句机位。</summary>
+    private static string CameraCue(string actionType, string intensity)
+    {
+        var cue = actionType switch
+        {
+            "Surround" => "缓慢环绕并缓缓压低，营造压迫感",
+            "QuickStrike" => "低角度极速推镜或贴地跟拍，跟随突进轨迹",
+            "DodgeCounter" => "手持快切、甩镜跟随闪避与反击身形",
+            "CloseCounter" => "环绕横移，中近景锁住贴身交锋",
+            "GrappleCounter" => "近景跟随纠缠，锁扣瞬间轻微晃动",
+            "PinDown" => "俯冲压镜跟拍，压住被压制方",
+            "RetreatHold" => "后拉跟拍，维持撤离的距离感",
+            "AmbushBreak" => "贴地跟拍突进，撕开缺口后拉高俯拍",
+            "AoeBreak" => "径向拉远并镜头震颤，看冲击向四面扩散",
+            "FinalBreak" => "径向拉远并镜头震颤，推进至接触点",
+            _ => "环绕横移跟随交锋"
+        };
+        return intensity is "高" or "极高" or "High" or "Extreme"
+            ? cue + "；命中瞬间推进至接触点顿帧 1~2 帧"
+            : cue;
+    }
+
+    /// <summary>空气动力反馈按烈度分级，禁止所有 Beat 共用同一句环境描写。</summary>
+    private static string AirFeedback(string intensity) => intensity switch
+    {
+        "极高" or "Extreme" => "环形冲击波自接触点横扫，地面放射状崩裂掀飞，周围物体被气浪掀翻",
+        "高" or "High" => "接触点炸开音爆气刃与弧形气流，碎石与尘土震起，衣袍发丝被冲击掀飞",
+        "中" or "Medium" => "接触点荡开可见空气波纹，衣袍发丝随动作翻动，地面轻微震动",
+        _ => "拳风带起细微气流扰动，衣摆与发丝轻扬，脚下浮尘轻起"
+    };
 
     private static List<string> SplitClauses(string? text)
     {

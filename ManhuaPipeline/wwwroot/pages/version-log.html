@@ -1,0 +1,127 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>版本记录 - 漫创引擎</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+  <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+  <style>
+    .container{max-width:100%;padding:32px 24px;}
+    .page-title{font-size:24px;font-weight:700;margin-bottom:8px;color:var(--primary-light);}
+    .page-tip{font-size:12px;color:#94a3b8;margin-bottom:24px;line-height:1.7;}
+
+    /* 时间线：左侧一条竖线串起所有版本， newest 在上 */
+    .timeline{position:relative;padding-left:26px;}
+    .timeline::before{content:"";position:absolute;left:7px;top:8px;bottom:8px;width:2px;background:linear-gradient(180deg,rgba(124,58,237,.65),rgba(124,58,237,.08));}
+    .vl-item{position:relative;margin-bottom:18px;background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:10px;padding:14px 16px;}
+    .vl-item::before{content:"";position:absolute;left:-25px;top:18px;width:10px;height:10px;border-radius:50%;background:#7c3aed;box-shadow:0 0 0 3px rgba(124,58,237,.22);}
+    .vl-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px;}
+    .vl-ver{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:14px;font-weight:700;color:#c4b5fd;background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.35);border-radius:6px;padding:2px 8px;}
+    .vl-title{font-size:15px;font-weight:600;color:#f1f5f9;}
+    .vl-tag{font-size:11px;border-radius:4px;padding:2px 7px;font-weight:600;}
+    .vl-tag.feature{background:rgba(34,197,94,.16);color:#4ade80;}
+    .vl-tag.fix{background:rgba(239,68,68,.16);color:#f87171;}
+    .vl-tag.optimize{background:rgba(59,130,246,.16);color:#60a5fa;}
+    .vl-tag.refactor{background:rgba(148,163,184,.16);color:#cbd5e1;}
+    .vl-meta{font-size:11px;color:#64748b;margin-left:auto;white-space:nowrap;}
+    .vl-body{margin:8px 0 0;padding-left:18px;color:#cbd5e1;font-size:13px;line-height:1.85;}
+    .vl-body li{margin-bottom:2px;}
+    .vl-empty{color:#94a3b8;font-size:13px;padding:24px;text-align:center;}
+  </style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <a href="system-config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
+        <span id="navUser" style="display:none;">
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest" style="display:none;">
+          <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">history_edu</span> 版本记录</div>
+    <div class="page-tip">
+      每次改动钉一条，<b>v1.x.0</b> 递增（新功能与修复各占一个号，大重构才动第一位）。<br>
+      早期条目是根据新增文件与建表脚本<b>反推补录</b>的，日期为补录当天、非真实改动日 —— 只能看功能线，不能当精确改动史。
+    </div>
+
+    <div class="timeline" id="vlTimeline">
+      <div class="vl-empty">加载中...</div>
+    </div>
+  </div>
+</div>
+
+<script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+<script src="../js/app.js?v=2"></script>
+<script>
+    function esc(s) {
+        return $('<div>').text(s == null ? "" : s).html();
+    }
+
+    var TAG_TEXT = { feature: "新功能", fix: "修复", optimize: "优化", refactor: "重构" };
+
+    // 正文按行渲染：约定是一行一条 "- xxx"，不是列表项的行也照样显示，不吞内容
+    function renderBody(content) {
+        var lines = (content || "").split(/\r?\n/);
+        var html = "";
+        $.each(lines, function (_, ln) {
+            var t = ln.replace(/^\s*[-*]\s?/, "").trim();
+            if (!t) return;
+            html += "<li>" + esc(t) + "</li>";
+        });
+        return html ? "<ul class='vl-body'>" + html + "</ul>" : "";
+    }
+
+    function render(list) {
+        var $box = $("#vlTimeline").empty();
+        if (!list || !list.length) {
+            $box.append($('<div>').addClass('vl-empty').text('还没有任何版本记录。'));
+            return;
+        }
+        $.each(list, function (_, it) {
+            var tag = TAG_TEXT[it.category] || it.category;
+            var $item = $('<div>').addClass('vl-item');
+            $item.append(
+                $('<div>').addClass('vl-head').append(
+                    $('<span>').addClass('vl-ver').text(it.version),
+                    $('<span>').addClass('vl-title').text(it.title),
+                    $('<span>').addClass('vl-tag ' + (it.category || 'feature')).text(tag),
+                    $('<span>').addClass('vl-meta').text(it.releasedAt + " · " + (it.author || "AI"))
+                )
+            );
+            var body = renderBody(it.content);
+            if (body) $item.append(body);
+            $box.append($item);
+        });
+    }
+
+    $(function () {
+        $.get("/api/version-log")
+            .done(render)
+            .fail(function () {
+                $("#vlTimeline").empty().append(
+                    $('<div>').addClass('vl-empty').text('版本记录加载失败，请刷新重试。'));
+            });
+    });
+</script>
+</body>
+</html>

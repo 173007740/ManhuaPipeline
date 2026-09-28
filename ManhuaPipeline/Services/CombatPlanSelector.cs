@@ -252,7 +252,7 @@ public static class CombatPlanSelector
         if (templates == null || templates.Count == 0) return null;
 
         // 4) 参数归约：时长仅认 5/11/15 三档，其余归一为 11；参与人数折算为 单人/双人/多人。
-        int effectiveDuration = intent.Duration is 5 or 11 or 15 ? intent.Duration : 11;
+        int effectiveDuration = intent.Duration > 0 ? intent.Duration : 11;
         string participantLabel = intent.Participants.Count switch
         {
             1 => "单人",
@@ -729,7 +729,7 @@ public static class CombatPlanSelector
         bool isSurrounded = ContainsAny(context, DefensiveGroupMarkers);
         bool isDefeated = ContainsAny(context, DefeatedMarkers);
         int tier = Math.Clamp(intensity, 1, 5);
-        int seconds = duration is 5 or 11 or 15 ? duration : 11;
+        int seconds = duration > 0 ? duration : 11;
         if (isSurrounded && seconds < 11) seconds = 11;
 
         FightTemplateItem item;
@@ -741,8 +741,8 @@ public static class CombatPlanSelector
                 Scene = "被围困、围攻、围杀、被群敌合拢逼近的防御型战斗",
                 Beat = "被围（压迫）→ 格挡闪避反击（快）→ 护体硬抗破阵（重）",
                 ActionPrompt = "A:被围在正中，前后左右兵刃与攻势同时合拢逼近；A 侧身闪开第一波，架臂格挡第二波，反手连击点倒左右两敌、踢开正面一敌；正面重击砸来，A 以护体/气血硬抗，震开攻势后爆发气浪将一圈敌人掀飞，突围而出",
-                CameraPrompt = "围拢段缓慢环绕并缓缓压低，营造压迫感；闪避反击段手持快切、甩镜跟随 A 身形；硬抗瞬间推进至接触点顿帧 0.3-0.5 秒，突围瞬间拉高俯拍慢动作看气浪扩散",
-                ConstraintPrompt = "围拢要有压迫感（镜头缓慢、敌人同步逼近）；闪避反击要快、动作干净；硬抗与突围命中瞬间必须顿帧接慢动作；禁止敌人原地待机，必须同时出手；禁止 A 全程站桩或被一击打倒",
+                CameraPrompt = "围拢段缓慢环绕并缓缓压低，营造压迫感；闪避反击段手持快切、甩镜跟随 A 身形；硬抗瞬间推进至接触点顿帧 1~2 帧，突围瞬间拉高俯拍看气浪炸开",
+                ConstraintPrompt = "围拢要有压迫感（镜头缓慢、敌人同步逼近）；闪避反击要快、动作干净；硬抗与突围命中瞬间必须顿帧（Hit-Stop 1~2 帧），禁止慢动作；禁止敌人原地待机，必须同时出手；禁止 A 全程站桩或被一击打倒",
                 Tags = "群战,围杀,被围,硬抗,突围,防御"
             };
         }
@@ -754,8 +754,8 @@ public static class CombatPlanSelector
                 Scene = "受击、被轰、硬抗、撑住、绝境防守后反击的防御型战斗",
                 Beat = "受击（重）→ 格挡硬抗（顿）→ 反打（快）",
                 ActionPrompt = "A:正面重击压来，A 不闪不避，双臂交叉/护体硬接一击，脚下退半步卸力、地面开裂；随即架开或震开攻势，抓住对手旧力未收的瞬间一记重拳/重击反打，将对手逼退半步；双方重新拉开距离对峙",
-                CameraPrompt = "受击瞬间推进至接触点特写并轻微晃动；硬抗段顿帧 0.3-0.5 秒看衣袍/护体受击反馈；反打用快速甩镜跟随拳头，命中后慢动作看对手后仰/退步",
-                ConstraintPrompt = "硬抗要有重量感（受击顿帧+慢动作+环境反馈）；反打要快、干净利落；禁止 A 被一击打倒；禁止对手打完就原地站桩，必须保持攻防回合",
+                CameraPrompt = "受击瞬间推进至接触点特写并轻微晃动；硬抗段顿帧 1~2 帧看衣袍/护体受击反馈；反打用快速甩镜跟随拳头，命中后对手即刻后仰/退步",
+                ConstraintPrompt = "硬抗要有重量感（受击顿帧 1~2 帧+环境反馈），禁止慢动作；反打要快、干净利落；禁止 A 被一击打倒；禁止对手打完就原地站桩，必须保持攻防回合",
                 Tags = "受击,硬抗,格挡,反击,防御"
             };
         }
@@ -767,7 +767,7 @@ public static class CombatPlanSelector
                 Scene = "战败、受击败退、护体崩碎、陨落牺牲的收束型战斗",
                 Beat = "受击（重）→ 护体崩碎（顿）→ 败退（慢）",
                 ActionPrompt = "A:正面攻势轰至，A 强行硬抗一击，护体/罡气当场崩碎、碎片四溅；A 被震退数步、气血翻涌，强行稳住身形仍被余波压得踉跄/坠落，败退收场",
-                CameraPrompt = "受击瞬间推进特写+轻微晃动；护体崩碎顿帧 0.5 秒看碎片与气浪飞溅；败退段慢动作跟拍 A 后退/坠落",
+                CameraPrompt = "受击瞬间推进特写+轻微晃动；护体崩碎顿帧 1~2 帧看碎片与气浪飞溅；败退段实速跟拍 A 后退/坠落",
                 ConstraintPrompt = "受击要真实（顿帧+碎片/尘土细节）；败退要有重量感，禁止 A 毫发无损站定；禁止战斗结果被改写成反杀或胜利",
                 Tags = "受击,败退,硬抗,坠落,防御"
             };

@@ -11,4 +11,14 @@
     <PackageReference Include="BCrypt.Net-Next" Version="4.0.3" />
     <PackageReference Include="System.Drawing.Common" Version="9.0.0" />
   </ItemGroup>
+
+  <!-- 让 build 也同步 wwwroot 到输出目录。
+       默认行为（Sdk.Web）：wwwroot 只在 publish 时复制，build 不复制。直接从 bin 里的 exe
+       启动就会读到几个月前的旧页面——改了 html/js 刷新也没变化，看着像「功能没做」。
+       这里改成 PreserveNewest，改完前端重新生成即可生效。
+       uploads 是运行时数据（用户上传的参考图等，动辄几个 G），不能进编译产物，单独排除。 -->
+  <ItemGroup>
+    <Content Update="wwwroot\**" CopyToOutputDirectory="PreserveNewest" />
+    <Content Update="wwwroot\uploads\**" CopyToOutputDirectory="Never" />
+  </ItemGroup>
 </Project>

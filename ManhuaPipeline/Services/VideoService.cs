@@ -36,7 +36,9 @@ public class VideoService
         public string Ratio { get; init; } = "16:9";
         public bool Watermark { get; init; } = false;
         public bool GenerateAudio { get; init; } = true;
-    public string? Resolution { get; init; }
+        public string? Resolution { get; init; }
+        /// <summary>出图像素档（百万像素）。只有 ComfyUI 引擎读它 —— 火山方舟看 Resolution。</summary>
+        public double Megapixels { get; init; } = 1;
     }
 
     /// <summary>

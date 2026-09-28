@@ -16,14 +16,16 @@ public class StoryboardPlanningService
     private readonly CombatGrammarEngine _grammar;
     private readonly DirectorService _director;
     private readonly DirectorSemanticValidator _semantic;
+    private readonly DbService _db;
     private readonly int _maxConcurrency;
 
-    public StoryboardPlanningService(LLMService llm, CombatGrammarEngine grammar, DirectorService director, DirectorSemanticValidator semantic, IConfiguration config)
+    public StoryboardPlanningService(LLMService llm, CombatGrammarEngine grammar, DirectorService director, DirectorSemanticValidator semantic, DbService db, IConfiguration config)
     {
         _llm = llm;
         _grammar = grammar;
         _director = director;
         _semantic = semantic;
+        _db = db;
         _maxConcurrency = Math.Max(1, config.GetValue("Stage5:StoryboardMaxConcurrency", 4));
     }
 
@@ -84,6 +86,8 @@ public class StoryboardPlanningService
         var cameraText = BuildCameraAtomText(atoms);
         var skillText = BuildSkillText(skills);
         var fightSummary = BuildFightSummary(templates);
+        // 项目内容类型（短剧/广告/MV）决定分镜阶段的结构性规则，短剧不注入任何额外内容
+        var projectType = _db.GetProjectType(projectId);
 
         var units = StageUnitParser.Parse(stage4Text);
         StoryboardPlanningLogger.Append(
@@ -100,7 +104,7 @@ public class StoryboardPlanningService
             });
 
             var request = BuildFallbackRequest(stage4Text, cameraText, skillText, fightSummary);
-            var result = await _llm.PlanShots(stage4Text, apiUrl, apiKey, model, cameraText, skillText, fightSummary, envText: envText, thinkingMode: thinkingMode);
+            var result = await _llm.PlanShots(stage4Text, apiUrl, apiKey, model, cameraText, skillText, fightSummary, envText: envText, thinkingMode: thinkingMode, projectType: projectType, lyricTrackText: _db.GetLyricTrackText(projectId));
             LogCall(projectId, model, "整段自由分镜", "-", request, result);
             if (IsRefusalOrPlaceholder(result)) return "";
             if (!StoryboardFrameParser.HasAnyShot(result)) return "";
@@ -329,7 +333,7 @@ public class StoryboardPlanningService
             }
 
             // 镜头数不足或镜头时长总和与单元时长不符时至少返工一次，禁止低思考模式下静默保留。
-            if (bestValidation.Violations?.Any(v => v.Code is "SHOT_COUNT_LOW" or "DURATION_SUM") == true)
+            if (bestValidation.Violations?.Any(v => v.Code is "SHOT_COUNT_LOW" or "SHOT_DURATION_ILLEGAL") == true)
                 maxRepairs = Math.Max(maxRepairs, 1);
 
             LogCall(projectId, model, $"导演校验未通过（{mode} 模式，返工上限 {maxRepairs}）", unit.UnitNumber,
@@ -491,7 +495,7 @@ public class StoryboardPlanningService
                 Message = $"正在生成单元 {unit.UnitNumber} 的自由分镜"
             });
             var request = BuildFreeDramaRequest(planText, cameraText, directorText);
-            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, null, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback);
+            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, null, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
             LogCall(projectId, model, "自由分镜（运镜原子可选）", unit.UnitNumber, request, result);
             return result;
         }
@@ -505,7 +509,7 @@ public class StoryboardPlanningService
             Message = $"正在生成单元 {unit.UnitNumber} 的分镜"
         });
         var nonCombatRequest = BuildNonCombatRequest(planText, skillText, cameraText, directorText);
-        var nonCombatResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback);
+        var nonCombatResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
         LogCall(projectId, model, "非打斗分镜（技能库+运镜原子）", unit.UnitNumber, nonCombatRequest, nonCombatResult);
         return nonCombatResult;
     }
@@ -552,13 +556,13 @@ public class StoryboardPlanningService
                 Message = $"单元 {unit.UnitNumber} 意图提取失败，按自由分镜生成"
             });
             var request = BuildFallbackRequest(planText, cameraText, skillText, fightSummary);
-            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode);
+            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
             LogCall(projectId, model, "打斗自由回退（意图失败）", unit.UnitNumber, request, result);
             return result;
         }
 
-        if (intent.Duration is not (5 or 11 or 15))
-            intent.Duration = unit.Duration is 5 or 11 or 15 ? unit.Duration : 11;
+        if (intent.Duration <= 0)
+            intent.Duration = unit.Duration > 0 ? unit.Duration : 11;
         // 时长档位不限制交锋频率：5 秒同样允许承载多个快速攻防回合，由内容密度决定。
         if (intent.Intensity is < 1 or > 5)
             intent.Intensity = Math.Clamp(unit.Duration == 15 ? 4 : 3, 1, 5);
@@ -633,7 +637,7 @@ public class StoryboardPlanningService
                 Message = $"单元 {unit.UnitNumber} 未匹配到模板，按自由分镜生成"
             });
             var request = BuildFallbackRequest(planText, cameraText, skillText, fightSummary);
-            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode);
+            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
             LogCall(projectId, model, "打斗自由回退（未匹配模板）", unit.UnitNumber, request, result);
             return result;
         }
@@ -685,7 +689,7 @@ public class StoryboardPlanningService
                     Message = $"单元 {unit.UnitNumber} 受控生成重试失败，按自由分镜重试"
                 });
                 var fallbackRequest = BuildFallbackRequest(planText, cameraText, skillText, fightSummary);
-                var fallbackResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode);
+                var fallbackResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
                 LogCall(projectId, model, "打斗自由回退（受控失败）", unit.UnitNumber, fallbackRequest, fallbackResult);
                 return fallbackResult;
             }

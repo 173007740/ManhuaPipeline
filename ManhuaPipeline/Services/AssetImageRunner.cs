@@ -11,6 +11,9 @@ namespace ManhuaPipeline.Services;
 ///   · 纯文生图   <see cref="GenerateAsync"/> —— 只用资产卡提示词（原有路径，行为未变）
 ///   · 参考图派生 <see cref="GenerateDerivedAsync"/> —— 「来源角色图 + 服装参考图 + 描述性提示词」出图，
 ///     用于角色换装/换形态，出图的同时登记一条派生血缘（CharacterCardDerivations）
+///
+/// 出图参数（比例/质量/张数/背景/格式）来自任务快照，快照为空时回落到配置页的默认值，
+/// 所以批量入队、老任务重跑都能拿到一份合法参数。
 /// </summary>
 public class AssetImageRunner
 {
@@ -31,47 +34,86 @@ public class AssetImageRunner
     /// <summary>队列任务入口：任务里带来源图时走「参考图派生」，否则走原来的纯文生图。</summary>
     public Task<GenerateOutcome> GenerateForTaskAsync(AssetImageTask task, CancellationToken ct) =>
         string.IsNullOrWhiteSpace(task.SourceImageUrl)
-            ? GenerateAsync(task.UserId, task.ProjectId, task.Category, task.AssetId,
-                task.PromptOverride, task.NegativeOverride, task.ExtraPrompt, task.Size, ct)
+            ? GenerateAsync(task, ct)
             : GenerateDerivedAsync(task, ct);
 
-    public async Task<GenerateOutcome> GenerateAsync(
-        int userId, int projectId, string category, int assetId,
-        string? promptOverride, string? negativeOverride, string? extraPrompt, string? size,
-        CancellationToken ct)
+    /// <summary>
+    /// 本次出图要用的参数：任务里带了就照它执行（入队时的快照，改配置不影响在跑的任务），
+    /// 没带（批量入队、老任务）就取该用户在配置页里的默认值。
+    /// </summary>
+    private ImageGenOptions ResolveOptions(AssetImageTask task)
     {
-        var asset = AssetImageSupport.ResolveAsset(_db, projectId, category, assetId);
+        var def = _db.GetImageGenOptions(task.UserId);
+        return new ImageGenOptions
+        {
+            UserId = task.UserId,
+            AspectRatio = def.AspectRatio,
+            Quality = string.IsNullOrWhiteSpace(task.Quality) ? def.Quality : task.Quality,
+            ImageCount = task.ImageCount ?? def.ImageCount,
+            Background = string.IsNullOrWhiteSpace(task.Background) ? def.Background : task.Background,
+            OutputFormat = string.IsNullOrWhiteSpace(task.OutputFormat) ? def.OutputFormat : task.OutputFormat
+        }.Normalized();
+    }
+
+    public async Task<GenerateOutcome> GenerateAsync(AssetImageTask task, CancellationToken ct)
+    {
+        var asset = AssetImageSupport.ResolveAsset(_db, task.ProjectId, task.Category, task.AssetId);
         if (asset == null) return new GenerateOutcome(false, null, 0, null, "资产不存在");
 
-        var (config, model, configError) = ResolveImageConfig(userId);
+        var (config, model, configError) = ResolveImageConfig(task.UserId);
         if (configError != null) return new GenerateOutcome(false, null, 0, null, configError);
 
-        var useSize = ImageService.IsValidSize(size) ? size!.Trim() : ImageService.DefaultSizeFor(category);
+        var opt = ResolveOptions(task);
+        var useSize = ImageService.IsValidSize(task.Size) ? task.Size!.Trim() : ImageService.DefaultSizeFor(task.Category);
 
         // 模版按「本剧 → 账号默认 → 出厂默认」取（ComposeFinalPrompt 内部取），所以每部剧的风格互不影响
-        var projectStyle = AssetImageSupport.GetProjectStylePrompt(_db, _logger, projectId);
+        var projectStyle = AssetImageSupport.GetProjectStylePrompt(_db, _logger, task.ProjectId);
         var prompt = AssetImageSupport.ComposeFinalPrompt(
-            _db, userId, projectId, category, asset, projectStyle, promptOverride, negativeOverride, extraPrompt);
+            _db, task.UserId, task.ProjectId, task.Category, asset, projectStyle,
+            task.PromptOverride, task.NegativeOverride, task.ExtraPrompt);
 
         _logger.LogInformation(
-            "[AssetImage] 开始出图 projectId={ProjectId} {Category}#{AssetId} size={Size} model={Model} 用资产提示词={UsePrompt} 临时覆盖={Overridden}",
-            projectId, category, assetId, useSize, model, !string.IsNullOrWhiteSpace(asset.ImagePrompt),
-            !string.IsNullOrWhiteSpace(promptOverride));
+            "[AssetImage] 开始出图 projectId={ProjectId} {Category}#{AssetId} size={Size} quality={Quality} 张数={Count} 背景={Bg} 格式={Fmt} model={Model}",
+            task.ProjectId, task.Category, task.AssetId, useSize,
+            opt.Quality, opt.ImageCount, opt.Background, opt.OutputFormat, model);
 
-        var result = await _image.GenerateAsync(prompt, config!.ApiUrl, config.ApiKey, model, useSize, ct);
-        if (!result.Ok || result.Data == null)
-            return new GenerateOutcome(false, null, 0, prompt, "出图失败：" + (result.Error ?? "未知错误"));
+        // 中转实测一次只回一张（传 n=2 也只回 1 张），所以「一次出几张」在这里靠循环实现：
+        // 每张都落盘并进参考图库，第一张回填资产卡。
+        string? firstPath = null;
+        var firstLibId = 0;
+        var lastError = "出图失败：未拿到图片";
 
-        var (localPath, fileSize) = ImageService.SaveLocalImage(result.Data, result.Ext ?? ".png", asset.Name, _logger);
-        var libraryId = AssetImageSupport.SyncToReferenceLibrary(
-            _db, _logger, userId, projectId, category, assetId, asset.Name, localPath, fileSize);
-        _db.UpdateAssetImage(projectId, category, assetId, localPath);
+        for (var i = 0; i < opt.ImageCount; i++)
+        {
+            var result = await _image.GenerateAsync(prompt, config!.ApiUrl, config.ApiKey, model, useSize, ct, opt);
+            if (!result.Ok || result.Data == null)
+            {
+                lastError = "出图失败：" + (result.Error ?? "未知错误");
+                // 第一张就失败 = 这次出图没成；后面的失败不回滚前面已经出好的
+                if (i == 0) return new GenerateOutcome(false, null, 0, prompt, lastError);
+                _logger.LogWarning("[AssetImage] 第 {Index} 张出图失败（前面的已入图库，不影响资产卡）：{Error}", i + 1, result.Error);
+                break;
+            }
 
-        _logger.LogInformation(
-            "[AssetImage] 完成 projectId={ProjectId} {Category}#{AssetId} → {Path} ({Size}B), libraryAssetId={LibId}",
-            projectId, category, assetId, localPath, fileSize, libraryId);
+            var (localPath, fileSize) = ImageService.SaveLocalImage(result.Data, result.Ext ?? ".png", asset.Name, _logger);
+            var libraryId = AssetImageSupport.SyncToReferenceLibrary(
+                _db, _logger, task.UserId, task.ProjectId, task.Category, task.AssetId, asset.Name, localPath, fileSize);
 
-        return new GenerateOutcome(true, localPath, libraryId, prompt, null);
+            if (i == 0)
+            {
+                firstPath = localPath;
+                firstLibId = libraryId;
+                _db.UpdateAssetImage(task.ProjectId, task.Category, task.AssetId, localPath);
+            }
+
+            _logger.LogInformation(
+                "[AssetImage] 第 {Index}/{Total} 张完成 projectId={ProjectId} {Category}#{AssetId} → {Path} ({Size}B), libraryAssetId={LibId}",
+                i + 1, opt.ImageCount, task.ProjectId, task.Category, task.AssetId, localPath, fileSize, libraryId);
+        }
+
+        return firstPath == null
+            ? new GenerateOutcome(false, null, 0, prompt, lastError)
+            : new GenerateOutcome(true, firstPath, firstLibId, prompt, null);
     }
 
     /// <summary>
@@ -87,6 +129,7 @@ public class AssetImageRunner
         var (config, model, configError) = ResolveImageConfig(task.UserId);
         if (configError != null) return new GenerateOutcome(false, null, 0, null, configError);
 
+        var opt = ResolveOptions(task);
         var useSize = ImageService.IsValidSize(task.Size)
             ? task.Size!.Trim()
             : ImageService.DefaultSizeFor(task.Category);
@@ -126,37 +169,58 @@ public class AssetImageRunner
             : 0;
 
         _logger.LogInformation(
-            "[AssetImage] 开始派生出图 projectId={ProjectId} {Category}#{AssetId} size={Size} model={Model} 参考图={Count}张 来源=({SourceProjectId}#{SourceAssetId}) 血缘={DerivationId}",
-            task.ProjectId, task.Category, task.AssetId, useSize, model, refImages.Count,
-            task.SourceProjectId, task.SourceAssetId, derivationId);
+            "[AssetImage] 开始派生出图 projectId={ProjectId} {Category}#{AssetId} size={Size} quality={Quality} 张数={Count} model={Model} 参考图={RefCount}张 来源=({SourceProjectId}#{SourceAssetId}) 血缘={DerivationId}",
+            task.ProjectId, task.Category, task.AssetId, useSize, opt.Quality, opt.ImageCount, model,
+            refImages.Count, task.SourceProjectId, task.SourceAssetId, derivationId);
 
-        var result = await _image.GenerateWithImagesAsync(
-            prompt, refImages, config!.ApiUrl, config.ApiKey, model, useSize, ct);
-        if (!result.Ok || result.Data == null)
-            return new GenerateOutcome(false, null, 0, prompt, "出图失败：" + (result.Error ?? "未知错误"));
+        string? firstPath = null;
+        var firstLibId = 0;
+        var lastError = "出图失败：未拿到图片";
 
-        var (localPath, fileSize) = ImageService.SaveLocalImage(result.Data, result.Ext ?? ".png", asset.Name, _logger);
-        var libraryId = AssetImageSupport.SyncToReferenceLibrary(
-            _db, _logger, task.UserId, task.ProjectId, task.Category, task.AssetId, asset.Name, localPath, fileSize);
-        _db.UpdateAssetImage(task.ProjectId, task.Category, task.AssetId, localPath);
-        if (derivationId > 0) _db.CompleteCharacterCardDerivation(derivationId, localPath);
+        for (var i = 0; i < opt.ImageCount; i++)
+        {
+            var result = await _image.GenerateWithImagesAsync(
+                prompt, refImages, config!.ApiUrl, config.ApiKey, model, useSize, ct,
+                null, opt);
+            if (!result.Ok || result.Data == null)
+            {
+                lastError = "出图失败：" + (result.Error ?? "未知错误");
+                if (i == 0) return new GenerateOutcome(false, null, 0, prompt, lastError);
+                _logger.LogWarning("[AssetImage] 第 {Index} 张派生出图失败（前面的已入图库）：{Error}", i + 1, result.Error);
+                break;
+            }
 
-        _logger.LogInformation(
-            "[AssetImage] 派生完成 projectId={ProjectId} {Category}#{AssetId} → {Path} ({Size}B), libraryAssetId={LibId}, 血缘={DerivationId}",
-            task.ProjectId, task.Category, task.AssetId, localPath, fileSize, libraryId, derivationId);
+            var (localPath, fileSize) = ImageService.SaveLocalImage(result.Data, result.Ext ?? ".png", asset.Name, _logger);
+            var libraryId = AssetImageSupport.SyncToReferenceLibrary(
+                _db, _logger, task.UserId, task.ProjectId, task.Category, task.AssetId, asset.Name, localPath, fileSize);
 
-        return new GenerateOutcome(true, localPath, libraryId, prompt, null);
+            if (i == 0)
+            {
+                firstPath = localPath;
+                firstLibId = libraryId;
+                _db.UpdateAssetImage(task.ProjectId, task.Category, task.AssetId, localPath);
+                if (derivationId > 0) _db.CompleteCharacterCardDerivation(derivationId, localPath);
+            }
+
+            _logger.LogInformation(
+                "[AssetImage] 派生第 {Index}/{Total} 张完成 projectId={ProjectId} {Category}#{AssetId} → {Path} ({Size}B), libraryAssetId={LibId}, 血缘={DerivationId}",
+                i + 1, opt.ImageCount, task.ProjectId, task.Category, task.AssetId, localPath, fileSize, libraryId, derivationId);
+        }
+
+        return firstPath == null
+            ? new GenerateOutcome(false, null, 0, prompt, lastError)
+            : new GenerateOutcome(true, firstPath, firstLibId, prompt, null);
     }
 
     /// <summary>取文生图配置并做非空校验，两条出图路径共用。Error 非空表示配置不可用。</summary>
     private (LLMConfig? Config, string Model, string? Error) ResolveImageConfig(int userId)
     {
-        var config = _db.GetActiveConfig(userId, "image");
+        var config = _db.GetDefaultImageConfig(userId);
         if (config == null || string.IsNullOrWhiteSpace(config.ApiKey))
-            return (null, "", "尚未配置文生图：请到「API 配置 → 文生图（中转）」填写接口地址、API Key 与模型名称");
+            return (null, "", "尚未配置出图渠道：请到「API 配置 → 图片模型配置」添加一个渠道（接口地址、API Key、模型名称）");
         var model = (config.ModelName ?? "").Trim();
         if (model.Length == 0)
-            return (null, "", "文生图模型名称为空：请到「API 配置 → 文生图（中转）」填写模型名称（如 gpt-image-1 / seedream-3.0 / gemini-2.5-flash-image）");
+            return (null, "", "出图模型名称为空：请到「API 配置 → 图片模型配置」补全该渠道的模型名称");
         return (config, model, null);
     }
 }

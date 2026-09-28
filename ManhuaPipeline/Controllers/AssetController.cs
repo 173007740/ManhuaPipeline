@@ -115,6 +115,26 @@ public class AssetController : ControllerBase
     }
 
     /// <summary>
+    /// 自动绑定图片：按项目名过滤参考图库，再按资产名匹配图片名，把命中的图片 URL 写回资产卡 ImageUrl。
+    /// 场景：画布里做好的图「存资源库」之后，不用一张张上传，回资产页点一下就绑回去。
+    /// 匹配打分规则见 AssetImageAutoBinder，没把握的（低分）不绑、列出来让人自己补。
+    /// </summary>
+    [HttpPost("auto-bind")]
+    public IActionResult AutoBindImages(int projectId, [FromBody] AutoBindImagesRequest? req)
+    {
+        var access = CheckProjectAccess(projectId);
+        if (access != null) return access;
+        var uid = GetUserId();
+
+        var category = AssetImageAutoBinder.NormalizeCategory(req?.Category);
+        if (category == null)
+            return BadRequest(new { message = "分类不正确，只支持 characters / props / environments / effects" });
+
+        var result = AssetImageAutoBinder.Bind(_db, uid, projectId, category, req?.Overwrite ?? false);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// 给资产卡出图（文生图），结果回填该资产的 ImageUrl，并同步一份进用户级参考图库。
     /// 走 LLMConfigs 中 Provider='image' 配置的中转接口，同步等待（单张图通常几十秒）。
     /// </summary>
@@ -131,14 +151,15 @@ public class AssetController : ControllerBase
         var asset = ResolveAssetForImage(projectId, category, assetId);
         if (asset == null) return NotFound(new { message = "资产不存在" });
 
-        var config = _db.GetActiveConfig(uid, "image");
+        // 出图渠道可能配了多个，这里用「默认」那条（跟画布节点没单独挑时用的是同一条）
+        var config = _db.GetDefaultImageConfig(uid);
         if (config == null || string.IsNullOrWhiteSpace(config.ApiKey))
-            return BadRequest(new { message = "尚未配置文生图：请到「API 配置 → 文生图（中转）」填写接口地址、API Key 与模型名称" });
+            return BadRequest(new { message = "尚未配置出图渠道：请到「API 配置 → 图片模型配置」添加一个渠道（接口地址、API Key、模型名称）" });
         var model = (config.ModelName ?? "").Trim();
         if (model.Length == 0)
-            return BadRequest(new { message = "文生图模型名称为空：请到「API 配置 → 文生图（中转）」填写模型名称（如 gpt-image-1 / seedream-3.0 / gemini-2.5-flash-image）" });
+            return BadRequest(new { message = "出图模型名称为空：请到「API 配置 → 图片模型配置」补全该渠道的模型名称" });
 
-        var size = ImageService.IsValidSize(req?.Size) ? req!.Size!.Trim() : ImageService.DefaultSizeFor(category);
+        var size = ResolveRequestSize(req) ?? ImageService.DefaultSizeFor(category);
         // 出图提示词：优先用「提取时按模版生成」的正文（改模版风格/负面词对已有资产立即生效），
         // 老资产还没有提示词时才退回旧的「名称+描述+属性」拼法。
         // 模版按「本剧 → 账号默认 → 出厂默认」取，所以每部剧的风格互不影响
@@ -175,7 +196,7 @@ public class AssetController : ControllerBase
         _logger.LogInformation("[AssetImage] 开始出图 projectId={ProjectId} {Category}#{AssetId} size={Size} model={Model} 用资产提示词={UsePrompt} 临时覆盖={Overridden}",
             projectId, category, assetId, size, model, !string.IsNullOrWhiteSpace(bodyPrompt), !string.IsNullOrWhiteSpace(req?.PromptOverride));
 
-        var result = await _image.GenerateAsync(prompt, config.ApiUrl, config.ApiKey, model, size, ct);
+        var result = await _image.GenerateAsync(prompt, config.ApiUrl, config.ApiKey, model, size, ct, ResolveOptions(uid, req));
         if (!result.Ok || result.Data == null)
             return StatusCode(StatusCodes.Status502BadGateway, new { message = "出图失败：" + (result.Error ?? "未知错误") });
 
@@ -232,7 +253,12 @@ public class AssetController : ControllerBase
             PromptOverride = req?.PromptOverride,
             NegativeOverride = req?.NegativeOverride,
             ExtraPrompt = req?.ExtraPrompt,
-            Size = req?.Size,
+            // 尺寸：显式 Size 优先，其次按画面比例算，都没有就留空（执行时再取配置页默认值）
+            Size = ResolveRequestSize(req),
+            Quality = req?.Quality,
+            ImageCount = req?.ImageCount,
+            Background = req?.Background,
+            OutputFormat = req?.OutputFormat,
             SourceProjectId = req?.SourceProjectId,
             SourceAssetId = req?.SourceAssetId,
             SourceImageUrl = req?.SourceImageUrl,
@@ -247,6 +273,25 @@ public class AssetController : ControllerBase
             taskId,
             message = "已加入出图队列（后台依次出图，关掉页面也会继续跑，回来刷新即可看到结果）。"
         });
+    }
+
+    /// <summary>出图尺寸：显式 Size 优先，其次按画面比例算；都没有返回 null（执行时再取默认值）。</summary>
+    private static string? ResolveRequestSize(GenerateAssetImageRequest? req)
+    {
+        if (!string.IsNullOrWhiteSpace(req?.Size)) return req!.Size!.Trim();
+        if (!string.IsNullOrWhiteSpace(req?.AspectRatio)) return ImageGenOptions.SizeForRatio(req!.AspectRatio);
+        return null;
+    }
+
+    /// <summary>同步出图接口用：以配置页默认值为底，请求里临时指定的几项覆盖它。</summary>
+    private ImageGenOptions ResolveOptions(int uid, GenerateAssetImageRequest? req)
+    {
+        var opt = _db.GetImageGenOptions(uid);
+        if (!string.IsNullOrWhiteSpace(req?.Quality)) opt.Quality = req!.Quality;
+        if (req?.ImageCount is > 0) opt.ImageCount = req.ImageCount.Value;
+        if (!string.IsNullOrWhiteSpace(req?.Background)) opt.Background = req!.Background;
+        if (!string.IsNullOrWhiteSpace(req?.OutputFormat)) opt.OutputFormat = req!.OutputFormat;
+        return opt.Normalized();
     }
 
     /// <summary>批量入队：整个分类缺图（默认）或全部资产。</summary>
@@ -706,11 +751,37 @@ public class UpdateEnvAssetRequest
     public string? NegativePrompt { get; set; }
 }
 
+/// <summary>自动绑定图片请求。</summary>
+public class AutoBindImagesRequest
+{
+    /// <summary>characters / props / environments / effects。</summary>
+    public string? Category { get; set; }
+
+    /// <summary>为真时连已经绑过图的资产一起替换；默认只补还没有图的。</summary>
+    public bool Overwrite { get; set; }
+}
+
 /// <summary>资产卡出图请求（各字段都可选，不传就用资产卡内容 + 类型默认尺寸）。</summary>
 public class GenerateAssetImageRequest
 {
-    /// <summary>可选，形如 1280x720（16:9）；不传统一出 16:9（ImageService.AssetImageSize）。</summary>
+    /// <summary>可选，形如 1536x864（16:9）；不传按 ImageService.AssetImageSize（16:9）。</summary>
     public string? Size { get; set; }
+
+    /// <summary>可选，画面比例（1:1 / 3:2 / 2:3 / 16:9 / 9:16）。
+    /// 与 Size 二选一：传了比例就由它算出请求尺寸，比例优先。</summary>
+    public string? AspectRatio { get; set; }
+
+    /// <summary>可选，质量档位（auto / low / medium / high / xhigh / max）；不传用配置页的默认值。</summary>
+    public string? Quality { get; set; }
+
+    /// <summary>可选，一次出几张（1–10）；不传用配置页的默认值。</summary>
+    public int? ImageCount { get; set; }
+
+    /// <summary>可选，背景（auto / opaque / transparent）；不传用配置页的默认值。</summary>
+    public string? Background { get; set; }
+
+    /// <summary>可选，输出格式（png / jpeg / webp）；不传用配置页的默认值。</summary>
+    public string? OutputFormat { get; set; }
 
     /// <summary>可选，追加在提示词末尾的额外要求（例如「戴斗笠」「雨夜」）。</summary>
     public string? ExtraPrompt { get; set; }

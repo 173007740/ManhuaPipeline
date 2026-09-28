@@ -1,0 +1,440 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>音色库 - 漫创引擎</title>
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height: 100vh; }
+        body .container { max-width: 100% !important; margin: 0 auto; padding: 24px 24px 40px; }
+
+        .panel { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 18px 20px; margin-bottom: 18px; }
+        .field { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+        .field input[type=text] { background: var(--bg-card); border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
+        .field input::placeholder { color: var(--text-muted); }
+
+        .voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
+        .voice-card { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
+        /* 有封面图时铺满卡片当背景，上面压一层暗色渐变保证文字可读 */
+        .voice-card.has-cover { background-size: cover; background-position: center; }
+        .voice-card.has-cover::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6,8,16,.55), rgba(6,8,16,.85)); }
+        .voice-card.has-cover > * { position: relative; z-index: 1; }
+        .voice-card.has-cover .name { text-shadow: 0 1px 3px rgba(0,0,0,.8); }
+        .voice-card.has-cover .meta { color: rgba(226,232,240,.85); }
+        .voice-card.has-cover .note { color: rgba(226,232,240,.8); }
+        .voice-card .cover-tip { position: absolute; top: 8px; right: 10px; z-index: 2; font-size: 10px; color: rgba(226,232,240,.7); }
+        .voice-card .name { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .voice-card .meta { font-size: 11px; color: var(--text-muted); line-height: 1.8; }
+        .voice-card .file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .voice-card .note { font-size: 12px; color: var(--text-muted); line-height: 1.6; max-height: 38px; overflow: hidden; }
+        .tagchip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; background: rgba(124,58,237,.18); color: var(--primary-light); }
+        .catchip { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; background: rgba(56,189,248,.16); color: #38bdf8; }
+        /* 两个文件选择器：加前缀标签 + 已选文件名，避免两个「选择文件」分不清 */
+        .pick { display: flex; align-items: center; gap: 6px; }
+        .pick input[type=file] { font-size: 12px; color: var(--text-muted); max-width: 200px; }
+        .pick-label { font-size: 12px; color: var(--text-muted); white-space: nowrap; }
+        .pick-label em { font-style: normal; color: #f87171; }
+        .pick-name { font-size: 11px; color: var(--primary-light); max-width: 140px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+        .row-act { display: flex; gap: 8px; }
+        audio { width: 100%; height: 34px; }
+        .empty { color: var(--text-muted); padding: 40px; text-align: center; }
+        .modal-mask { position: fixed; inset: 0; background: rgba(0,0,0,.78); z-index: 100; display: flex; align-items: center; justify-content: center; }
+        /* 弹层用不透明实色，避免透过弹窗看到后面的卡片 */
+        .modal-box { background: #191926; border: 1px solid var(--border); border-radius: 12px; padding: 20px; width: 380px; max-width: 92%; box-shadow: 0 20px 50px rgba(0,0,0,.55); }
+        .modal-box label { display: block; font-size: 12px; color: var(--text-muted); margin: 10px 0 5px; }
+        .modal-box input, .modal-box select { width: 100%; box-sizing: border-box; background: #12121e; border: 1px solid var(--border); color: var(--text); border-radius: 8px; padding: 9px 12px; font-size: 13px; }
+        /* 封面图裁剪弹窗 */
+        .crop-view { width: 420px; height: 280px; position: relative; overflow: hidden; background: #0b0b12; border: 1px solid var(--border); border-radius: 8px; cursor: move; touch-action: none; }
+        .crop-view img { position: absolute; left: 0; top: 0; transform-origin: 0 0; user-select: none; -webkit-user-drag: none; }
+        .crop-tools { display: flex; align-items: center; gap: 14px; margin-top: 12px; flex-wrap: wrap; }
+        .crop-ratios { display: flex; gap: 6px; }
+        .crop-ratio.active { background: rgba(124,58,237,.35); border-color: var(--primary-light); color: #fff; }
+        .crop-zoom { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--text-muted); }
+        .crop-zoom input { width: 160px; }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                <a href="canvas.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</span>
+            <span style="font-size:12px;font-weight:400;color:var(--text-muted);">
+                这里的音色可跨项目复用：项目里「音色参考」→「从音色库选择」即可直接绑定给角色，不用重复上传
+            </span>
+        </div>
+
+        <div class="panel">
+            <div style="font-size:14px;font-weight:600;color:var(--text);margin-bottom:10px;">添加音色</div>
+            <div class="field">
+                <select id="vCategory" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
+                    <option value="">分类（通用）</option>
+                    <option value="动漫">动漫</option>
+                    <option value="游戏">游戏</option>
+                    <option value="写实">写实</option>
+                    <option value="仙侠">仙侠</option>
+                </select>
+                <input type="text" id="vName" placeholder="音色名，如：陈默-沉稳男声" style="flex:2;min-width:200px;">
+                <select id="vTag" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;flex:1;min-width:150px;"></select>
+                <input type="text" id="vTagCustom" placeholder="自定义标签" style="display:none;flex:1;min-width:150px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
+                <input type="text" id="vNote" placeholder="备注（适合什么角色/情绪，可留空）" style="flex:2;min-width:200px;">
+                <div class="pick"><span class="pick-label">音频 <em>*</em></span><input type="file" id="vFile" accept="audio/*,.wav,.mp3,.m4a,.flac,.ogg,.aac,.opus"><span class="pick-name" id="vFileName"></span></div>
+                <div class="pick"><span class="pick-label">封面图</span><input type="file" id="vImage" accept="image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp" title="封面图（可选）：显示在卡片背景上"><span class="pick-name" id="vImageName"></span></div>
+                <button class="btn btn-primary btn-small" id="btnUpload"><span class="material-icons" style="font-size:inherit;vertical-align:middle">upload</span> 上传</button>
+            </div>
+            <div id="upMsg" style="font-size:12px;margin-top:8px;color:var(--text-muted);">建议用单一说话人的干净人声、2~15 秒。</div>
+        </div>
+
+        <div class="panel" style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;">
+            <input type="text" id="q" placeholder="搜索音色名 / 标签 / 备注" style="flex:1;min-width:200px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
+            <select id="catFilter" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
+                <option value="">全部分类</option>
+                <option value="动漫">动漫</option>
+                <option value="游戏">游戏</option>
+                <option value="写实">写实</option>
+                <option value="仙侠">仙侠</option>
+            </select>
+            <select id="tagFilter" style="background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
+                <option value="">全部标签</option>
+            </select>
+            <button class="btn btn-outline btn-small" id="btnReload"><span class="material-icons" style="font-size:inherit;vertical-align:middle">refresh</span> 刷新</button>
+            <span id="countTip" style="font-size:12px;color:var(--text-muted);"></span>
+        </div>
+
+        <div id="grid" class="voice-grid"></div>
+        <div id="empty" class="empty" style="display:none;">还没有音色，先用上面的「添加音色」上传一段参考音频。</div>
+    </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script>
+        var items = [], tags = [];
+        var croppedImage = null, croppedName = "";   // 上传区裁剪后的封面图
+
+        // 常用音色标签：下拉选择，避免各人写法不一（男声 / 男 / 男性…）导致筛选失效。
+        // 分三组：年龄性别 → 角色/音色类型 → 情绪风格
+        var VOICE_TAGS = [
+            "男声", "女声", "少年男声", "少年女声", "小孩男", "小孩女",
+            "青年男", "青年女", "中年男", "中年女", "老年男", "老年女",
+            "旁白男", "旁白女", "机器声", "魔鬼声", "怪物声", "动物声", "机器人女声",
+            "温柔", "甜美", "低沉", "沙哑", "高亢", "冷酷", "搞怪", "温柔女声", "方言", "外语"
+        ];
+        var CUSTOM_TAG = "__custom__";
+
+        // 生成标签下拉：预设 + 已用过的旧标签（去重），末尾「自定义…」可手输
+        function tagOptions(selected) {
+            var all = VOICE_TAGS.slice();
+            (tags || []).forEach(function (t) { if (t && all.indexOf(t) < 0) all.push(t); });
+            if (selected && all.indexOf(selected) < 0) all.push(selected);
+            var h = '<option value="">标签（不选）</option>';
+            all.forEach(function (t) {
+                h += '<option value="' + esc(t) + '"' + (t === selected ? " selected" : "") + ">" + esc(t) + "</option>";
+            });
+            h += '<option value="' + CUSTOM_TAG + '">自定义…</option>';
+            return h;
+        }
+
+        // 下拉选「自定义…」时才显示手输框
+        function bindTagSelect($sel, $custom) {
+            $sel.on("change", function () { $custom.toggle($(this).val() === CUSTOM_TAG); });
+        }
+
+        // 取最终标签值：自定义时用手输框内容
+        function readTag($sel, $custom) {
+            var v = $sel.val() || "";
+            return v === CUSTOM_TAG ? ($custom.val() || "").trim() : v;
+        }
+
+        function esc(s) { if (!s) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+
+        // ============ 封面图裁剪：选完图弹窗裁剪，导出固定比例 JPEG 再上传 ============
+        var CROP_VIEW_W = 420;                                  // 裁剪框显示宽度
+        var CROP_OUT_W = 900;                                   // 导出宽度（保证卡片背景够清晰）
+        var CROP_RATIOS = { "3:2": 3 / 2, "1:1": 1, "16:9": 16 / 9 };
+
+        /// <summary>打开裁剪器：file 为原图，onDone(blob, fileName) 返回裁剪结果。</summary>
+        function openCropper(file, onDone) {
+            var reader = new FileReader();
+            reader.onload = function (ev) {
+                var img = new Image();
+                img.onload = function () { buildCropper(img, file.name || "cover.jpg", onDone); };
+                img.src = ev.target.result;
+            };
+            reader.readAsDataURL(file);
+        }
+
+        function buildCropper(img, fileName, onDone) {
+            var ratio = 3 / 2, zoom = 1, ox = 0, oy = 0;
+            var mask = $('<div class="modal-mask"></div>');
+            mask.append('<div class="modal-box" style="width:480px;">'
+                + '<div style="font-size:15px;font-weight:600;color:var(--text);margin-bottom:10px;">裁剪封面图</div>'
+                + '<div class="crop-view"><img id="cropImg" alt=""></div>'
+                + '<div class="crop-tools"><div class="crop-ratios">'
+                + Object.keys(CROP_RATIOS).map(function (r, i) {
+                    return '<button class="btn btn-outline btn-small crop-ratio' + (i === 0 ? " active" : "") + '" data-r="' + r + '">' + r + "</button>";
+                }).join("")
+                + '</div><div class="crop-zoom"><span>缩放</span>'
+                + '<input type="range" id="cropZoom" min="1" max="4" step="0.01" value="1"></div></div>'
+                + '<div style="font-size:11px;color:var(--text-muted);margin-top:10px;">拖动画面调整位置，滚轮或滑动条缩放；卡片背景按所选比例裁切</div>'
+                + '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:14px;">'
+                + '<button class="btn btn-outline btn-small" id="cropCancel">取消</button>'
+                + '<button class="btn btn-primary btn-small" id="cropOk">确定</button></div></div>');
+            $("body").append(mask);
+
+            var $view = mask.find(".crop-view"), $im = mask.find("#cropImg");
+            $im.attr("src", img.src);
+
+            function viewH() { return Math.round(CROP_VIEW_W / ratio); }
+            function baseScale() { return Math.max(CROP_VIEW_W / img.width, viewH() / img.height); }
+
+            function apply() {
+                var vs = { w: CROP_VIEW_W, h: viewH() };
+                $view.css({ width: vs.w + "px", height: vs.h + "px" });
+                var dw = img.width * baseScale() * zoom, dh = img.height * baseScale() * zoom;
+                // 限制拖动范围：图片必须始终盖满裁剪框
+                ox = Math.min(0, Math.max(vs.w - dw, ox));
+                oy = Math.min(0, Math.max(vs.h - dh, oy));
+                $im.css({ width: dw + "px", height: dh + "px", transform: "translate(" + ox + "px," + oy + "px)" });
+            }
+
+            function exportBlob(cb) {
+                var vh = viewH(), k = CROP_OUT_W / CROP_VIEW_W;
+                var outH = Math.round(vh * k);
+                var cv = document.createElement("canvas");
+                cv.width = CROP_OUT_W; cv.height = outH;
+                var ctx = cv.getContext("2d");
+                ctx.fillStyle = "#fff";                       // png 透明区转 jpeg 时补白底
+                ctx.fillRect(0, 0, CROP_OUT_W, outH);
+                ctx.drawImage(img, ox * k, oy * k, img.width * baseScale() * zoom * k, img.height * baseScale() * zoom * k);
+                cv.toBlob(function (b) { cb(b); }, "image/jpeg", 0.92);
+            }
+
+            var dragging = false, sx = 0, sy = 0, bx = 0, by = 0;
+            $view.on("pointerdown", function (e) {
+                dragging = true; sx = e.clientX; sy = e.clientY; bx = ox; by = oy;
+            });
+            $view.on("pointermove", function (e) {
+                if (!dragging) return;
+                ox = bx + (e.clientX - sx); oy = by + (e.clientY - sy); apply();
+            });
+            $view.on("pointerup pointercancel pointerleave", function () { dragging = false; });
+            $view.on("wheel", function (e) {
+                e.preventDefault();
+                zoom = Math.min(4, Math.max(1, zoom * (e.originalEvent.deltaY > 0 ? 0.94 : 1.06)));
+                mask.find("#cropZoom").val(zoom); apply();
+            });
+            mask.find("#cropZoom").on("input", function () { zoom = parseFloat($(this).val()) || 1; apply(); });
+            mask.find(".crop-ratio").on("click", function () {
+                mask.find(".crop-ratio").removeClass("active");
+                $(this).addClass("active");
+                ratio = CROP_RATIOS[$(this).attr("data-r")];
+                zoom = 1; mask.find("#cropZoom").val(1); apply();
+            });
+            mask.find("#cropCancel").on("click", function () { mask.remove(); });
+            mask.on("click", function (e) { if (e.target === this) mask.remove(); });
+            mask.find("#cropOk").on("click", function () {
+                exportBlob(function (b) {
+                    if (b) onDone(b, fileName.replace(/\.[^.]+$/, "") + ".jpg");
+                    mask.remove();
+                });
+            });
+            apply();
+        }
+
+        function load() {
+            $.get("/api/voice-library", {
+                search: $("#q").val() || "",
+                tag: $("#tagFilter").val() || "",
+                category: $("#catFilter").val() || ""
+            }, function (d) {
+                items = (d && d.items) || [];
+                tags = (d && d.tags) || [];
+                var $tf = $("#tagFilter"), cur = $tf.val();
+                $tf.html('<option value="">全部标签</option>');
+                tags.forEach(function (t) { $tf.append('<option value="' + esc(t) + '">' + esc(t) + "</option>"); });
+                $tf.val(cur);
+                // 上传区的标签下拉跟着已有标签一起刷新（保留当前选择）
+                var $vt = $("#vTag"), vtCur = $vt.val();
+                $vt.html(tagOptions(vtCur));
+                if (vtCur) $vt.val(vtCur);
+                render();
+            }).fail(function () { $("#grid").html(""); $("#empty").show().text("加载失败，请刷新重试"); });
+        }
+
+        function render() {
+            var $g = $("#grid").empty();
+            $("#countTip").text("共 " + items.length + " 个音色");
+            if (!items.length) { $("#empty").show().text("没有符合条件的音色"); return; }
+            $("#empty").hide();
+            items.forEach(function (v) {
+                var $c = $('<div class="voice-card"></div>');
+                if (v.imageUrl) {
+                    $c.addClass("has-cover").css("background-image", "url('" + esc(v.imageUrl) + "')");
+                    $c.append('<span class="cover-tip" title="封面图"><span class="material-icons" style="font-size:12px;vertical-align:middle">image</span></span>');
+                }
+                $c.append('<div class="name" title="' + esc(v.name) + '">' + esc(v.name) + "</div>");
+                // 卡片信息分三行：分类/标签 → 文件名 → 更新日期
+                var chips = (v.category ? '<span class="catchip">' + esc(v.category) + "</span> " : "")
+                    + (v.tag ? '<span class="tagchip">' + esc(v.tag) + "</span>" : "");
+                if (chips) $c.append('<div class="meta">' + chips + "</div>");
+                $c.append('<div class="meta file" title="' + esc(v.originalFileName || "") + '">'
+                    + esc(v.originalFileName || "（无文件名）") + "</div>");
+                $c.append('<div class="meta">更新于 ' + esc(v.updatedAt) + "</div>");
+                if (v.note) $c.append('<div class="note">' + esc(v.note) + "</div>");
+                $c.append('<audio controls preload="none" src="' + esc(v.audioUrl) + '"></audio>');
+                var act = $('<div class="row-act"></div>');
+                act.append('<button class="btn btn-outline btn-small btn-edit" data-id="' + v.id + '">编辑</button>');
+                act.append('<button class="btn btn-small btn-danger btn-del" data-id="' + v.id + '" data-name="' + esc(v.name) + '">删除</button>');
+                $c.append(act);
+                $g.append($c);
+            });
+        }
+
+        function upload() {
+            var name = ($("#vName").val() || "").trim();
+            var input = $("#vFile")[0];
+            if (!name) { $("#upMsg").html('<span style="color:#f59e0b;">请填写音色名</span>'); return; }
+            if (!input || !input.files || !input.files.length) { $("#upMsg").html('<span style="color:#f59e0b;">请选择音频文件</span>'); return; }
+            var fd = new FormData();
+            fd.append("name", name);
+            fd.append("category", $("#vCategory").val() || "");
+            fd.append("tag", readTag($("#vTag"), $("#vTagCustom")));
+            fd.append("note", ($("#vNote").val() || "").trim());
+            fd.append("file", input.files[0]);
+            // 有裁剪结果就用裁剪后的图，否则用原图
+            if (croppedImage) fd.append("image", croppedImage, croppedName || "cover.jpg");
+            else {
+                var img = $("#vImage")[0];
+                if (img && img.files && img.files.length) fd.append("image", img.files[0]);
+            }
+            $("#upMsg").html('<span style="color:#94a3b8;">正在上传…</span>');
+            $.ajax({
+                url: "/api/voice-library", method: "POST", data: fd, processData: false, contentType: false,
+                success: function () {
+                    $("#upMsg").html('<span style="color:#34d399;">已添加音色「' + esc(name) + '」</span>');
+                    $("#vName").val(""); $("#vNote").val(""); $("#vFile").val(""); $("#vImage").val("");
+                    $("#vFileName,#vImageName").text("");
+                    croppedImage = null; croppedName = "";
+                    load();
+                },
+                error: function (x) {
+                    $("#upMsg").html('<span style="color:#f87171;">' + esc((x.responseJSON && x.responseJSON.message) || "上传失败") + "</span>");
+                }
+            });
+        }
+
+        function openEdit(id) {
+            var v = items.filter(function (x) { return x.id === id; })[0];
+            if (!v) return;
+            var mask = $('<div class="modal-mask"></div>');
+            mask.append('<div class="modal-box">' +
+                '<div style="font-size:15px;font-weight:600;color:var(--text);">编辑音色</div>' +
+                "<label>分类</label><select id='edCategory'>" +
+                    ["", "动漫", "游戏", "写实", "仙侠"].map(function (c) {
+                        return "<option value='" + c + "'" + ((v.category || "") === c ? " selected" : "") + ">" + (c || "通用（不分类）") + "</option>";
+                    }).join("") + "</select>" +
+                "<label>音色名</label><input id='edName' value='" + esc(v.name) + "'>" +
+                "<label>标签</label><select id='edTag'>" + tagOptions(v.tag || "") + "</select>" +
+                "<input id='edTagCustom' placeholder='自定义标签' style='display:none;'>" +
+                "<label>备注</label><input id='edNote' value='" + esc(v.note || "") + "'>" +
+                "<label>封面图（可选，显示在卡片背景上）</label>" +
+                "<input type='file' id='edImage' accept='image/*,.jpg,.jpeg,.png,.webp,.gif,.bmp'>" +
+                (v.imageUrl ? "<div style='margin-top:6px;font-size:11px;color:var(--text-muted);'>当前封面：<a href='" + esc(v.imageUrl) + "' target='_blank' style='color:var(--primary-light);'>查看</a>（不选新图则保持原样）</div>" : "") +
+                '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:16px;">' +
+                '<button class="btn btn-outline btn-small" id="edCancel">取消</button>' +
+                '<button class="btn btn-primary btn-small" id="edSave">保存</button></div></div>');
+            $("body").append(mask);
+            bindTagSelect(mask.find("#edTag"), mask.find("#edTagCustom"));
+            // 选新封面图时同样先裁剪
+            var edCropped = null;
+            mask.find("#edImage").on("change", function () {
+                var f = this.files && this.files[0];
+                if (!f) { edCropped = null; return; }
+                openCropper(f, function (blob) { edCropped = blob; });
+            });
+            mask.on("click", function (e) { if (e.target === this) mask.remove(); });
+            mask.find("#edCancel").on("click", function () { mask.remove(); });
+            mask.find("#edSave").on("click", function () {
+                var saveFields = function () {
+                    $.ajax({
+                        url: "/api/voice-library/" + id, method: "PUT", contentType: "application/json",
+                        data: JSON.stringify({
+                            name: (mask.find("#edName").val() || "").trim(),
+                            category: mask.find("#edCategory").val() || "",
+                            tag: readTag(mask.find("#edTag"), mask.find("#edTagCustom")),
+                            note: (mask.find("#edNote").val() || "").trim()
+                        }),
+                        success: function () { mask.remove(); load(); },
+                        error: function (x) { alert((x.responseJSON && x.responseJSON.message) || "保存失败"); }
+                    });
+                };
+                // 选了新封面图：先传图（裁剪过的用裁剪结果），成功后再保存其它字段
+                var img = mask.find("#edImage")[0];
+                var newImg = edCropped || (img && img.files && img.files.length ? img.files[0] : null);
+                if (newImg) {
+                    var cfd = new FormData();
+                    cfd.append("image", newImg, edCropped ? "cover.jpg" : img.files[0].name);
+                    $.ajax({
+                        url: "/api/voice-library/" + id + "/cover", method: "POST",
+                        data: cfd, processData: false, contentType: false,
+                        success: saveFields,
+                        error: function (x) { alert((x.responseJSON && x.responseJSON.message) || "封面图上传失败"); }
+                    });
+                } else saveFields();
+            });
+        }
+
+        $(function () {
+            $.get("/api/auth/me", function (u) {
+                if (!u || !u.userId) { window.location.href = "login.html"; return; }
+                load();
+            }).fail(function () { window.location.href = "login.html"; });
+
+            bindTagSelect($("#vTag"), $("#vTagCustom"));
+            // 音频：显示文件名
+            $("#vFile").on("change", function () {
+                var f = this.files && this.files[0];
+                $("#vFileName").text(f ? f.name : "").attr("title", f ? f.name : "");
+            });
+            // 封面图：选完先弹裁剪器，确定后才记为待上传
+            $("#vImage").on("change", function () {
+                var f = this.files && this.files[0];
+                if (!f) { croppedImage = null; $("#vImageName").text(""); return; }
+                $("#vImageName").text(f.name + "（待裁剪）");
+                openCropper(f, function (blob, name) {
+                    croppedImage = blob; croppedName = name;
+                    $("#vImageName").text(name + "（已裁剪）").attr("title", name);
+                });
+            });
+            $("#btnUpload").on("click", upload);
+            $("#btnReload").on("click", load);
+            $("#q").on("keydown", function (e) { if (e.key === "Enter") load(); });
+            $("#tagFilter").on("change", load);
+            $("#catFilter").on("change", load);
+            $(document).on("click", ".btn-edit", function () { openEdit(parseInt($(this).attr("data-id"), 10)); });
+            $(document).on("click", ".btn-del", function () {
+                var id = parseInt($(this).attr("data-id"), 10), name = $(this).attr("data-name") || "";
+                if (!confirm("确定删除音色「" + name + "」？\n（已绑定到项目里的那份是复制件，不受影响）")) return;
+                $.ajax({
+                    url: "/api/voice-library/" + id, method: "DELETE",
+                    success: function () { load(); },
+                    error: function (x) { alert((x.responseJSON && x.responseJSON.message) || "删除失败"); }
+                });
+            });
+        });
+    </script>
+</body>
+</html>

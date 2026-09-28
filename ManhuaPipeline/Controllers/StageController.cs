@@ -225,7 +225,7 @@ public class StageController : ControllerBase
     }
 
     [HttpPost("{stageNumber}/process")]
-    public async Task<IActionResult> ProcessStage(int projectId, int stageNumber)
+    public async Task<IActionResult> ProcessStage(int projectId, int stageNumber, [FromQuery] bool force = false)
     {
         var uid = GetUserId();
         if (uid == 0) return Unauthorized();
@@ -318,7 +318,7 @@ public class StageController : ControllerBase
                     break;
                 case 2:
                     // L1：阶段 1 已产出结构化故事基线时直接复用渲染，不再单独调用大模型。
-                    if (proj.CurrentBatch <= 1)
+                    if (proj.CurrentBatch <= 1 && !force)
                     {
                         var reusedFoundation = StoryFoundationRenderer.TryLoad(_db.GetStageData(projectId, 1)?.StructuredJson);
                         if (reusedFoundation != null)
@@ -358,7 +358,7 @@ public class StageController : ControllerBase
                     break;
                 case 3:
                     // L1：同上——视觉锚点 + 分集大纲直接复用阶段 1 的结构化故事基线。
-                    if (proj.CurrentBatch <= 1)
+                    if (proj.CurrentBatch <= 1 && !force)
                     {
                         var reusedBlueprint = StoryFoundationRenderer.TryLoad(_db.GetStageData(projectId, 1)?.StructuredJson);
                         if (reusedBlueprint != null)
@@ -388,7 +388,7 @@ public class StageController : ControllerBase
                     AppendProgressLog(progress, "连续性表", null, "已停用，按原逻辑拆分");
                     // 全片目标时长区间：显式设置优先（Stage4 界面的"目标总时长"），其次剧本头部"建议时长"自动识别
                     var durationBudget = DurationBudgetParser.TryParse(proj.TargetDurationText) ?? DurationBudgetParser.TryParse(proj.ScriptContent);
-                    result = await _llm.SplitIntoUnits(proj.ScriptContent, proj.EpisodeCount, apiUrl, apiKey, model, skillList: splitSkillNames, thinkingMode: thinkingMode, assetCatalog: stage4AssetCatalog, totalDurationMinSeconds: durationBudget?.MinSeconds, totalDurationMaxSeconds: durationBudget?.MaxSeconds, totalDurationDisplay: durationBudget?.Display, continuityText: stage4Continuity);
+                    result = await _llm.SplitIntoUnits(proj.ScriptContent, proj.EpisodeCount, apiUrl, apiKey, model, skillList: splitSkillNames, thinkingMode: thinkingMode, assetCatalog: stage4AssetCatalog, totalDurationMinSeconds: durationBudget?.MinSeconds, totalDurationMaxSeconds: durationBudget?.MaxSeconds, totalDurationDisplay: durationBudget?.Display, continuityText: stage4Continuity, projectType: proj.ProjectType, lyricTrackText: _db.GetLyricTrackText(projectId));
                     result = SeedancePromptParser.NormalizeEpisodeMarkers(result);
                     string? repairedSplit = null;
                     try
@@ -403,8 +403,9 @@ public class StageController : ControllerBase
                     if (durationBudget.HasValue)
                     {
                         var budget = durationBudget.Value;
-                        // 单点目标（如"200秒"）只约束上限，避免要求总时长"恰好等于"某值而无解
-                        var enforceFloor = budget.MinSeconds < budget.MaxSeconds;
+                        // 单点目标（如"3分钟"/"200秒"，Min==Max）同样强制补足下限：
+                        // RepairSplitFloor 只升档/放细、不编造内容，达不到时尽量贴近并保留原结果，不存在"恰好等于某值而无解"的风险。
+                        var enforceFloor = true;
                         int Distance(int total) => total > budget.MaxSeconds ? total - budget.MaxSeconds
                             : enforceFloor && total < budget.MinSeconds ? budget.MinSeconds - total : 0;
                         for (var attempt = 1; attempt <= 3; attempt++)

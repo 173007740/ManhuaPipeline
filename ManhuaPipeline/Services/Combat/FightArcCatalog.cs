@@ -155,7 +155,7 @@ public static class FightArcCatalog
     public static FightSequencePlan? FitToDuration(FightSequencePlan? sequence, int duration)
     {
         if (sequence == null || sequence.Phases.Count == 0) return sequence;
-        var total = duration is 5 or 11 or 15 ? duration : 11;
+        var total = duration > 0 ? duration : 11;
         sequence.TotalDurationSeconds = total;
         var sum = sequence.Phases.Sum(p => p.DurationPercent);
         if (sum <= 0) return sequence;
@@ -179,7 +179,7 @@ public static class FightArcCatalog
         var template = (templates ?? Enumerable.Empty<FightArcTemplate>())
             .FirstOrDefault(t => string.Equals(t.ArcTypeId, normalized, StringComparison.OrdinalIgnoreCase));
 
-        var duration = unit.Duration is 5 or 11 or 15 ? unit.Duration : 11;
+        var duration = unit.Duration > 0 ? unit.Duration : 11;
         if (template != null && template.Phases.Count > 0)
         {
             return new FightSequencePlan
@@ -202,10 +202,10 @@ public static class FightArcCatalog
             [
                 new FightArcPhase
                 {
-                    PhaseNo = 1, Name = "对峙进场", Purpose = "建立双方身份与距离",
-                    DurationPercent = 15, MinSeconds = 1, MaxSeconds = 2, ShotCount = 1,
-                    ShotStyle = "特写/双人同框", Camera = "缓推", VfxLevel = 10,
-                    EndState = "双方进入战斗距离", NextCondition = "对话或直接开打"
+                    PhaseNo = 1, Name = "开局硬撞", Purpose = "首帧即接触，双方招式正面硬撞",
+                    DurationPercent = 10, MinSeconds = 0, MaxSeconds = 1, ShotCount = 1,
+                    ShotStyle = "中近景/双人同框", Camera = "急速推镜", VfxLevel = 20,
+                    EndState = "第一击命中，命中瞬间微停顿", NextCondition = "进入连续攻防"
                 },
                 new FightArcPhase
                 {
@@ -223,9 +223,9 @@ public static class FightArcCatalog
                 },
                 new FightArcPhase
                 {
-                    PhaseNo = 4, Name = "胜负收束", Purpose = "命中定格并留情绪余韵",
-                    DurationPercent = 20, MinSeconds = 1, MaxSeconds = 3, ShotCount = 1,
-                    ShotStyle = "特写/远景", Camera = "定格/缓拉", VfxLevel = 50,
+                    PhaseNo = 4, Name = "胜负定格", Purpose = "终结技命中，停在高潮瞬间",
+                    DurationPercent = 25, MinSeconds = 1, MaxSeconds = 3, ShotCount = 1,
+                    ShotStyle = "中景/全景", Camera = "定格/径向拉远", VfxLevel = 70,
                     EndState = unit.EndState, NextCondition = "切到下一单元"
                 }
             ]

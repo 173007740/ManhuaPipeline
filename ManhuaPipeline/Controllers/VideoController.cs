@@ -99,7 +99,7 @@ public class VideoController : ControllerBase
     private static ComfyService.ComfyGenSettings? ToComfySettings(VideoService.VideoGenSettings? vs)
     {
         if (vs == null) return null;
-        return new ComfyService.ComfyGenSettings { Duration = vs.Duration, Ratio = vs.Ratio };
+        return new ComfyService.ComfyGenSettings { Duration = vs.Duration, Ratio = vs.Ratio, Megapixels = vs.Megapixels };
     }
 
     /// <summary>
@@ -258,6 +258,69 @@ public class VideoController : ControllerBase
         }
     }
 
+    /// <summary>从音色库里选一个音色绑定给角色（不上传文件）。
+    /// 会把音色库里的音频<b>复制一份</b>到项目音色目录再绑定，这样以后删掉库里的音色，已绑定项目不受影响。</summary>
+    [HttpPost("voices/from-library")]
+    public IActionResult BindVoiceFromLibrary(int projectId, [FromBody] BindVoiceFromLibraryRequest req)
+    {
+        var access = CheckProjectAccess(projectId, out _);
+        if (access != null) return access;
+        try
+        {
+            var name = (req.CharacterName ?? "").Trim();
+            if (name.Length == 0) return BadRequest(new { message = "请先选择或填写角色名" });
+            if (name.Length > 100) return BadRequest(new { message = "角色名过长（最多 100 字）" });
+
+            var uid = HttpContext.Session.GetInt32("UserId") ?? 0;
+            var item = _db.GetVoiceLibraryItemById(req.LibraryId);
+            if (item == null || item.UserId != uid) return NotFound(new { message = "音色不存在或不属于当前账号" });
+
+            var wwwroot = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+            var src = Path.Combine(wwwroot, item.AudioUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+            if (!System.IO.File.Exists(src))
+                return BadRequest(new { message = "这个音色的音频文件已丢失，请到音色库重新上传" });
+
+            var dir = Path.Combine(wwwroot, "uploads", "voices");
+            Directory.CreateDirectory(dir);
+            var ext = Path.GetExtension(src);
+            if (string.IsNullOrEmpty(ext)) ext = ".mp3";
+            var fileName = "voice_" + Guid.NewGuid().ToString("N").Substring(0, 12) + ext;
+            System.IO.File.Copy(src, Path.Combine(dir, fileName), true);
+            var url = "/uploads/voices/" + fileName;
+
+            var old = _db.GetVoiceReferences(projectId)
+                .FirstOrDefault(v => string.Equals(v.CharacterName, name, StringComparison.Ordinal));
+            var voiceId = _db.UpsertVoiceReference(projectId, name, url, item.OriginalFileName);
+            if (old != null && !string.IsNullOrWhiteSpace(old.AudioUrl) && old.AudioUrl != url)
+            {
+                try
+                {
+                    var oldPath = Path.Combine(wwwroot, old.AudioUrl.TrimStart('/').Replace('/', Path.DirectorySeparatorChar));
+                    if (System.IO.File.Exists(oldPath)) System.IO.File.Delete(oldPath);
+                }
+                catch { /* 旧文件删除失败不影响新音频生效 */ }
+            }
+
+            _logger.LogInformation("[Video] 从音色库绑定音色 ProjectId={ProjectId} 角色={Character} 音色={Voice}",
+                projectId, name, item.Name);
+            return Ok(new { voiceId, characterName = name, audioUrl = url, voiceName = item.Name });
+        }
+        catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 208)
+        {
+            return BadRequest(new { message = "音色表不存在：请先在数据库执行 ManhuaPipeline/Database/Upgrade_VoiceReferences.sql 与 Upgrade_音色库表.sql" });
+        }
+        catch (Exception ex)
+        {
+            return ServerError(ex, "BindVoiceFromLibrary", "从音色库绑定失败，请稍后重试", projectId);
+        }
+    }
+
+    public sealed class BindVoiceFromLibraryRequest
+    {
+        public string? CharacterName { get; set; }
+        public int LibraryId { get; set; }
+    }
+
     /// <summary>删除某个角色的音色参考音频（连同本地文件）</summary>
     [HttpDelete("voices/{voiceId:int}")]
     public IActionResult DeleteVoice(int projectId, int voiceId)
@@ -327,7 +390,7 @@ public class VideoController : ControllerBase
                 if (bindCount != null && bindCount.Value > 0 && bindCount.Value != activeRefImgs)
                     return BadRequest(new { message = "该提示词写明 " + bindCount.Value + " 张参考图（@图片1~@图片" + bindCount.Value + "），但当前仅上传 " + activeRefImgs + " 张。请补足参考图或重新生成提示词后再提交，避免参考图与画面主体错位。" });
                 result = await _comfy.SubmitTask(projectId, promptId, uid, engineText, GetComfyBaseUrl(), refImgs, ToComfySettings(vs),
-                    ResolveVoiceAudios(projectId, prompt, engineText, refAud));
+                    ResolveVoiceAudios(projectId, prompt, engineText, refAud), refVids);
             }
             else
             {
@@ -426,7 +489,7 @@ public class VideoController : ControllerBase
                     {
                         var pEngineText = ResolveEnginePrompt(p, engine);
                         result = await _comfy.SubmitTask(projectId, p.PromptId, uid, pEngineText, GetComfyBaseUrl(), refImgs, ToComfySettings(vs),
-                            ResolveVoiceAudios(projectId, p, pEngineText, refAud));
+                            ResolveVoiceAudios(projectId, p, pEngineText, refAud), refVids);
                     }
                     else
                     {
@@ -503,7 +566,7 @@ public class VideoController : ControllerBase
             {
                 var fullEngineText = ResolveEnginePrompt(prompt, engine);
                 result = await _comfy.SubmitTask(projectId, promptId, uid, fullEngineText, GetComfyBaseUrl(), req.ReferenceImages, null,
-                    ResolveVoiceAudios(projectId, prompt, fullEngineText, req.ReferenceAudio));
+                    ResolveVoiceAudios(projectId, prompt, fullEngineText, req.ReferenceAudio), req.ReferenceVideos);
             }
             else
             {
@@ -964,9 +1027,11 @@ public class VideoSettingsRequest
     public bool Watermark { get; set; } = false;
     public bool GenerateAudio { get; set; } = true;
     public string? Resolution { get; set; }
+    /// <summary>出图像素档（百万像素），只影响 ComfyUI 引擎的画幅；火山方舟仍走 Resolution。</summary>
+    public double Megapixels { get; set; } = 1;
 
     public VideoService.VideoGenSettings ToVideoGenSettings()
-        => new() { Duration = Duration, Ratio = Ratio, Watermark = Watermark, GenerateAudio = GenerateAudio, Resolution = Resolution };
+        => new() { Duration = Duration, Ratio = Ratio, Watermark = Watermark, GenerateAudio = GenerateAudio, Resolution = Resolution, Megapixels = Megapixels };
 }
 
 public class GenerateFullRequest

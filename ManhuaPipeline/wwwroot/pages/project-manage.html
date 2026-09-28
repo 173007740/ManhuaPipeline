@@ -58,8 +58,7 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-heig
       <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
       <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
       <span id="navUser" style="display:none;">
-        <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
-        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;;font-size:14px"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+        <a href="system-config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
         <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
         <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
       </span>
@@ -96,6 +95,12 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-heig
     <input type="text" id="createProjectTitle" placeholder="输入项目名称">
     <label>描述（选填）</label>
     <textarea id="createProjectDesc" rows="3" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;font-family:inherit;"></textarea>
+    <label>项目类型</label>
+    <select id="createProjectType" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;">
+      <option value="drama">短剧（默认）</option>
+      <option value="ad">广告</option>
+      <option value="mv">MV（歌曲）</option>
+    </select>
     <label style="display:block;font-size:13px;color:var(--text-muted);margin-bottom:4px;">封面（选填）</label>
     <div class="cover-upload-area" style="position:relative;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px;">
       <span class="material-icons" style="font-size:24px;color:var(--text-muted);display:block;margin-bottom:8px;">cloud_upload</span>
@@ -134,6 +139,21 @@ body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;min-heig
       <option value="游戏">游戏</option>
       <option value="仙侠">仙侠</option>
     </select>
+    <label>项目类型（只决定结构规则：时间轴来源、是否线性叙事、产品如何出现、镜头时长取档；画风与去水等质量规则三种类型通用）</label>
+    <select id="editProjectType" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
+      <option value="drama">短剧（默认）</option>
+      <option value="ad">广告</option>
+      <option value="mv">MV（歌曲）</option>
+    </select>
+    <div id="editLyricsWrap" style="display:none;">
+      <label>歌词轨（LRC，带时间戳）</label>
+      <textarea id="editProjectLyrics" rows="7" placeholder="[00:00.00]第一句歌词&#10;[00:05.20]第二句歌词&#10;[00:09.80]第三句歌词" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:6px;font-family:Consolas,Monaco,monospace;line-height:1.6;box-sizing:border-box;"></textarea>
+      <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.7;">
+        镜头时长与切点会按这里的实际秒数取档，生成结果基本对齐真歌、后期只微调。<br>
+        不填也可以：模型按乐句自然长度估算，但总时长大概率和真歌对不齐，后期需手动对轨。<br>
+        每行必须带 <code style="color:#a78bfa;">[mm:ss.xx]</code> 时间戳，否则该行会被丢弃。
+      </div>
+    </div>
     <label>项目封面</label>
     <img id="editCoverPreview" style="display:none;">
     <div class="cover-upload-area">
@@ -235,6 +255,7 @@ function showCreateProject(){
   var dramaId=params.get("dramaId");
   $("#createProjectTitle").val("");
   $("#createProjectDesc").val("");
+  $("#createProjectType").val("drama");
   if(dramaId){
     $("#createProjectDramaId").val(dramaId);
     $("#dramaSelectorWrap").hide();
@@ -265,7 +286,7 @@ function doCreateProject(){
   if(!dramaId){alert("请选择所属漫剧");return}
   var desc=$("#createProjectDesc").val().trim();
   var done=function(){$("#createProjectModal").hide();loadAllProjects(new URLSearchParams(window.location.search).get("dramaId"))};
-  $.ajax({url:"/api/project",method:"POST",contentType:"application/json",data:JSON.stringify({dramaId:parseInt(dramaId),title:title,description:desc,scriptContent:""}),success:function(r){
+  $.ajax({url:"/api/project",method:"POST",contentType:"application/json",data:JSON.stringify({dramaId:parseInt(dramaId),title:title,description:desc,scriptContent:"",projectType:$("#createProjectType").val()||"drama"}),success:function(r){
     var pid=r.projectId;
     if(createCoverFile){
       var fd=new FormData();

@@ -12,7 +12,7 @@ public static class CombatTimeBudgetBuilder
 {
     public static string Build(StageUnit unit, IReadOnlyList<PackedShot>? packedShots, int beatCount = 0)
     {
-        var duration = unit.Duration is 5 or 11 or 15 ? unit.Duration : 11;
+        var duration = unit.Duration > 0 ? unit.Duration : 11;
         var sb = new StringBuilder();
         sb.AppendLine("【时间预算】");
         sb.AppendLine($"- 本单元时长: {duration} 秒；节拍数: {Math.Max(1, beatCount)}");
@@ -37,7 +37,7 @@ public static class CombatTimeBudgetBuilder
         sb.AppendLine();
         sb.AppendLine("【时长铁律】");
         sb.AppendLine("- 每个镜头的「镜头时长」只能选 5/11/15 秒；「镜头时间轴」必须从 0 秒连续覆盖到该镜头时长结束，时间轴总和既不能小于镜头时长，也不能超出。");
-        sb.AppendLine("- 慢动作/顿帧/定格（如 0.2-0.4 秒命中瞬间）计入总时长，禁止在镜头时长之外另算时间。");
+        sb.AppendLine("- 命中瞬间的 1~2 帧微停顿（Hit-Stop）计入总时长，禁止在镜头时长之外另算时间；禁止写慢动作/升格/慢放，节奏靠动作密度与镜头切换提速，不靠放慢画面。");
         return sb.ToString();
     }
 }

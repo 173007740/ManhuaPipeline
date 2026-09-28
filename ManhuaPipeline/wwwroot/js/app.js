@@ -70,6 +70,32 @@ $(document).on("click", ".btn-del-project", function() {
 
 // ========== 编辑项目 ==========
 var editCoverFile = null;
+
+// 歌词轨只在 MV 类型下出现：MV 的镜头时长与切点服从真歌时间戳，短剧/广告没有这个输入。
+function syncLyricsVisibility(projectType) {
+  var $wrap = $("#editLyricsWrap");
+  if (!$wrap.length) return;
+  if (projectType === "mv") $wrap.show(); else $wrap.hide();
+}
+$(document).on("change", "#editProjectType", function() { syncLyricsVisibility($(this).val()); });
+
+function fmtLrcTime(sec) {
+  var s = Number(sec) || 0;
+  var m = Math.floor(s / 60);
+  var r = s - m * 60;
+  return (m < 10 ? "0" : "") + m + ":" + (r < 10 ? "0" : "") + r.toFixed(2);
+}
+
+// 把已存歌词回填成 LRC 文本，方便在原基础上改；没有歌词就留空。
+function loadLyricsIntoBox(id) {
+  var $ta = $("#editProjectLyrics");
+  if (!$ta.length) return;
+  $ta.val("");
+  $.get("/api/project/" + id + "/lyrics", function(list) {
+    if (!list || !list.length) return;
+    $ta.val(list.map(function(l) { return "[" + fmtLrcTime(l.startSec) + "]" + (l.text || ""); }).join("\n"));
+  }).fail(function() {});
+}
 $(document).on("click", ".btn-edit-project", function() {
   var id = $(this).data("id");
   $("#editProjectId").val(id);
@@ -82,6 +108,10 @@ $(document).on("click", ".btn-edit-project", function() {
     $("#editProjectDesc").val(p.description || "");
     $("#editProjectTags").val(p.tags || "");
     $("#editProjectLibCategory").val(p.libraryCategory || "");
+    var pt = p.projectType || "drama";
+    $("#editProjectType").val(pt);
+    syncLyricsVisibility(pt);
+    loadLyricsIntoBox(id);
     if (p.coverImage) {
       $("#editCoverPreview").attr("src", p.coverImage).show();
     }
@@ -112,6 +142,33 @@ $("#btnRemoveCover").click(function() {
   $("#editCoverInput").val("");
 });
 
+// 项目类型（短剧 / 广告 / MV）：只有项目管理页的编辑弹窗带这个下拉，别的页面跳过。
+function saveProjectType(id, done) {
+  var $sel = $("#editProjectType");
+  if (!$sel.length) { done(); return; }
+  $.ajax({
+    url: "/api/project/" + id + "/project-type",
+    method: "PUT",
+    contentType: "application/json",
+    data: JSON.stringify({ projectType: $sel.val() || "drama" })
+  }).done(done).fail(function(xhr) {
+    alert("项目类型保存失败: " + (xhr.responseJSON?.message || xhr.statusText));
+  });
+}
+
+// 歌词轨只在 MV 类型下提交；非 MV 或页面无该输入框时跳过，绝不把已有歌词清掉。
+function saveProjectLyrics(id, done) {
+  var $ta = $("#editProjectLyrics");
+  if (!$ta.length || $("#editProjectType").val() !== "mv") { done(); return; }
+  $.ajax({
+    url: "/api/project/" + id + "/lyrics",
+    method: "PUT",
+    contentType: "application/json",
+    data: JSON.stringify({ lrc: $ta.val() || "" })
+  }).done(done).fail(function(xhr) {
+    alert("歌词轨保存失败: " + (xhr.responseJSON?.message || xhr.statusText));
+  });
+}
 // 资产库类型：随编辑弹窗一起保存。只有项目管理页的编辑弹窗带这个下拉，
 // 别的页面（也引 app.js）没有该元素，此时直接跳过，绝不能发请求把已有值清空。
 function saveProjectLibCategory(id, done) {
@@ -149,8 +206,12 @@ $("#btnSaveEditProject").click(function() {
         data: JSON.stringify({ tags: tags })
       }).done(function() {
         saveProjectLibCategory(id, function() {
-          $("#editProjectModal").hide();
-          window.location.reload();
+          saveProjectType(id, function() {
+            saveProjectLyrics(id, function() {
+              $("#editProjectModal").hide();
+              window.location.reload();
+            });
+          });
         });
       }).fail(function(xhr) {
         alert("标签保存失败: " + (xhr.responseJSON?.message || xhr.statusText));

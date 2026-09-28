@@ -8,11 +8,11 @@ public static class CombatIntentMapper
 {
     public static CombatRequest ToCombatRequest(CombatIntent intent, StageUnit? unit = null)
     {
-        var duration = intent.Duration is 5 or 11 or 15 ? intent.Duration : 11;
+        var duration = intent.Duration > 0 ? intent.Duration : 11;
         var beatCount = duration switch
         {
-            5 => 12,
-            15 => 40,
+            <= 5 => 12,
+            >= 15 => 40,
             _ => 24
         };
 

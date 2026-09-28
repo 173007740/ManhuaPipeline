@@ -79,6 +79,145 @@ public class ConfigController : ControllerBase
         return Ok(new { engine, volcano = ToSafeConfig(volcano), comfyui = ToSafeConfig(comfyui), workflow });
     }
 
+    // ==================== 出图渠道（可配多个并存、可指定默认） ====================
+    //
+    // 出图不再限死一个渠道：这里能增删任意多个（中转 / 方舟 / 302.ai …），
+    // 标了「默认」的那个是全局默认，画布节点没单独挑就用它，资产库出图也用它。
+
+    [HttpGet("image-models")]
+    public IActionResult GetImageModels()
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+
+        var list = _db.GetImageConfigs(uid);
+        var def = list.FirstOrDefault(c => c.IsActive) ?? list.FirstOrDefault();
+        return Ok(new
+        {
+            models = list.Select(c => new
+            {
+                configId = c.ConfigId,
+                // 没起名字就显示模型名，不至于在列表里一堆「未命名」分不清
+                name = string.IsNullOrWhiteSpace(c.DisplayName) ? (c.ModelName ?? "未命名渠道") : c.DisplayName,
+                displayName = c.DisplayName,
+                modelName = c.ModelName,
+                apiUrl = c.ApiUrl,
+                hasKey = !string.IsNullOrWhiteSpace(c.ApiKey),
+                isDefault = c.IsActive,
+                sortOrder = c.SortOrder,
+                resolutionHint = ImageGenOptions.ResolutionHintFor(c.ApiUrl, c.ModelName)
+            }),
+            defaultConfigId = def?.ConfigId ?? 0
+        });
+    }
+
+    public sealed record ImageModelRequest(
+        int ConfigId, string? DisplayName, string? ApiKey, string? ApiUrl, string? ModelName);
+
+    [HttpPost("image-models")]
+    public IActionResult SaveImageModel([FromBody] ImageModelRequest? req)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+
+        var url = (req?.ApiUrl ?? "").Trim();
+        var model = (req?.ModelName ?? "").Trim();
+        if (url.Length == 0) return BadRequest(new { message = "请填写 API 地址" });
+        if (model.Length == 0) return BadRequest(new { message = "请填写模型名称" });
+
+        var configId = req?.ConfigId ?? 0;
+        // 新增必须带 Key；改的时候留空 = 保留原来的 Key（不然每次改地址都要重新贴一遍）
+        if (configId <= 0 && string.IsNullOrWhiteSpace(req?.ApiKey))
+            return BadRequest(new { message = "新增渠道请填写 API Key" });
+
+        var existing = configId > 0 ? _db.GetImageConfig(uid, configId) : null;
+        var saved = _db.SaveImageModel(new LLMConfig
+        {
+            ConfigId = configId,
+            UserId = uid,
+            Provider = "image",
+            ApiKey = (req?.ApiKey ?? "").Trim(),
+            ApiUrl = url,
+            ModelName = model,
+            DisplayName = string.IsNullOrWhiteSpace(req?.DisplayName) ? null : req!.DisplayName!.Trim(),
+            SortOrder = existing?.SortOrder ?? 0
+        });
+
+        if (saved == 0) return NotFound(new { message = "这条渠道不存在或已被删除" });
+        return Ok(new { message = "出图渠道已保存", configId = saved });
+    }
+
+    [HttpDelete("image-models/{id:int}")]
+    public IActionResult DeleteImageModel(int id)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        if (!_db.DeleteImageModel(uid, id))
+            return NotFound(new { message = "这条渠道不存在或已被删除" });
+        return Ok(new { message = "已删除" });
+    }
+
+    [HttpPost("image-models/{id:int}/default")]
+    public IActionResult SetDefaultImageModel(int id)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        if (!_db.SetDefaultImageModel(uid, id))
+            return NotFound(new { message = "这条渠道不存在或已被删除" });
+        return Ok(new { message = "已设为默认出图渠道" });
+    }
+
+    // ==================== 出图参数（比例 / 质量 / 张数 / 背景 / 格式） ====================
+
+    /// <summary>
+    /// 取当前用户的出图参数，附带页面下拉要用的取值清单。
+    /// ratios 里带的是「中转实测会吐回来的分辨率」——中转把总像素锁在 ~1.573MP 后按
+    /// 比例分配宽高，请求值跟实际输出并不一致，所以给页面显示的是实际值。
+    /// </summary>
+    [HttpGet("image-options")]
+    public IActionResult GetImageGenOptions()
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        var o = _db.GetImageGenOptions(uid);
+        return Ok(new
+        {
+            aspectRatio = o.AspectRatio,
+            quality = o.Quality,
+            imageCount = o.ImageCount,
+            background = o.Background,
+            outputFormat = o.OutputFormat,
+            ratios = ImageGenOptions.Ratios.Select(r =>
+            {
+                var (w, h) = ImageGenOptions.ActualSizeForRatio(r);
+                return new { value = r, label = ImageGenOptions.RatioLabel(r), width = w, height = h };
+            }),
+            qualities = ImageGenOptions.Qualities,
+            backgrounds = ImageGenOptions.Backgrounds,
+            formats = ImageGenOptions.Formats,
+            maxCount = ImageGenOptions.MaxCount
+        });
+    }
+
+    [HttpPost("image-options")]
+    public IActionResult SaveImageGenOptions([FromBody] ImageGenOptions? req)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        var o = (req ?? new ImageGenOptions { UserId = uid }).Normalized();
+        o.UserId = uid;
+        _db.SaveImageGenOptions(o);
+        return Ok(new
+        {
+            message = "出图参数已保存",
+            aspectRatio = o.AspectRatio,
+            quality = o.Quality,
+            imageCount = o.ImageCount,
+            background = o.Background,
+            outputFormat = o.OutputFormat
+        });
+    }
+
     [HttpPost("video-engine")]
     public IActionResult SetVideoEngine([FromBody] VideoEngineRequest req)
     {

@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1.0">
+  <title>系统配置 - 漫创引擎</title>
+  <link rel="stylesheet" href="../css/style.css">
+  <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+  <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+  <style>
+    /* 全屏：整页撑满视口高度，滚动只发生在内嵌的那个配置页里 —— 不会出现双层滚动条 */
+    html,body{height:100%;}
+    body{overflow:hidden;}
+    .container{max-width:100%;margin:0;padding:14px 24px 18px;display:flex;flex-direction:column;flex:1;min-height:0;}
+    .page-title{font-size:20px;font-weight:700;margin-bottom:12px;color:var(--primary-light);flex:0 0 auto;}
+    /* 左侧分区 + 右侧内容：跟统计页同一套骨架，只是右边换成内嵌页 */
+    .syscfg-wrap{display:flex;gap:20px;align-items:stretch;flex:1;min-height:0;}
+    .syscfg-side{flex:0 0 210px;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px;overflow:auto;}
+    .syscfg-side .item{display:flex;align-items:center;gap:8px;width:100%;padding:11px 12px;border:none;background:none;border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;text-align:left;}
+    .syscfg-side .item:hover{background:rgba(255,255,255,.05);color:var(--text);}
+    .syscfg-side .item.active{background:rgba(124,58,237,.18);color:var(--primary-light);font-weight:600;}
+    .syscfg-side .sub{color:var(--text-muted);font-size:11px;padding:2px 12px 8px;line-height:1.5;}
+    .syscfg-main{flex:1;min-width:0;min-height:0;display:flex;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
+    #sysFrame{width:100%;height:100%;border:none;display:block;background:transparent;}
+  </style>
+</head>
+<body>
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
+  <div style="position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;">
+  <nav class="navbar">
+    <div class="nav-inner">
+      <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
+      </a>
+      <div class="nav-links" id="navLinks">
+        <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
+        <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+        <a href="system-config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
+        <span id="navUser" style="display:none;">
+          <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
+          <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:13px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
+        </span>
+        <span id="navGuest" style="display:none;">
+          <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
+          <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
+        </span>
+      </div>
+    </div>
+  </nav>
+
+  <div class="container">
+    <div class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置
+      <span id="curVersion" style="display:none;margin-left:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;color:#c4b5fd;background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.35);border-radius:6px;padding:3px 8px;vertical-align:middle;"></span>
+    </div>
+
+    <div class="syscfg-wrap">
+      <div class="syscfg-side">
+        <button class="item active" data-page="config.html"><span class="material-icons" style="font-size:18px;">tune</span> 接口配置</button>
+        <div class="sub">大模型 / 视频模型 / 图片模型 / 画质增强 / 启用配置</div>
+        <button class="item" data-page="asset-prompt-templates.html"><span class="material-icons" style="font-size:18px;">auto_awesome</span> 资产提示词模版</button>
+        <div class="sub">角色 / 道具 / 环境 / 特效的提取与出图提示词（账号默认，每部剧可覆盖）</div>
+        <button class="item" data-page="video-styles.html"><span class="material-icons" style="font-size:18px;">movie</span> 视频风格</button>
+        <div class="sub">生成视频提示词时注入的风格</div>
+        <button class="item" data-page="image-styles.html"><span class="material-icons" style="font-size:18px;">palette</span> 图片风格</button>
+        <div class="sub">无限画布「图片风格」下拉的数据源，与项目无关</div>
+        <button class="item" data-page="profile.html"><span class="material-icons" style="font-size:18px;">settings</span> 个人设置</button>
+        <div class="sub">昵称与头像</div>
+        <button class="item" data-page="version-log.html"><span class="material-icons" style="font-size:18px;">history_edu</span> 版本记录</button>
+        <div class="sub">每次改动钉一条，回查「哪个版本引入的」</div>
+      </div>
+
+      <div class="syscfg-main">
+        <iframe id="sysFrame" src="config.html"></iframe>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+<script src="../js/app.js?v=2"></script>
+<script>
+    // 内嵌页自带一份导航栏和粒子背景，嵌进来会重复一份 —— 同源可以直接藏掉
+    function tidyFrame() {
+        var f = document.getElementById('sysFrame');
+        try {
+            var d = f.contentDocument;
+            if (!d) return;
+            $(d).find('.navbar').hide();
+            $(d).find('#particleWrap').hide();
+            $(d).find('body').css('padding-top', '0');
+        } catch (e) { /* 跨域就不处理，照原样显示 */ }
+    }
+
+    $(function () {
+        $.get("/api/auth/me", function (user) {
+            if (!user || user.userId === 0) { window.location.href = "login.html"; return; }
+        }).fail(function () { window.location.href = "login.html"; });
+
+        // 标题旁显示当前版本号：数据来自版本记录表的最新一条，没记录就不显示
+        $.get("/api/version-log/latest", function (r) {
+            if (r && r.version) $("#curVersion").text(r.version).show();
+        });
+
+        // 高度由 CSS 撑满（全屏布局），这里只负责把内嵌页里重复的导航栏藏掉
+        $('#sysFrame').on('load', tidyFrame);
+
+        $('.syscfg-side .item').on('click', function () {
+            $('.syscfg-side .item').removeClass('active');
+            $(this).addClass('active');
+            $('#sysFrame').attr('src', $(this).attr('data-page'));
+        });
+    });
+</script>
+<script>
+(function() {
+    var c = document.getElementById("particleCanvas");
+    if (!c) return;
+    c.style.top = "0"; c.style.width = "100%"; c.style.pointerEvents = "none";
+    var ctx = c.getContext("2d");
+    var W, H;
+    function resize(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; }
+    resize(); window.addEventListener("resize", resize);
+    var p = [], COUNT = 70;
+    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    for (var i = 0; i < COUNT; i++) p.push({
+      x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+1.2,
+      dx:(Math.random()-0.5)*0.4, dy:(Math.random()-0.5)*0.4-0.15,
+      color:colors[Math.floor(Math.random()*3)], alpha:Math.random()*0.4+0.15
+    });
+    var DIST = 130;
+    !function anim(){
+      ctx.clearRect(0,0,W,H);
+      for (var i = 0; i < COUNT; i++) {
+        var q = p[i]; q.x += q.dx; q.y += q.dy;
+        if (q.x < 0 || q.x > W) q.dx *= -1;
+        if (q.y < 0 || q.y > H) q.dy *= -1;
+        ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI*2);
+        ctx.fillStyle = q.color + q.alpha + ")"; ctx.fill();
+        for (var j = i+1; j < COUNT; j++) {
+          var r = p[j], dx = q.x - r.x, dy = q.y - r.y, d = Math.sqrt(dx*dx+dy*dy);
+          if (d < DIST) {
+            var a = (1 - d/DIST) * 0.2;
+            ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
+            ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+          }
+        }
+      }
+      requestAnimationFrame(anim);
+    }();
+  })();
+
+</script>
+</body>
+</html>

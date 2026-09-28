@@ -32,13 +32,18 @@ public class ComfyService
         public int Duration { get; init; } = 11;
         public string Ratio { get; init; } = "16:9";
         public int Fps { get; init; } = 16;
+        /// <summary>
+        /// 出图像素档（百万像素）：H3 工作流的画幅按它算宽高。1MP 档算出来就是模板原生的 1376×768，
+        /// 与加这个开关之前完全一致。可选 0.5 / 1 / 1.5 / 2，超出范围会退回 1MP。
+        /// </summary>
+        public double Megapixels { get; init; } = 1.0;
     }
 
     public static string WorkflowPath(int userId)
         => Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", "uploads", "comfyui", userId + ".workflow.json");
 
     /// <summary>提交任务到 ComfyUI</summary>
-    public async Task<VideoService.VideoTaskInfo> SubmitTask(int projectId, int promptId, int userId, string promptText, string baseUrl, List<string>? refImages, ComfyGenSettings? settings = null, List<string>? refAudios = null)
+    public async Task<VideoService.VideoTaskInfo> SubmitTask(int projectId, int promptId, int userId, string promptText, string baseUrl, List<string>? refImages, ComfyGenSettings? settings = null, List<string>? refAudios = null, List<string>? refVideos = null)
     {
         settings ??= new ComfyGenSettings();
         baseUrl = baseUrl.TrimEnd('/');
@@ -57,7 +62,7 @@ public class ComfyService
         var uploadedNames = new List<string>();
         foreach (var img in imgs)
         {
-            var name = await UploadMedia(baseUrl, img, false);
+            var name = await UploadMedia(baseUrl, img, MediaKind.Image);
             if (!string.IsNullOrEmpty(name)) uploadedNames.Add(name);
         }
         var firstImage = uploadedNames.FirstOrDefault();
@@ -67,16 +72,27 @@ public class ComfyService
         var uploadedAudios = new List<string>();
         foreach (var a in auds)
         {
-            var name = await UploadMedia(baseUrl, a, true);
+            var name = await UploadMedia(baseUrl, a, MediaKind.Audio);
             if (!string.IsNullOrEmpty(name)) uploadedAudios.Add(name);
             else _logger.LogWarning("[ComfyService] 音色参考音频上传失败，已跳过：{Ref}", a);
+        }
+
+        // 动作参考视频（白膜）：同样上传到 ComfyUI input 目录，由工作流里已连好的视频节点去读。
+        // 这里只负责送达素材，不增删任何节点、不改动工作流结构。
+        var vids = refVideos?.Where(x => !string.IsNullOrEmpty(x)).ToList() ?? new List<string>();
+        var uploadedVideos = new List<string>();
+        foreach (var v in vids)
+        {
+            var name = await UploadMedia(baseUrl, v, MediaKind.Video);
+            if (!string.IsNullOrEmpty(name)) uploadedVideos.Add(name);
+            else _logger.LogWarning("[ComfyService] 动作参考视频上传失败，已跳过：{Ref}", v);
         }
 
         var (width, height) = RatioToSize(settings.Ratio);
         var frames = Math.Max(4, settings.Duration * settings.Fps);
 
         // 按常见节点类型注入；也可用占位符 __COMFY_*__ 精确控制
-        InjectImages(root, uploadedNames);
+        InjectImages(root, uploadedNames, uploadedVideos);
         InjectInput(root, "LoadImage", "image", firstImage);
         InjectInput(root, "CLIPTextEncode", "text", promptText);
         InjectInput(root, "PrimitiveStringMultiline", "value", promptText);
@@ -102,9 +118,9 @@ public class ComfyService
         if (HasMiniMax(root))
         {
             // MiniMax H3 工作流：画幅（宽高）+ 时长（秒）由工作流公式计算
-            var h3Size = InjectMiniMaxParams(root, settings.Ratio, settings.Duration);
+            var h3Size = InjectMiniMaxParams(root, settings.Ratio, settings.Duration, settings.Megapixels);
             if (h3Size != null)
-                _logger.LogInformation("[ComfyService] H3 画幅 {Ratio} → {Width}×{Height}", settings.Ratio, h3Size.Value.width, h3Size.Value.height);
+                _logger.LogInformation("[ComfyService] H3 画幅 {Ratio} @{Mp}MP → {Width}×{Height}", settings.Ratio, settings.Megapixels, h3Size.Value.width, h3Size.Value.height);
             // 音色参考音频：接到 H3 节点的 ref_audios 槽位。未传音频时清空模板残留，行为与改动前一致。
             if (root is JsonObject h3Root) await InjectMiniMaxAudios(h3Root, uploadedAudios, baseUrl);
         }
@@ -265,30 +281,46 @@ public class ComfyService
 
     private static readonly string[] AllowedImageExts = { ".jpg", ".jpeg", ".png", ".webp" };
     private static readonly string[] AllowedAudioExts = { ".wav", ".mp3", ".flac", ".ogg", ".m4a", ".aac", ".opus" };
+    private static readonly string[] AllowedVideoExts = { ".mp4", ".mov", ".webm", ".mkv", ".avi" };
 
-    /// <summary>把参考素材（参考图 / 音色参考音频）上传到 ComfyUI input 目录，返回 ComfyUI 侧文件名。
-    /// 注意：ComfyUI 只有 /upload/image 这一个通用上传端点，音频也走它（字段名固定 image）。</summary>
-    private async Task<string?> UploadMedia(string baseUrl, string fileRef, bool isAudio)
+    /// <summary>上传素材种类：参考图 / 音色参考音频 / 动作参考视频（白膜）</summary>
+    private enum MediaKind { Image, Audio, Video }
+
+    /// <summary>把参考素材（参考图 / 音色参考音频 / 动作参考视频）上传到 ComfyUI input 目录，返回 ComfyUI 侧文件名。
+    /// 注意：ComfyUI 只有 /upload/image 这一个通用上传端点，音频与视频也走它（字段名固定 image）。</summary>
+    private async Task<string?> UploadMedia(string baseUrl, string fileRef, MediaKind kind)
     {
+        var allowed = kind switch
+        {
+            MediaKind.Audio => AllowedAudioExts,
+            MediaKind.Video => AllowedVideoExts,
+            _ => AllowedImageExts
+        };
+        var fallback = kind switch
+        {
+            MediaKind.Audio => ".wav",
+            MediaKind.Video => ".mp4",
+            _ => ".png"
+        };
         try
         {
             byte[] bytes;
-            var ext = isAudio ? ".wav" : ".png";
+            var ext = fallback;
             if (fileRef.StartsWith("data:"))
             {
                 var comma = fileRef.IndexOf(',');
                 var mime = comma > 5 ? fileRef.Substring(5, comma - 5).Split(';')[0] : "";
-                ext = isAudio
-                    ? (AllowedAudioExts.Contains("." + mime.Split('/').Last().Replace("mpeg", "mp3")) ? "." + mime.Split('/').Last().Replace("mpeg", "mp3") : ".wav")
-                    : (mime == "image/jpeg" ? ".jpg" : mime == "image/webp" ? ".webp" : ".png");
+                var mimeExt = "." + mime.Split('/').Last().Replace("mpeg", "mp3");
+                ext = kind == MediaKind.Image
+                    ? (mime == "image/jpeg" ? ".jpg" : mime == "image/webp" ? ".webp" : fallback)
+                    : (allowed.Contains(mimeExt) ? mimeExt : fallback);
                 bytes = Convert.FromBase64String(fileRef.Substring(comma + 1));
             }
             else if (fileRef.StartsWith("http://") || fileRef.StartsWith("https://"))
             {
                 bytes = await _http.GetByteArrayAsync(fileRef);
                 ext = Path.GetExtension(new Uri(fileRef).AbsolutePath).ToLowerInvariant();
-                var allowed = isAudio ? AllowedAudioExts : AllowedImageExts;
-                if (!allowed.Contains(ext)) ext = isAudio ? ".wav" : ".png";
+                if (!allowed.Contains(ext)) ext = fallback;
             }
             else
             {
@@ -296,16 +328,19 @@ public class ComfyService
                 if (!File.Exists(filePath)) return null;
                 bytes = File.ReadAllBytes(filePath);
                 ext = Path.GetExtension(filePath).ToLowerInvariant();
-                var allowed = isAudio ? AllowedAudioExts : AllowedImageExts;
-                if (!allowed.Contains(ext)) ext = isAudio ? ".wav" : ".png";
+                if (!allowed.Contains(ext)) ext = fallback;
             }
 
-            var fileName = (isAudio ? "vo_" : "ref_") + Guid.NewGuid().ToString("N").Substring(0, 8) + ext;
+            var prefix = kind switch { MediaKind.Audio => "vo_", MediaKind.Video => "mo_", _ => "ref_" };
+            var fileName = prefix + Guid.NewGuid().ToString("N").Substring(0, 8) + ext;
             using var form = new MultipartFormDataContent();
             var fileContent = new ByteArrayContent(bytes);
-            var contentType = isAudio
-                ? (ext == ".mp3" ? "audio/mpeg" : ext == ".wav" ? "audio/wav" : ext == ".m4a" ? "audio/mp4" : "audio/" + ext.TrimStart('.'))
-                : "image/" + ext.TrimStart('.').Replace("jpg", "jpeg");
+            var contentType = kind switch
+            {
+                MediaKind.Audio => ext == ".mp3" ? "audio/mpeg" : ext == ".m4a" ? "audio/mp4" : "audio/" + ext.TrimStart('.'),
+                MediaKind.Video => ext == ".mov" ? "video/quicktime" : "video/" + ext.TrimStart('.'),
+                _ => "image/" + ext.TrimStart('.').Replace("jpg", "jpeg")
+            };
             fileContent.Headers.ContentType = new System.Net.Http.Headers.MediaTypeHeaderValue(contentType);
             form.Add(fileContent, "image", fileName);
             form.Add(new StringContent("true"), "overwrite");
@@ -367,19 +402,19 @@ public class ComfyService
     /// 传入几张图就保留几个 LoadImage，多余的 LoadImage 节点连同其下游 ref_image_X 连接一并删除——
     /// 避免用第一张图兜底填充导致 H3 同时参考多路相同图片（拖慢生成并干扰效果）。
     /// 模板文件本身不动，保留多参考能力：以后传 N 张图就只参考 N 张。</summary>
-    private static void InjectImages(JsonNode root, List<string> names)
+    private static void InjectImages(JsonNode root, List<string> names, List<string> videoNames)
     {
         if (root is not JsonObject obj) return;
 
         // MiniMax H3 工作流：参考图必须按 ref_images.ref_image_N 槽位精确注入，
-        // 不能按 LoadImage 出现顺序硬塞（模板里 ref_videos.ref_video_0 也连着 LoadImage，
+        // 不能按 LoadImage 出现顺序硬塞（模板里 ref_videos.ref_video_0 连的是视频节点，
         // 顺序注入会把第 N 张图误填进视频槽位，触发 "reference videos need at least 5 frames"）。
         // 注意：0 张参考图（纯黑场/纯文本镜头）也必须走此分支——InjectMiniMaxImages
-        // 会把全部 ref_images/ref_videos 槽位连同 LoadImage 节点一并删除，否则残留的
-        // ref_videos 槽位会把单帧图当参考视频，导致 H3 校验失败提交不了。
+        // 会把多余的 ref_images 槽位连同 LoadImage 节点一并删除，否则残留槽位会把空图
+        // 填给 H3 导致校验失败。ref_videos 槽位不在清理范围内，保持用户在 ComfyUI 里的连线原样。
         if (HasMiniMax(obj))
         {
-            InjectMiniMaxImages(obj, names);
+            InjectMiniMaxImages(obj, names, videoNames);
             return;
         }
 
@@ -410,10 +445,9 @@ public class ComfyService
 
     /// <summary>MiniMax H3 工作流的参考图注入：
     /// 1) 按 ref_images.ref_image_N 槽位序号注入图片（N 从 0 起，与 @图片1~@图片N 顺序一致）；
-    /// 2) ref_videos.ref_video_N 槽位：本引擎当前只支持图片参考，若该槽位连的是 LoadImage（单帧图），
-    ///    必须断开引用并删除节点，否则 H3 会把单帧图片当参考视频报错；若连的是 LoadVideo 等视频节点，
-    ///    同样断开（无视频可传），避免 ComfyUI 因缺视频输入而校验失败。</summary>
-    private static void InjectMiniMaxImages(JsonObject obj, List<string> names)
+    /// 2) ref_videos.ref_video_N 槽位：只把已上传的动作参考视频（白膜）文件名写进工作流里连好的
+    ///    视频节点（如 VHS_LoadVideo）。不删槽位、不删节点、不断连线，结构归用户在 ComfyUI 里维护。</summary>
+    private static void InjectMiniMaxImages(JsonObject obj, List<string> names, List<string> videoNames)
     {
         // 找到 MiniMax H3 节点及其 inputs
         JsonObject? h3Inputs = null;
@@ -427,7 +461,7 @@ public class ComfyService
 
         // 解析 ref_images.ref_image_N -> nodeId（按槽位序号排序）
         var refImageSlots = new SortedDictionary<int, string>();
-        var refVideoIds = new List<string>();
+        var refVideoSlots = new SortedDictionary<int, string>();
         foreach (var kv in h3Inputs)
         {
             if (kv.Value is not JsonArray arr || arr.Count < 2) continue;
@@ -436,16 +470,23 @@ public class ComfyService
             var m = Regex.Match(kv.Key, @"^ref_images\.ref_image_(\d+)$");
             if (m.Success)
                 refImageSlots[int.Parse(m.Groups[1].Value)] = nodeId;
-            else if (kv.Key.StartsWith("ref_videos."))
-                refVideoIds.Add(nodeId);
+            else
+            {
+                var mv = Regex.Match(kv.Key, @"^ref_videos\.ref_video_(\d+)$");
+                if (mv.Success) refVideoSlots[int.Parse(mv.Groups[1].Value)] = nodeId;
+            }
         }
 
-        // ref_videos 槽位：断开引用并删除其连接的节点（图片/视频节点均断开，当前无视频可传）
-        foreach (var vid in refVideoIds.Distinct())
+        // ref_videos 槽位：只把上传后的白膜文件名写进工作流里已连好的视频节点（如 VHS_LoadVideo）。
+        // 绝不删除槽位、也绝不删除其上游节点——工作流结构归用户在 ComfyUI 里维护，代码只负责送达素材。
+        // 未上传白膜时不进入循环，模板里界面设定的视频与参数原样保留。
+        foreach (var slot in refVideoSlots)
         {
-            if (!obj.ContainsKey(vid)) continue;
-            RemoveRefsTo(obj, vid);
-            obj.Remove(vid);
+            if (slot.Key >= videoNames.Count) break;
+            if (!obj.TryGetPropertyValue(slot.Value, out var vnode) || vnode is not JsonObject vnodeObj) continue;
+            if (vnodeObj["inputs"] is not JsonObject vinputs) continue;
+            if (vinputs.ContainsKey("video"))
+                vinputs["video"] = JsonValue.Create(videoNames[slot.Key]);
         }
 
         // 按 ref_image_N 槽位顺序注入图片；图片数不足时删掉多余槽位及其节点。
@@ -606,11 +647,11 @@ public class ComfyService
     /// <summary>MiniMax H3：写入画幅宽高 + 把时长（秒）注入时长公式引用的 PrimitiveFloat。
     /// 返回实际写入的宽高（走 ResolutionSelector 时返回 null）；模板里找不到任何可写画幅的节点时抛异常，
     /// 避免像过去那样静默空转、出片尺寸恒为模板里写死的值。</summary>
-    private static (int width, int height)? InjectMiniMaxParams(JsonNode root, string ratio, int duration)
+    private static (int width, int height)? InjectMiniMaxParams(JsonNode root, string ratio, int duration, double megapixels = 1.0)
     {
         if (root is not JsonObject obj) return null;
 
-        var (w, h) = RatioToH3Size(ratio);
+        var (w, h) = RatioToH3Size(ratio, megapixels);
         var wjiApplied = false;       // WJILatentPreset 写入成功
         var selectorApplied = false;  // ResolutionSelector 写入成功
 
@@ -750,18 +791,38 @@ public class ComfyService
             v.ReplaceWith(JsonValue.Create(s.Replace(token, value)));
     }
 
-    /// <summary>画幅比例 → 宽高（MiniMax H3：64~8192、32 的倍数，取值与模板原本的 1376×768 同量级 ≈1MP）</summary>
-    public static (int width, int height) RatioToH3Size(string ratio)
+    /// <summary>
+    /// 画幅比例 + 像素档 → 宽高（MiniMax H3：限 64~8192、取 32 的倍数，步长跟节点的「缩放倍数:32」一致）。
+    /// 以前这里是一张写死的 switch 表，等于把画幅永远钉在 1MP；现在按目标像素面积反推宽高，
+    /// 档位由页面选（0.5 / 1 / 1.5 / 2 MP）。1MP 档算出来是 1376×768（16:9），跟改造前一模一样。
+    /// </summary>
+    public static (int width, int height) RatioToH3Size(string ratio, double megapixels = 1.0)
     {
-        return ratio switch
+        // 档位白名单之外（含 0、负数、NaN）一律退回 1MP，避免算出离谱尺寸把显存打爆
+        if (!double.IsFinite(megapixels) || megapixels < 0.5 || megapixels > 2)
+            megapixels = 1.0;
+
+        var (rw, rh) = ratio switch
         {
-            "9:16" => (768, 1376),
-            "1:1" => (1024, 1024),
-            "4:3" => (1152, 864),
-            "3:4" => (864, 1152),
-            "2:1" => (1472, 736),
-            _ => (1376, 768),
+            "9:16" => (9.0, 16.0),
+            "1:1" => (1.0, 1.0),
+            "4:3" => (4.0, 3.0),
+            "3:4" => (3.0, 4.0),
+            "2:1" => (2.0, 1.0),
+            _ => (16.0, 9.0),
         };
+
+        var area = megapixels * 1024 * 1024;   // 1MP 按 1024×1024 算，与模板原生尺寸同量级
+        var w = Step32(Math.Sqrt(area * rw / rh));
+        var h = Step32(Math.Sqrt(area * rh / rw));
+        return ((int)Math.Clamp(w, 64, 8192), (int)Math.Clamp(h, 64, 8192));
+    }
+
+    /// <summary>取整到 32 的倍数（不足 64 时抬到 64，ComfyUI 潜空间步长要求）</summary>
+    private static int Step32(double v)
+    {
+        var r = (int)(Math.Round(v / 32.0) * 32);
+        return r < 64 ? 64 : r;
     }
 
     /// <summary>画幅比例 → 宽高（Wan 系列要求 16 的倍数，480p 附近）</summary>

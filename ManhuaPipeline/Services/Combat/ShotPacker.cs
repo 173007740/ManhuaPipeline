@@ -50,7 +50,7 @@ public static class ShotPacker
         if (chains == null || chains.Count == 0) return [];
 
         profile ??= BuildProfile(unit, plan);
-        var suggestedDuration = unit.Duration is 5 or 11 or 15 ? unit.Duration : 11;
+        var suggestedDuration = SnapToShotDuration(unit.Duration);
         var shot = new PackedShot
         {
             ShotId = "1",
@@ -64,6 +64,16 @@ public static class ShotPacker
         return [shot];
     }
 
+    /// <summary>
+    /// 把任意秒数收敛到视频 API 一次生成支持的镜头时长档位 5/11/15。
+    /// 单元时长已改为内容预算（可为任意值），但「镜头」仍必须是这三档之一。
+    /// </summary>
+    private static int SnapToShotDuration(int seconds)
+        => seconds <= 0 ? 11
+         : seconds <= 5 ? 5
+         : seconds <= 11 ? 11
+         : 15;
+
     /// <summary>把一个镜头内部的时间轴片段拼出来：顺序动作 + 并行事件，供分镜 LLM 参考。</summary>
     public static List<ShotTimelineSegment> BuildTimeline(
         IReadOnlyList<MicroAction> actions,
@@ -73,7 +83,7 @@ public static class ShotPacker
         var segments = new List<ShotTimelineSegment>();
         if (actions == null || actions.Count == 0) return segments;
 
-        var duration = durationSeconds is 5 or 11 or 15 ? durationSeconds : 11;
+        var duration = SnapToShotDuration(durationSeconds);
         var boundaries = duration switch
         {
             5 => new[] { (0.0, 1.0), (1.0, 2.0), (2.0, 3.0), (3.0, 4.0), (4.0, 5.0) },

@@ -1,0 +1,263 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>系统报告 - 漫创引擎</title>
+    <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
+    <link rel="stylesheet" href="../css/style.css">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; min-height: 100vh; }
+
+        /* 全屏铺开：不限制宽度 */
+        body .container { max-width: 100% !important; margin: 0 auto; padding: 24px 24px 40px; }
+
+        .report-wrap { display: flex; gap: 20px; align-items: flex-start; margin-top: 16px; }
+        .report-side {
+            flex: 0 0 210px; background: var(--bg-glass); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 10px; position: sticky; top: 16px;
+        }
+        .report-side .item {
+            display: flex; align-items: center; gap: 8px; padding: 10px 12px; border-radius: 8px;
+            color: var(--text-muted); font-size: 14px; cursor: pointer; border: none;
+            background: transparent; width: 100%; text-align: left;
+        }
+        .report-side .item:hover { background: rgba(124,58,237,.10); color: var(--text); }
+        .report-side .item.active { background: rgba(124,58,237,.18); color: var(--primary-light); font-weight: 600; }
+        .report-main { flex: 1; min-width: 0; }
+
+        .stat-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
+        .stat-box {
+            flex: 1; min-width: 130px; background: var(--bg-glass); border: 1px solid var(--border);
+            border-radius: var(--radius-lg); padding: 14px 16px;
+        }
+        .stat-box .k { font-size: 12px; color: var(--text-muted); }
+        .stat-box .v { font-size: 24px; font-weight: 700; color: var(--text); margin-top: 4px; }
+
+        .table-wrap { background: var(--card); border: 1px solid var(--border); border-radius: 12px; overflow: hidden; }
+        table.rpt { width: 100%; border-collapse: collapse; font-size: 13px; }
+        table.rpt th, table.rpt td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
+        table.rpt th { background: rgba(255,255,255,.04); color: var(--text-muted); font-weight: 600; white-space: nowrap; font-size: 12px; }
+        table.rpt td { color: var(--text); }
+        table.rpt tbody tr:hover td { background: rgba(255,255,255,.02); }
+
+        .tag { display: inline-block; padding: 1px 8px; border-radius: 10px; font-size: 11px; }
+        .tag-done { background: rgba(16,185,129,.18); color: #10b981; }
+        .tag-failed { background: rgba(239,68,68,.18); color: #ef4444; }
+        .tag-run { background: rgba(56,189,248,.18); color: #38bdf8; }
+        .tag-idle { background: rgba(148,163,184,.18); color: #94a3b8; }
+        .bar { height: 8px; background: rgba(255,255,255,.06); border-radius: 4px; overflow: hidden; min-width: 120px; }
+        .bar > div { height: 100%; background: linear-gradient(90deg,#7c3aed,#a78bfa); border-radius: 4px; }
+        .note {
+            padding: 10px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 14px;
+            background: rgba(148,163,184,.12); border: 1px solid var(--border); color: var(--text-muted);
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-inner">
+            <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
+                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+            </a>
+            <div class="nav-links">
+                <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
+                <a href="canvas.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="page-title" style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+            <span><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</span>
+            <span style="font-size:13px;font-weight:400;color:var(--text-muted);display:flex;gap:8px;align-items:center;">
+                <span id="daysWrap" style="display:flex;gap:6px;align-items:center;">
+                    <span>时间范围</span>
+                    <select id="rptDays" style="padding:6px 10px;">
+                        <option value="7">近 7 天</option>
+                        <option value="30">近 30 天</option>
+                        <option value="0">全部</option>
+                    </select>
+                </span>
+                <button class="btn btn-primary btn-small" onclick="loadCurrent()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">refresh</span> 刷新</button>
+            </span>
+        </div>
+
+        <div class="report-wrap">
+            <div class="report-side">
+                <button class="item active" data-tab="image"><span class="material-icons" style="font-size:18px">image</span> 出图统计</button>
+                <button class="item" data-tab="video"><span class="material-icons" style="font-size:18px">movie</span> 视频统计</button>
+            </div>
+            <div class="report-main">
+                <div id="rptContent"><div style="color:var(--text-muted);padding:20px;">加载中…</div></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script>
+        var curTab = "image";
+        var imgData = null;   // 出图统计：/api/dashboard/report
+        var tokData = null;   // 视频统计：/api/config/token-usage（与 token-report.html 同源）
+        var projData = null;  // 视频统计：/api/config/token-usage/projects
+
+        function esc(s) { if (!s) return ""; return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+        function num(n) { return (Number(n) || 0).toLocaleString("zh-CN"); }
+        function wan(n) { n = Number(n) || 0; return (n / 10000).toFixed(2); }
+        function dur(sec) { sec = Number(sec) || 0; var m = Math.floor(sec / 60), s = sec % 60; return m > 0 ? m + "分" + s + "秒" : s + "秒"; }
+        function money(n, rate) { return "¥" + (Number(n) / 10000 * rate).toFixed(2); }
+
+        function statusTag(st) {
+            st = (st || "").toLowerCase();
+            if (st === "done" || st === "completed" || st === "succeeded") return '<span class="tag tag-done">' + esc(st || "-") + "</span>";
+            if (st === "failed") return '<span class="tag tag-failed">failed</span>';
+            if (st === "running" || st === "processing" || st === "queued" || st === "pending")
+                return '<span class="tag tag-run">' + esc(st) + "</span>";
+            return '<span class="tag tag-idle">' + esc(st || "idle") + "</span>";
+        }
+
+        function box(k, v, color) {
+            return '<div class="stat-box"><div class="k">' + k + '</div><div class="v"' + (color ? ' style="color:' + color + '"' : "") + ">" + v + "</div></div>";
+        }
+
+        function table(headers, rows) {
+            var h = "<div class='table-wrap'><table class='rpt'><thead><tr>";
+            headers.forEach(function (t) { h += "<th>" + t + "</th>"; });
+            h += "</tr></thead><tbody>";
+            if (!rows.length) h += "<tr><td colspan='" + headers.length + "' style='color:var(--text-muted);'>这段时间没有数据</td></tr>";
+            rows.forEach(function (r) { h += "<tr>" + r.map(function (c) { return "<td>" + c + "</td>"; }).join("") + "</tr>"; });
+            return h + "</tbody></table></div>";
+        }
+
+        // ===================== 出图统计（画布节点，按时间范围） =====================
+        function loadImage(done) {
+            var days = parseInt($("#rptDays").val(), 10); if (isNaN(days)) days = 7;
+            $.get("/api/dashboard/report", { days: days }, function (d) { imgData = d; done(); })
+                .fail(function (x) {
+                    $("#rptContent").html("<div style='color:var(--danger);padding:20px;'>加载失败（HTTP " + (x.status || "?") + "）"
+                        + (x.status === 401 ? "　请先登录" : "") + "</div>");
+                });
+        }
+
+        function renderImage() {
+            if (!imgData) return "";
+            var im = imgData.images || {}, h = "";
+            h += '<div class="stat-grid">'
+                + box("总节点", num(im.total))
+                + box("成功", num(im.done), "#10b981")
+                + box("失败", num(im.failed), im.failed ? "#ef4444" : null)
+                + box("进行中", num(im.running), "#38bdf8")
+                + box("未跑", num(im.idle))
+                + "</div>";
+
+            h += '<div style="font-size:15px;font-weight:600;color:var(--text);margin:4px 0 10px;">按天出图</div>';
+            h += table(["日期", "总数", "成功", "失败"], (im.byDay || []).map(function (r) {
+                return [esc(r.date), num(r.total), num(r.done), num(r.failed)];
+            }));
+
+            h += '<div style="font-size:15px;font-weight:600;color:var(--text);margin:18px 0 10px;">按节点类型</div>';
+            h += table(["类型", "总数", "成功", "失败"], (im.byType || []).map(function (r) {
+                return [esc(r.nodeType), num(r.total), num(r.done), num(r.failed)];
+            }));
+
+            h += '<div style="font-size:15px;font-weight:600;color:var(--text);margin:18px 0 10px;">出图清单（最近 100 条）</div>';
+            h += table(["节点", "标题", "类型", "状态", "所属画布", "更新时间", "报错"], (im.recent || []).map(function (r) {
+                return ["#" + r.id, esc(r.title), esc(r.nodeType), statusTag(r.status), esc(r.boardName),
+                        esc(r.updatedAt), r.errorMsg ? '<span style="color:#ef4444;">' + esc(r.errorMsg) + "</span>" : ""];
+            }));
+            return h;
+        }
+
+        // ===================== 视频统计（与 token-report.html 完全同源） =====================
+        function loadVideo(done) {
+            $.get("/api/config/token-usage", function (d) { tokData = d; })
+                .always(function () {
+                    $.get("/api/config/token-usage/projects", function (list) { projData = list || []; })
+                        .always(done)
+                        .fail(function () { projData = []; });
+                })
+                .fail(function () {
+                    $("#rptContent").html("<div style='color:var(--danger);padding:20px;'>加载失败</div>");
+                });
+        }
+
+        function renderVideo() {
+            var g = tokData || {}, list = projData || [], h = "";
+            var quota = g.quotaTokens || 0, used = g.usedTokens || 0, remain = g.remainingTokens || 0;
+            var pct = quota > 0 ? Math.min(100, Math.round(used / quota * 100)) : 0;
+            var warn = quota > 0 && remain / quota < 0.1;
+
+            h += '<div class="stat-grid">'
+                + box("资源包总量", wan(quota) + " 万")
+                + box("已消耗", wan(used) + " 万 (" + pct + "%)", "#facc15")
+                + box("金额·资源包", money(used, 0.14), "#f472b6")
+                + box("金额·4折按量", money(used, 0.092), "#f472b6")
+                + box("剩余", wan(remain) + " 万", warn ? "#ef4444" : "#22c55e")
+                + "</div>";
+            h += '<div class="note">1 万 tokens = 0.14 元（资源包）/ 0.092 元（4 折按量）。'
+                + 'Token 只统计<b>回传了用量</b>的视频任务，上游没回传的不计入（不估算）。</div>';
+
+            if (!list.length) {
+                return h + '<div style="color:var(--text-muted);padding:30px;text-align:center;">暂无项目消耗记录</div>';
+            }
+
+            var totalSec = 0;
+            list.forEach(function (p) { totalSec += (p.totalSeconds || 0); });
+            h += "<div style='margin-bottom:10px;color:var(--text-muted);font-size:13px;'>全部项目视频总时长：<span style='color:#34d399;font-weight:600;'>" + dur(totalSec) + "</span></div>";
+
+            h += "<div class='table-wrap'><table class='rpt'><thead><tr><th>项目名称</th><th>项目ID</th><th>已消耗</th>"
+                + "<th>金额·资源包</th><th>金额·4折</th><th>视频时长</th><th>占总资源包</th><th>消耗趋势</th><th></th></tr></thead><tbody>";
+            list.forEach(function (p) {
+                var pp = quota > 0 ? (p.usedTokens / quota * 100) : 0;
+                h += "<tr>"
+                    + "<td style='max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>"
+                    + "<a href='project.html?id=" + p.projectId + "' style='color:var(--primary-light);text-decoration:none;'>" + esc(p.projectName || "未命名项目") + "</a></td>"
+                    + "<td>" + p.projectId + "</td>"
+                    + "<td>" + wan(p.usedTokens) + " 万 <span style='color:#64748b;font-size:11px;'>(" + num(p.usedTokens) + ")</span></td>"
+                    + "<td style='color:#f472b6;font-weight:600;'>" + money(p.usedTokens, 0.14) + "</td>"
+                    + "<td style='color:#f472b6;font-weight:600;'>" + money(p.usedTokens, 0.092) + "</td>"
+                    + "<td>" + dur(p.totalSeconds) + "</td>"
+                    + "<td>" + pp.toFixed(2) + "%</td>"
+                    + "<td><div class='bar'><div style='width:" + Math.min(100, pp) + "%'></div></div></td>"
+                    + "<td><a href='project.html?id=" + p.projectId + "' style='color:#a78bfa;font-size:12px;text-decoration:none;'>进入项目 →</a></td>"
+                    + "</tr>";
+            });
+            return h + "</tbody></table></div>";
+        }
+
+        // ===================== 调度 =====================
+        function loadCurrent() {
+            $("#rptContent").html("<div style='color:var(--text-muted);padding:20px;'>加载中…</div>");
+            var done = function () {
+                if (curTab === "image") $("#rptContent").html(renderImage());
+                else $("#rptContent").html(renderVideo());
+            };
+            if (curTab === "image") loadImage(done); else loadVideo(done);
+        }
+
+        function render() {
+            if (curTab === "image") $("#rptContent").html(renderImage());
+            else $("#rptContent").html(renderVideo());
+        }
+
+        $(function () {
+            $.get("/api/auth/me", function (u) {
+                if (!u || !u.userId) { window.location.href = "login.html"; return; }
+                loadCurrent();
+            }).fail(function () { window.location.href = "login.html"; });
+
+            $(".report-side .item").on("click", function () {
+                $(".report-side .item").removeClass("active");
+                $(this).addClass("active");
+                curTab = $(this).attr("data-tab");
+                $("#daysWrap").toggle(curTab === "image");   // 时间范围只对出图统计生效
+                if ((curTab === "image" && !imgData) || (curTab === "video" && !projData)) loadCurrent();
+                else render();
+            });
+            $("#rptDays").on("change", function () { loadCurrent(); });
+        });
+    </script>
+</body>
+</html>

@@ -59,8 +59,91 @@ public class ProjectController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.Title)) return BadRequest(new { message = "请输入项目名称" });
         if (req.DramaId <= 0) return BadRequest(new { message = "请选择所属漫剧" });
         if (_db.GetDrama(req.DramaId, uid) == null) return NotFound(new { message = "漫剧不存在" });
-        var id = _db.CreateProject(uid, req.DramaId, req.Title, req.Description, req.ScriptContent);
+        var id = _db.CreateProject(uid, req.DramaId, req.Title, req.Description, req.ScriptContent, req.ProjectType);
         return Ok(new { projectId = id, message = "创建成功" });
+    }
+
+    /// <summary>切换项目内容类型（短剧 / 广告 / MV）。已有内容不重算，仅影响后续生成的分镜与提示词规则。</summary>
+    [HttpPut("{id}/project-type")]
+    public IActionResult UpdateProjectType(int id, [FromBody] UpdateProjectTypeRequest req)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        if (!_db.ProjectBelongsToUser(id, uid)) return NotFound(new { message = "项目不存在" });
+        var pt = DbService.NormalizeProjectType(req.ProjectType);
+        _db.UpdateProjectType(id, pt);
+        return Ok(new { projectId = id, projectType = pt, message = "项目类型已更新" });
+    }
+
+    // ============ MV 歌词轨 ============
+
+    /// <summary>读取项目歌词轨（MV 对口型用）。</summary>
+    [HttpGet("{id}/lyrics")]
+    public IActionResult GetLyrics(int id)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        if (!_db.ProjectBelongsToUser(id, uid)) return NotFound(new { message = "项目不存在" });
+        return Ok(_db.GetLyricLines(id));
+    }
+
+    /// <summary>整轨覆盖保存歌词。支持两种输入：Lrc 文本（推荐，时间戳来自真歌）
+    /// 或 Lines 数组（手动填写 startSec/endSec/text）。两者都给时以 Lrc 为准。</summary>
+    [HttpPut("{id}/lyrics")]
+    public IActionResult UpdateLyrics(int id, [FromBody] UpdateLyricsRequest req)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        if (!_db.ProjectBelongsToUser(id, uid)) return NotFound(new { message = "项目不存在" });
+
+        List<ProjectLyricLine> lines;
+        if (!string.IsNullOrWhiteSpace(req.Lrc))
+            lines = ParseLrc(req.Lrc!);
+        else
+            lines = (req.Lines ?? new List<LyricLineDto>())
+                .Select(x => new ProjectLyricLine { StartSec = x.StartSec, EndSec = x.EndSec, Text = x.Text })
+                .ToList();
+
+        // LRC 无时间戳的行会被整行丢弃；静默存成 0 条会让用户以为保存成功、实际时间轨是空的。
+        var hadInput = !string.IsNullOrWhiteSpace(req.Lrc) || (req.Lines?.Count ?? 0) > 0;
+        if (hadInput && lines.Count == 0)
+            return BadRequest(new { message = "没识别到歌词行：LRC 每行都需要 [mm:ss.xx] 时间戳，例如 [00:12.34]歌词文本。只想清空歌词轨时请把内容删空后再保存。" });
+
+        _db.ReplaceLyricLines(id, lines);
+        return Ok(new { count = lines.Count, message = "歌词轨已保存" });
+    }
+
+    /// <summary>解析 LRC：形如 [00:12.34]歌词文本。
+    /// 每行支持多个时间戳；未给出结束时间的，以下一句起始为结束，末句默认 5 秒。</summary>
+    private static List<ProjectLyricLine> ParseLrc(string lrc)
+    {
+        var result = new List<ProjectLyricLine>();
+        var rx = new System.Text.RegularExpressions.Regex(@"\[(\d{1,3}):(\d{1,2}(?:[.:]\d{1,3})?)\]");
+        foreach (var raw in lrc.Split('\n'))
+        {
+            var line = raw.Trim();
+            if (string.IsNullOrWhiteSpace(line)) continue;
+            var ms = rx.Matches(line);
+            if (ms.Count == 0) continue;
+            var text = rx.Replace(line, "").Trim();
+            if (string.IsNullOrWhiteSpace(text)) continue;
+
+            foreach (System.Text.RegularExpressions.Match m in ms)
+            {
+                if (!decimal.TryParse(m.Groups[1].Value, out var mm)) continue;
+                var secPart = m.Groups[2].Value.Replace(':', '.');
+                if (!decimal.TryParse(secPart, System.Globalization.CultureInfo.InvariantCulture, out var ss)) continue;
+                result.Add(new ProjectLyricLine { StartSec = mm * 60 + ss, EndSec = mm * 60 + ss, Text = text });
+            }
+        }
+
+        result.Sort((a, b) => a.StartSec.CompareTo(b.StartSec));
+        for (var i = 0; i < result.Count; i++)
+        {
+            var next = i + 1 < result.Count ? result[i + 1].StartSec : result[i].StartSec + 5m;
+            result[i].EndSec = next > result[i].StartSec ? next : result[i].StartSec + 5m;
+        }
+        return result;
     }
 
     [HttpPut("{id}/script")]
@@ -348,7 +431,7 @@ public class ProjectController : ControllerBase
         if (uid == 0) return Unauthorized();
         var p = _db.GetProject(id, uid);
         if (p == null) return NotFound();
-        _db.UpdateProjectVideoSettings(id, req.Ratio ?? "16:9", req.Watermark, req.Audio, req.Resolution ?? "720p");
+        _db.UpdateProjectVideoSettings(id, req.Ratio ?? "16:9", req.Watermark, req.Audio, req.Resolution ?? "720p", req.Megapixels);
         return Ok(new { message = "已保存" });
     }
 
@@ -405,11 +488,32 @@ public class CreateProjectRequest
     public string Title { get; set; } = "";
     public string? Description { get; set; }
     public string? ScriptContent { get; set; }
+    /// <summary>项目内容类型：drama（默认）/ ad / mv。</summary>
+    public string? ProjectType { get; set; }
+}
+
+public class UpdateProjectTypeRequest
+{
+    public string ProjectType { get; set; } = "drama";
+}
+
+public class UpdateLyricsRequest
+{
+    /// <summary>LRC 原文，含 [mm:ss.xx] 时间戳。与 Lines 二选一，优先使用。</summary>
+    public string? Lrc { get; set; }
+    public List<LyricLineDto>? Lines { get; set; }
+}
+
+public class LyricLineDto
+{
+    public decimal StartSec { get; set; }
+    public decimal EndSec { get; set; }
+    public string Text { get; set; } = "";
 }
 
 public class UpdateEpisodeCountRequest
 {
-    public int Count { get; set; } = 12;
+    public int Count { get; set; } = 1;
 }
 public class UpdateTargetDurationRequest
 {
@@ -452,5 +556,7 @@ public class UpdateProjectVideoSettingsRequest
     public bool Watermark { get; set; }
     public bool Audio { get; set; } = true;
     public string? Resolution { get; set; }
+    /// <summary>出图像素档（百万像素），ComfyUI 引擎专用；火山方舟看 Resolution。页面传 0.5/1/1.5/2。</summary>
+    public double Megapixels { get; set; } = 1;
 }
 

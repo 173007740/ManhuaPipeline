@@ -120,8 +120,10 @@ public static class DirectorRuleValidator
         var soloOrMovement = DirectorValidator.IsSoloOrMovementCombat(unit);
         var singleStrike = IsSingleStrikeTemplate(result);
 
-        // ---- 镜头数与节奏（单元总时长决定可承载镜头数；时长已知时不机械要求多镜）----
-        var minShots = unit.Duration == 5 || unit.Duration == 11 || unit.Duration == 15 ? 1 : unit.IsCombat ? 3 : 2;
+        // ---- 镜头数下限 ----
+        // 单元时长已降级为内容预算，不再由「是否 5/11/15 档」反推镜头数；
+        // 镜头数下限改按内容类型给，保证一个单元不会被压成单镜。
+        var minShots = unit.IsCombat ? 3 : 2;
         if (shots.Count < minShots)
         {
             violations.Add(MakeViolation(
@@ -133,20 +135,24 @@ public static class DirectorRuleValidator
             hardFail = true;
         }
 
-        // ---- 单元时长守恒：镜头时长总和必须等于（非打斗）/ 不得超过（打斗）单元时长 ----
-        if ((unit.Duration == 5 || unit.Duration == 11 || unit.Duration == 15) && shots.Count > 0)
+        // ---- 镜头时长档位 ----
+        // 单元时长只是内容预算，不再要求「镜头时长之和 == 单元时长」；
+        // 唯一硬约束是每条镜头本身必须落在视频 API 支持的 5/11/15 档位上。
+        if (shots.Count > 0)
         {
-            var shotTotal = shots.Sum(s => ReadShotDurationSeconds(s) ?? 0);
-            var mismatch = isCombat ? shotTotal > unit.Duration : shotTotal != unit.Duration;
-            if (mismatch)
+            var illegal = shots
+                .Select(ReadShotDurationSeconds)
+                .Where(d => d.HasValue && d!.Value is not (5 or 11 or 15))
+                .Select(d => d!.Value)
+                .Distinct()
+                .ToList();
+            if (illegal.Count > 0)
             {
                 violations.Add(MakeViolation(
-                    "DURATION_SUM", "Error",
-                    $"镜头时长总和 {shotTotal} 秒与单元时长 {unit.Duration} 秒不一致",
-                    unit.Duration.ToString(), shotTotal.ToString(),
-                    isCombat
-                        ? $"把镜头时长总和压到 ≤ {unit.Duration} 秒（尽量等于）：合并连续镜头或把多拍压进同一镜头，禁止靠超出单元总时长堆镜头。"
-                        : $"把镜头时长总和改到恰好等于 {unit.Duration} 秒（D={unit.Duration}：只允许 1 条 {unit.Duration} 秒镜头，D=15 也可拆 3 条 5 秒镜头），禁止用超出/小于 D 的组合堆镜头。"));
+                    "SHOT_DURATION_ILLEGAL", "Error",
+                    $"镜头时长 {string.Join(" 秒、", illegal)} 秒不是合法档位",
+                    "5 / 11 / 15", string.Join("/", illegal),
+                    "把该镜头的「镜头时长」改成 5、11 或 15 秒，并把「镜头时间轴」从 0 秒连续铺满到该时长结束秒数。"));
                 logicScore = Deduct(logicScore, 8);
                 hardFail = true;
             }

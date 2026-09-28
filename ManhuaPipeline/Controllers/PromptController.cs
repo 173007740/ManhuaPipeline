@@ -42,6 +42,57 @@ public class PromptController : ControllerBase
         return Ok(_db.GetPrompts(projectId));
     }
 
+    /// <summary>
+    /// 阶段 9 顶部进度统计。
+    /// 分镜总数 = StoryboardFrames 表里该项目的条数 —— 阶段 5「分镜脚本」页面渲染的就是这张表，
+    /// 两边口径必须一致：页面上有多少行分镜，这里就是多少。
+    /// 提示词是逐镜生成的，中途被打断（比如重跑项目）就会少于分镜数，这个差值正是要盯的缺口。
+    /// </summary>
+    [HttpGet("stats")]
+    [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
+    public IActionResult GetStats(int projectId)
+    {
+        var access = CheckProjectAccess(projectId);
+        if (access != null) return access;
+
+        var shotTotal = _db.CountStoryboardFrames(projectId);   // 权威口径：分镜脚本表
+        var (promptTotal, videoDone) = _db.GetPromptStats(projectId);
+
+        return Ok(new
+        {
+            shotTotal,
+            promptTotal,
+            videoDone,
+            shotSource = "StoryboardFrames",
+            diag = new { frames = shotTotal, script = CountStoryboardShots(projectId).Shots }
+        });
+    }
+
+    /// <summary>
+    /// 数分镜脚本里的镜头数：按「镜头编号」去重统计。
+    /// 顺带返回行数 / 命中行数 / 文本长度，接口原样带回去，页面数不出来时能直接看出卡在哪一环。
+    /// </summary>
+    private (int Shots, int Lines, int Matched, int TextLen) CountStoryboardShots(int projectId)
+    {
+        // 分镜在阶段 5；内容可能落在 Content 或 LlmResponse 上，两个都试
+        var stage = _db.GetStageData(projectId, 5);
+        var text = !string.IsNullOrWhiteSpace(stage?.LlmResponse) ? stage!.LlmResponse
+                 : !string.IsNullOrWhiteSpace(stage?.Content) ? stage!.Content
+                 : null;
+        if (string.IsNullOrWhiteSpace(text)) return (0, 0, 0, 0);
+
+        var shots = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+        var lines = 0;
+        var matched = 0;
+        foreach (var line in text.Replace("\r\n", "\n").Split('\n'))
+        {
+            lines++;
+            var no = StoryboardFrameParser.TryGetShotNumber(line);
+            if (!string.IsNullOrWhiteSpace(no)) { shots.Add(no!); matched++; }
+        }
+        return (shots.Count, lines, matched, text.Length);
+    }
+
     [HttpPost("import-excel")]
     public async Task<IActionResult> ImportExcel(int projectId, IFormFile file)
     {

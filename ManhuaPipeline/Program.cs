@@ -22,22 +22,57 @@ builder.Services.AddSession(options =>
 // LLM 单次请求超时。qwen3 系列默认开启思考链，分集细化（Stage 4）要输出上万 token，
 // 思考链 + 长输出叠加实测会超过 10 分钟，原来的 600 秒会在模型还没返回时被 HttpClient 掐断
 // （表现为 TaskCanceledException: "...HttpClient.Timeout of 600 seconds elapsing"）。
-builder.Services.AddHttpClient<LLMService>(c => c.Timeout = TimeSpan.FromMinutes(30));
-builder.Services.AddHttpClient<AgentService>();
-builder.Services.AddHttpClient<VideoService>(c => c.Timeout = TimeSpan.FromMinutes(10));
+// ======== 出站 HTTP 统一 handler（含 SSL 排查开关） ========
+// 默认严格校验证书。中转站自签证书、公司网关/杀软做 HTTPS 拦截、本机 CRL 取不到这几类场景
+// 都会在握手阶段直接失败，而报错只有一句 "The SSL connection could not be established..."
+// （真正原因在 InnerException 里，现在 ImageService 已经把它带出来了）。
+// 确认是这类问题后，在 appsettings.json 里加 "Security": { "SkipSslValidation": true } 就能临时绕过。
+var skipSsl = builder.Configuration.GetValue<bool>("Security:SkipSslValidation");
+var bypassProxy = builder.Configuration.GetValue<bool>("Security:BypassProxy");
+if (skipSsl)
+    Console.WriteLine("[启动] Security:SkipSslValidation=true —— 出站 HTTPS 不再校验证书，仅供本地排查/自签环境使用，确认后请关掉");
+if (bypassProxy)
+    Console.WriteLine("[启动] Security:BypassProxy=true —— 出站请求不走系统代理，直连目标地址");
+
+Func<System.Net.Http.HttpMessageHandler> NewOutboundHandler = () => new SocketsHttpHandler
+{
+    // 只用 TLS1.2/1.3：Windows 默认已禁用 TLS1.0/1.1，老中转站只支持旧协议时握手会直接失败
+    SslOptions = new System.Net.Security.SslClientAuthenticationOptions
+    {
+        EnabledSslProtocols = System.Security.Authentication.SslProtocols.Tls12 | System.Security.Authentication.SslProtocols.Tls13,
+        CertificateRevocationCheckMode = skipSsl ? System.Security.Cryptography.X509Certificates.X509RevocationMode.NoCheck
+                                                 : System.Security.Cryptography.X509Certificates.X509RevocationMode.Online,
+        // 仅在开关打开时放行自签/被拦截的证书
+        RemoteCertificateValidationCallback = skipSsl ? (_, _, _, _) => true : null
+    },
+    ConnectTimeout = TimeSpan.FromSeconds(30),
+    // 默认走系统代理（跟浏览器一致）；开关打开时直连，用来判断 SSL 失败是不是代理（127.0.0.1:5780 这类）造成的
+    UseProxy = !bypassProxy,
+    Proxy = bypassProxy ? null : HttpClient.DefaultProxy,
+    AutomaticDecompression = System.Net.DecompressionMethods.All
+};
+
+builder.Services.AddHttpClient<LLMService>(c => c.Timeout = TimeSpan.FromMinutes(30)).ConfigurePrimaryHttpMessageHandler(NewOutboundHandler);
+builder.Services.AddHttpClient<AgentService>().ConfigurePrimaryHttpMessageHandler(NewOutboundHandler);
+builder.Services.AddHttpClient<VideoService>(c => c.Timeout = TimeSpan.FromMinutes(10)).ConfigurePrimaryHttpMessageHandler(NewOutboundHandler);
 // 中转出图：单张图几十秒到几分钟（高峰排队更久），并且成功响应里可能给的是图片 URL，
 // 需要再发一次 GET 把图拉回来，所以超时给到 10 分钟。
-builder.Services.AddHttpClient<ImageService>(c => c.Timeout = TimeSpan.FromMinutes(10));
-builder.Services.AddHttpClient<ComfyService>(c => c.Timeout = TimeSpan.FromMinutes(10));
-builder.Services.AddHttpClient<EnhanceService>(c => c.Timeout = TimeSpan.FromMinutes(30));
+builder.Services.AddHttpClient<ImageService>(c => c.Timeout = TimeSpan.FromMinutes(10)).ConfigurePrimaryHttpMessageHandler(NewOutboundHandler);
+builder.Services.AddHttpClient<ComfyService>(c => c.Timeout = TimeSpan.FromMinutes(10)).ConfigurePrimaryHttpMessageHandler(NewOutboundHandler);
+builder.Services.AddHttpClient<EnhanceService>(c => c.Timeout = TimeSpan.FromMinutes(30)).ConfigurePrimaryHttpMessageHandler(NewOutboundHandler);
 builder.Services.AddHostedService<VideoPollingService>();
 // 资产卡出图后台队列：入队后由后台执行，关页面/刷新也会跑完（见 Database\Upgrade_资产出图任务队列.sql）
 builder.Services.AddHostedService<AssetImageQueueService>();
+// 无限画布出图后台队列：同一套思路，见 Database\Upgrade_无限画布.sql
+builder.Services.AddHostedService<CanvasImageQueueService>();
 builder.Services.AddHttpClient();
 builder.Services.AddSingleton<DbService>();
 // 视频状态 SSE 订阅中心：后台巡检发现状态变化后主动推给页面，替代前端每个镜头一条 5 秒轮询链
 builder.Services.AddSingleton<VideoEventHub>();
+// 画布节点状态 SSE 订阅中心：后台出图队列跑完一张就推一次，页面不用给每个节点起轮询
+builder.Services.AddSingleton<CanvasEventHub>();
 builder.Services.AddScoped<AssetImageRunner>();
+builder.Services.AddScoped<CanvasImageRunner>();
 builder.Services.AddScoped<StoryboardPlanningService>();
 builder.Services.AddScoped<CombatGrammarEngine>();
 builder.Services.AddScoped<DirectorService>();

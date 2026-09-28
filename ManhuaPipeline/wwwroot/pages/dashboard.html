@@ -271,8 +271,7 @@
                 <a href="skill-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
                 <a href="camera-atom-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
                     <span id="navUser" style="display:none;">
-                        <a href="config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> API 配置</a>
-                        <a href="profile.html" style="margin-left:8px;color:var(--primary-light);font-size:13px;;font-size:14px"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
+                        <a href="system-config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
                         <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
                         <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
                     </span>
@@ -293,10 +292,12 @@
                     <div class="action-bar" style="margin-bottom:0;">
                         <button class="btn btn-primary" onclick="showCreateDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建漫剧</button>
                         <a href="asset-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 资产库</a>
+                        <a href="canvas.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
                         <a href="skill-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
                         <a href="fight-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
 <a href="camera-atom-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
-                        <a href="token-report.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bar_chart</span> Token统计</a>
+<a href="report.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</a>
+                        <a href="voice-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</a>
                         <a href="works.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
                         <button class="btn btn-outline" id="btnDramaSort" onclick="toggleDramaSort()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="dramaSortLabel">最新优先</span></button>
                     </div>
@@ -343,6 +344,12 @@
                 <input id="projectTitleInput" placeholder="输入项目名称">
                 <label>描述（选填）</label>
                 <textarea id="projectDescInput" placeholder="输入描述" rows="3"></textarea>
+                <label>项目类型</label>
+                <select id="projectTypeInput">
+                    <option value="drama">短剧（默认）</option>
+                    <option value="ad">广告</option>
+                    <option value="mv">MV（歌曲）</option>
+                </select>
                 <div class="modal-actions">
                     <button class="btn btn-outline" onclick="$('#createProjectModal').hide()">取消</button>
                     <button class="btn btn-primary" onclick="createProject()">创建</button>
@@ -438,13 +445,15 @@
                     }
                 });
             }
-            function showCreateProject() { $("#projectTitleInput").val(""); $("#projectDescInput").val(""); $("#createProjectModal").css("display", "flex") }
+            function showCreateProject() { $("#projectTitleInput").val(""); $("#projectDescInput").val(""); $("#projectTypeInput").val("drama"); $("#createProjectModal").css("display", "flex") }
             function createProject() {
                 var t = $("#projectTitleInput").val().trim(); if (!t) { alert("请输入项目名称"); return }
-                $.ajax({ url: "/api/project", method: "POST", contentType: "application/json", data: JSON.stringify({ dramaId: currentDramaId, title: t, description: $("#projectDescInput").val(), scriptContent: "" }), success: function () { $("#createProjectModal").hide(); loadProjects() }, error: function (x) { alert("失败: " + (x.responseJSON?.message || x.statusText)) } });
+                $.ajax({ url: "/api/project", method: "POST", contentType: "application/json", data: JSON.stringify({ dramaId: currentDramaId, title: t, description: $("#projectDescInput").val(), scriptContent: "", projectType: $("#projectTypeInput").val() || "drama" }), success: function () { $("#createProjectModal").hide(); loadProjects() }, error: function (x) { alert("失败: " + (x.responseJSON?.message || x.statusText)) } });
             }
             function editProject(id, title) { var nt = prompt("项目名称", title); if (!nt || !nt.trim()) return; $.ajax({ url: "/api/project/" + id, method: "PUT", contentType: "application/json", data: JSON.stringify({ title: nt }), success: function () { loadProjects() } }) }
             function deleteProject(id) { if (!confirm("确定删除？")) return; $.ajax({ url: "/api/project/" + id, method: "DELETE", success: function () { loadProjects() } }) }
+
+
 
             var editDramaCoverFile = null;
             function showEditDrama(id, title) {

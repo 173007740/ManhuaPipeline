@@ -76,7 +76,7 @@ public class Stage9PostGuardTests
     {
         var method = typeof(AgentService).GetMethod("BuildSeedanceSystemPrompt", BindingFlags.Static | BindingFlags.NonPublic);
         Assert.NotNull(method);
-        return (string)method.Invoke(null, new object[] { "风格", "技能", "打斗", "角色" })!;
+        return (string)method.Invoke(null, new object?[] { "风格", "技能", "打斗", "角色", null })!;
     }
 
     [Fact]
