@@ -147,17 +147,30 @@
     $.get('/api/project', function(list){
       $('#proj').html('<option value="">（不入库）</option>'
         + (list || []).map(function(p){ return '<option value="' + p.projectId + '">' + esc(p.title) + '</option>'; }).join(''));
+      applyPreset(list || []);
     });
   }
 
-  $('#proj').change(function(){
-    var pid = $(this).val();
+  $('#proj').change(function(){ loadEpisodes($(this).val()); });
+
+  function loadEpisodes(pid){
     if (!pid){ $('#eps').html('<option value="">（先选项目）</option>'); return; }
     $.get('/api/project/' + pid + '/episode', function(list){
       $('#eps').html('<option value="">（不选则分镜不入库）</option>'
         + (list || []).map(function(e){ return '<option value="' + e.episodeId + '">第' + e.episodeNumber + '集 ' + esc(e.title || '') + '</option>'; }).join(''));
+      if (list && list.length === 1) $('#eps').val(list[0].episodeId);   // 只有一集就不用选了
     });
-  });
+  }
+
+  // 从项目卡片跳进来时带 projectId：直接替他选中，别让他再点一次下拉
+  function applyPreset(list){
+    var pid = new URLSearchParams(location.search).get('projectId');
+    if (!pid) return;
+    $('#proj').val(pid);
+    loadEpisodes(pid);
+    var t = list.filter(function(p){ return p.projectId === +pid; })[0];
+    if (t) say('产出将落到《' + t.title + '》');
+  }
 
   // 起始阶段的输入表单：字段定义在库里（Stages.InputsJson），加一项减一项不用改页面
   function renderForm(){
