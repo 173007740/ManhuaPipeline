@@ -51,9 +51,10 @@ public class DirectorAgentService
     public sealed record PromptBuild(string SystemPrompt, string DocsSummary, int Chars, List<(string Title, int Chars)> Docs);
 
     /// <summary>拼出本阶段的 System prompt。返回时也带上文档清单，供预览和审计用。</summary>
-    public PromptBuild BuildPrompt(int packId, DbService.SkillStageRow stage)
+    public PromptBuild BuildPrompt(int packId, DbService.SkillStageRow stage,
+                                   List<DbService.SkillDocFull>? docsCache = null)
     {
-        var docs = _db.GetSkillDocsWithContent(packId);
+        var docs = docsCache ?? _db.GetSkillDocsWithContent(packId);
         var picked = docs.Where(d => MatchFilter(stage.DocFilter, d)).ToList();
 
         var sb = new StringBuilder();
@@ -107,21 +108,44 @@ public class DirectorAgentService
 
     // ========== 2. 预览（跑之前的确认，防止一点就烧掉一堆额度） ==========
 
+    /// <summary>
+    /// 一步的「连带代价」：本步重跑要多少、下游有几个阶段得跟着重跑。
+    /// 存在的理由是门禁不能只问「过不过」，得说清「错了要赔多少」——没有代价的确认等于形式主义。
+    /// </summary>
+    public sealed record StepCost(int PromptTokens, int RerunTokens, int DownstreamCount, int DownstreamTokens);
+
+    /// <summary>算本步 + 下游的 token 代价。下游按各阶段自己的 prompt 长度累加，只拼一次文档避免反复查库。</summary>
+    public StepCost CostOf(int packId, DbService.SkillStageRow stage, List<DbService.SkillDocFull>? docsCache = null)
+    {
+        var docs = docsCache ?? _db.GetSkillDocsWithContent(packId);
+        var self = EstimateTokens(BuildPrompt(packId, stage, docs).SystemPrompt);
+        var downstream = _db.GetSkillStages(packId)
+                            .Where(s => s.IsEnabled && s.SortOrder > stage.SortOrder)
+                            .ToList();
+        int ds = 0;
+        foreach (var d in downstream) ds += EstimateTokens(BuildPrompt(packId, d, docs).SystemPrompt);
+        // 重跑 = 本步 prompt 再来一遍 + 输出量按 prompt 的一半粗算
+        return new StepCost(self, self + self / 2, downstream.Count, ds);
+    }
+
     public sealed record PreviewResult(int PromptChars, int EstTokens, List<(string Title, int Chars)> Docs,
-                                        bool HumanConfirm, string? Gates, string? InputsJson);
+                                        bool HumanConfirm, string? Gates, string? InputsJson, StepCost Cost);
 
     public PreviewResult Preview(int packId, string stageKey, DbService.SkillStageRow? stage = null)
     {
         stage ??= _db.GetSkillStages(packId).FirstOrDefault(s => s.StageKey == stageKey)
                   ?? throw new InvalidOperationException($"阶段不存在：{stageKey}");
-        var build = BuildPrompt(packId, stage);
+        var docs = _db.GetSkillDocsWithContent(packId);
+        var build = BuildPrompt(packId, stage, docs);
         return new PreviewResult(build.Chars, EstimateTokens(build.SystemPrompt), build.Docs,
-                                 stage.HumanConfirm, stage.Gates, stage.InputsJson);
+                                 stage.HumanConfirm, stage.Gates, stage.InputsJson,
+                                 CostOf(packId, stage, docs));
     }
 
     // ========== 3. 真正跑一步 ==========
 
-    public sealed record StepResult(int StepId, string StageKey, string Status, string? Output, int PromptChars, int EstTokens, string? Gates);
+    public sealed record StepResult(int StepId, string StageKey, string Status, string? Output, int PromptChars,
+                                    int EstTokens, string? Gates, StepCost Cost);
 
     public async Task<StepResult> RunStepAsync(int userId, int runId, string stageKey, string inputText)
     {
@@ -136,6 +160,7 @@ public class DirectorAgentService
                   ?? throw new InvalidOperationException("没有可用的 LLM 配置，先去系统配置里配一个");
 
         var build = BuildPrompt(packId, stage);
+        var cost = CostOf(packId, stage);
         int stepId = _db.CreateSkillStep(runId, stageKey, stage.Name, stage.SortOrder,
                                          inputText, build.DocsSummary, build.Chars, stage.Gates);
 
@@ -150,7 +175,7 @@ public class DirectorAgentService
             _db.FinishSkillStep(stepId, status, raw, json, null);
             _db.UpdateSkillRun(runId, stageKey, stage.HumanConfirm ? "await_confirm" : "running");
             return new StepResult(stepId, stageKey, status, raw, build.Chars,
-                                  EstimateTokens(sys), stage.Gates);
+                                  EstimateTokens(sys), stage.Gates, cost);
         }
         catch (Exception ex)
         {

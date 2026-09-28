@@ -19,6 +19,15 @@ public class DirectorAgentController : ControllerBase
 
     private int GetUserId() => HttpContext.Session.GetInt32("UserId") ?? 0;
 
+    /// <summary>代价说明：这一步错了要赔多少。门禁弹窗和预览面板都用它，避免「确认」变成无信息的点头。</summary>
+    private static object Cost(DirectorAgentService.StepCost c) => new
+    {
+        promptTokens = c.PromptTokens,
+        rerunTokens = c.RerunTokens,
+        downstreamCount = c.DownstreamCount,
+        downstreamTokens = c.DownstreamTokens
+    };
+
     /// <summary>
     /// 跑之前的预览：这一阶段会加载哪些规则、prompt 多长、大约多少 token、要不要人工确认。
     /// 存在的理由很实在——一次调用可能几万 token，不该在用户不知情的情况下就烧掉。
@@ -38,7 +47,8 @@ public class DirectorAgentController : ControllerBase
             humanConfirm = p.HumanConfirm,
             gates = p.Gates,
             inputsJson = p.InputsJson,
-            docs = p.Docs.Select(d => new { title = d.Title, chars = d.Chars })
+            docs = p.Docs.Select(d => new { title = d.Title, chars = d.Chars }),
+            cost = Cost(p.Cost)
         });
     }
 
@@ -61,7 +71,8 @@ public class DirectorAgentController : ControllerBase
             return Ok(new
             {
                 stepId = r.StepId, stageKey = r.StageKey, status = r.Status,
-                output = r.Output, promptChars = r.PromptChars, estTokens = r.EstTokens, gates = r.Gates
+                output = r.Output, promptChars = r.PromptChars, estTokens = r.EstTokens,
+                gates = r.Gates, cost = Cost(r.Cost)
             });
         }
         catch (InvalidOperationException ex) { return BadRequest(new { message = ex.Message }); }

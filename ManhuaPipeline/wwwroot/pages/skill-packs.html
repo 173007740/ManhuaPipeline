@@ -209,6 +209,18 @@
         loadSteps();
     }
 
+    // 门禁不能只问「过不过」，得说清「错了要赔多少」，否则确认就是无信息的点头
+    function costHtml(c){
+        if (!c) return '';
+        var w = function(n){ return n >= 10000 ? (n/10000).toFixed(1) + '万' : n + ''; };
+        return '<div style="font-size:12px;color:#94a3b8;margin-top:6px">'
+             + '这一步错了的代价：重跑约 <b style="color:#f59e0b">' + w(c.rerunTokens) + '</b> token'
+             + (c.downstreamCount
+                ? '，下游 <b style="color:#f87171">' + c.downstreamCount + '</b> 个阶段得跟着重跑，约 <b style="color:#f87171">' + w(c.downstreamTokens) + '</b> token'
+                : '（后面没有阶段了）')
+             + '</div>';
+    }
+
     function previewRun(){
         $('#rPreview').html('计算中...');
         $.ajax({
@@ -221,7 +233,8 @@
               + '<div style="font-size:13px;color:#e2e8f0;margin-bottom:6px">本次将加载 ' + (p.docs||[]).length + ' 份规则，prompt 共 '
               + p.promptChars + ' 字符，约 <b style="color:#f59e0b">' + p.estTokens + '</b> token'
               + (p.humanConfirm ? '（跑完停在人工确认）' : '') + '</div>'
-              + '<div style="max-height:180px;overflow:auto;font-size:12px;color:#94a3b8">' + docs + '</div>'
+              + costHtml(p.cost)
+              + '<div style="max-height:180px;overflow:auto;font-size:12px;color:#94a3b8;margin-top:6px">' + docs + '</div>'
               + '</div>');
         }).fail(function(xhr){
             $('#rPreview').html('<span class="sp-hint">预览失败：' + esc((xhr.responseJSON && xhr.responseJSON.message) || '') + '</span>');
@@ -248,9 +261,16 @@
                 var h = '<div style="border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px">';
                 h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">状态 ' + esc(r.status)
                    + ' · prompt ' + r.promptChars + ' 字符 · 约 ' + r.estTokens + ' token</div>';
-                if (r.gates) h += '<div style="font-size:12px;color:#fb923c;margin-bottom:8px">门禁：' + esc(r.gates) + '</div>';
-                if (r.status === 'await_confirm')
-                    h += '<button class="btn" id="btnConfirm" data-step="' + r.stepId + '">确认放行</button>';
+                if (r.status === 'await_confirm'){
+                    h += '<div style="border:1px solid rgba(251,146,60,.35);border-radius:8px;padding:10px;margin:8px 0;background:rgba(251,146,60,.08)">'
+                       + '<div style="font-size:13px;color:#fb923c;font-weight:600;margin-bottom:4px">停在人工确认</div>'
+                       + (r.gates ? '<div style="font-size:12px;color:#fdba74;margin-bottom:6px">门禁：' + esc(r.gates) + '</div>' : '')
+                       + costHtml(r.cost)
+                       + '<button class="btn" style="margin-top:10px" id="btnConfirm" data-step="' + r.stepId + '">确认放行</button>'
+                       + '</div>';
+                } else if (r.gates) {
+                    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">门禁：' + esc(r.gates) + '</div>';
+                }
                 h += '<textarea class="tall" style="min-height:300px;margin-top:8px" readonly>' + esc(r.output || '') + '</textarea></div>';
                 $('#rOutput').html(h);
                 $('#btnConfirm').click(function(){ confirmStep($(this).data('step')); });
