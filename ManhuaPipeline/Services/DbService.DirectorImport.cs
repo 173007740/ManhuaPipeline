@@ -214,4 +214,70 @@ UPDATE DirectorSkillRunSteps SET ImportedCount=@c, ImportError=@e, UpdatedAt=SYS
         cmd.Parameters.AddWithValue("@id", stepId);
         cmd.ExecuteNonQuery();
     }
+
+    /// <summary>
+    /// 存一份交付物（立项 / 剧本 / 资产清单 / 图册 / 质检这类整篇文本）。
+    /// 同一项目同一阶段每跑一次 Version +1，旧版留在表里——重跑不冲掉上一版，
+    /// 这也是剧本敢覆盖 Projects.ScriptContent 的底气：要回看随时能翻出来。
+    /// </summary>
+    public int InsertDeliverable(int runId, int stepId, string stageKey, int projectId, int episodeId,
+                                 string? title, string? content, string? payloadJson)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+DECLARE @v INT = ISNULL((SELECT MAX(Version) FROM DirectorSkillDeliverables WHERE ProjectId=@p AND StageKey=@k),0)+1;
+INSERT INTO DirectorSkillDeliverables(RunId,StepId,StageKey,ProjectId,EpisodeId,Title,Content,PayloadJson,Version)
+VALUES(@r,@s,@k,@p,@e,@t,@c,@j,@v);
+SELECT @v;", conn);
+        cmd.Parameters.AddWithValue("@r", runId);
+        cmd.Parameters.AddWithValue("@s", stepId);
+        cmd.Parameters.AddWithValue("@k", stageKey);
+        cmd.Parameters.AddWithValue("@p", projectId > 0 ? projectId : (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@e", episodeId > 0 ? episodeId : (object)DBNull.Value);
+        cmd.Parameters.AddWithValue("@t", (object?)title ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@c", (object?)content ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@j", (object?)payloadJson ?? DBNull.Value);
+        return Convert.ToInt32(cmd.ExecuteScalar());
+    }
+
+    public List<(int DeliverableId, string? StageKey, string? Title, int Version, string? CreatedAt)> GetDeliverables(int projectId)
+    {
+        using var conn = GetConn(); conn.Open();
+        var list = new List<(int, string?, string?, int, string?)>();
+        using var cmd = new SqlCommand(@"
+SELECT DeliverableId, StageKey, Title, Version, CONVERT(varchar(16), CreatedAt, 120)
+FROM DirectorSkillDeliverables WHERE ProjectId=@p ORDER BY DeliverableId DESC", conn);
+        cmd.Parameters.AddWithValue("@p", projectId);
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add((r.GetInt32(0), r.IsDBNull(1) ? null : r.GetString(1), r.IsDBNull(2) ? null : r.GetString(2),
+                      r.GetInt32(3), r.IsDBNull(4) ? null : r.GetString(4)));
+        return list;
+    }
+
+    public string? GetDeliverableContent(int deliverableId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT Content FROM DirectorSkillDeliverables WHERE DeliverableId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", deliverableId);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    /// <summary>剧本正本。老流水线的阶段 3/4/6/7/8 全读这一列，是它们的输入源。</summary>
+    public string? GetProjectScriptContent(int projectId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT ScriptContent FROM Projects WHERE ProjectId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", projectId);
+        return cmd.ExecuteScalar() as string;
+    }
+
+    public void SetProjectScriptContent(int projectId, string? text)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("UPDATE Projects SET ScriptContent=@s, UpdatedAt=SYSDATETIME() WHERE ProjectId=@id", conn);
+        cmd.Parameters.AddWithValue("@s", (object?)text ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", projectId);
+        cmd.ExecuteNonQuery();
+    }
 }

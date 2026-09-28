@@ -119,6 +119,20 @@
     .log{margin-top:18px;border-top:1px solid #22242b;padding-top:12px;font-size:11px;color:#8b8e99;line-height:1.9;
          max-height:150px;overflow:auto;}
     .empty{color:#6f7280;font-size:12px;padding:18px;text-align:center;}
+    /* 交付物：立项/剧本/清单/图册/质检这些整篇产出，以前没地方去，现在有出口 */
+    .deliv-card{background:#111218;border:1px solid var(--line);border-radius:13px;padding:18px 22px;margin-top:18px;}
+    .deliv-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
+    .deliv-head h3{font-size:13px;margin:0;}
+    .deliv-list{display:grid;gap:5px;}
+    .deliv-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #23252c;border-radius:8px;
+                background:#15161c;cursor:pointer;font-size:11.5px;transition:.15s;}
+    .deliv-item:hover{border-color:#3a3d47;background:#191a21;}
+    .deliv-item .dk{font-family:ui-monospace,Menlo,monospace;color:var(--cyan);font-size:10px;}
+    .deliv-item .dt{flex:1;}
+    .deliv-item .dv{color:#6f7280;font-size:10px;}
+    .deliv-body{margin-top:8px;background:#0e0f14;border:1px solid #23252c;border-radius:8px;padding:12px;
+                font-size:11px;line-height:1.75;color:#c9cbd2;white-space:pre-wrap;max-height:320px;overflow:auto;
+                font-family:ui-monospace,Menlo,monospace;}
     @keyframes sideScan{from{top:-35%}to{top:100%}}
     @keyframes pulse{50%{opacity:.45}}
     @media(max-width:1050px){.app-shell{grid-template-columns:1fr}.sidebar{display:none}.form-stage{grid-template-columns:1fr}}
@@ -240,6 +254,15 @@
           </div>
         </div>
 
+        <div class="deliv-card" id="delivCard" style="display:none">
+          <div class="deliv-head">
+            <h3>交付物</h3>
+            <span class="hint">立项 / 剧本 / 资产清单 / 图册 / 质检 —— 点开看全文，重跑留新版本，旧版不丢</span>
+          </div>
+          <div class="deliv-list" id="delivList"></div>
+          <div class="deliv-body" id="delivBody" style="display:none"></div>
+        </div>
+
         <div class="log" id="log"></div>
       </div>
     </main>
@@ -285,6 +308,7 @@
     var pid = $(this).val(), t = $(this).find('option:selected').text();
     $('#wsTarget').text(pid ? t : '未绑定项目');
     loadEpisodes(pid);
+    loadDeliverables();
   });
   $('#eps').change(function(){
     var pid = $('#proj').val();
@@ -312,7 +336,34 @@
     $('#proj').val(pid);
     $('#wsTarget').text((list.filter(function(p){ return p.projectId === +pid; })[0] || {}).title || '项目 #' + pid);
     loadEpisodes(pid);
+    loadDeliverables();
   }
+
+  // 交付物：立项 / 剧本 / 资产清单 / 图册 / 质检的产出是整篇文本，
+  // 没有对应的业务表，以前只能躺在步骤记录里没人看。重跑留新版本，旧版都在。
+  function loadDeliverables(){
+    var pid = $('#proj').val();
+    if (!pid){ $('#delivCard').hide(); return; }
+    $.get('/api/director-agent/deliverables', { projectId: pid }, function(d){
+      var items = (d && d.items) || [];
+      if (!items.length){ $('#delivCard').hide(); return; }
+      $('#delivCard').show();
+      $('#delivBody').hide();
+      $('#delivList').html(items.map(function(it){
+        return '<div class="deliv-item" data-id="' + it.deliverableId + '">'
+             + '<span class="dk">' + esc(it.stageKey) + '</span>'
+             + '<span class="dt">' + esc(it.title || '') + '</span>'
+             + '<span class="dv">v' + it.version + ' · ' + esc(it.createdAt || '') + '</span></div>';
+      }).join(''));
+    });
+  }
+
+  $(document).on('click', '.deliv-item', function(){
+    var id = $(this).data('id');
+    $.get('/api/director-agent/deliverables/' + id, function(d){
+      $('#delivBody').text((d && d.content) || '（空）').show();
+    });
+  });
 
   // 表单预填：上次填过的 > 字段自带 default > 空。
   // 画幅/交付/平台这类参数一部剧定一次就够了，不该每次跑都手填一遍。
@@ -418,6 +469,7 @@
       renderPipe(d.steps); updateStats(d);
       if (d.status === 'running') return;          // 还在跑，继续轮询
       clearInterval(timer);
+      loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
       if (d.status === 'done') { say('全部跑完'); $('#gate').html('<div class="gatebox" style="border-color:#2c5540;background:linear-gradient(145deg,#101c16,#101117)"><div class="gh" style="color:#6bd3a1">流水线跑完了</div><div class="gm" style="color:#9fb8a8">产出已入库，左侧可以看到每步的入库条数。</div></div>'); }
       else if (d.status === 'error') say('出错，看左侧红的那一步');
       else if (d.status === 'await_confirm') showGate(d);

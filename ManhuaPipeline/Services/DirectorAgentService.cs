@@ -275,7 +275,8 @@ public class DirectorAgentService
             if (!string.IsNullOrWhiteSpace(stage.OutputTarget))
             {
                 var ctx = _db.GetRunContext(runId);
-                var res = _importer.Import(stage.OutputTarget!, json, raw, ctx.ProjectId, ctx.EpisodeId, inputText);
+                var res = _importer.Import(stage.OutputTarget!, json, raw, ctx.ProjectId, ctx.EpisodeId,
+                                           inputText, runId, stepId, stage.StageKey);
                 imported = res.Count;
                 importError = res.Error;
             }

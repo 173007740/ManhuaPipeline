@@ -22,6 +22,32 @@ public class DirectorAgentController : ControllerBase
     /// <summary>正在跑的运行，防重复启动。一次连跑十几分钟，同一次运行不该被点两下。</summary>
     private static readonly System.Collections.Concurrent.ConcurrentDictionary<int, byte> _running = new();
 
+    /// <summary>
+    /// 交付物列表：立项、剧本、资产清单、图册、质检这几步的产出。
+    /// 它们不落到业务表，以前只能躺在步骤记录里没人看，现在有个正式的出口。
+    /// </summary>
+    [HttpGet("deliverables")]
+    public IActionResult Deliverables([FromQuery] int projectId)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        if (projectId <= 0) return Ok(new { items = Array.Empty<object>() });
+        return Ok(new
+        {
+            items = _db.GetDeliverables(projectId).Select(d => new
+            {
+                deliverableId = d.DeliverableId, stageKey = d.StageKey, title = d.Title,
+                version = d.Version, createdAt = d.CreatedAt
+            })
+        });
+    }
+
+    [HttpGet("deliverables/{id:int}")]
+    public IActionResult DeliverableContent(int id)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        return Ok(new { content = _db.GetDeliverableContent(id) });
+    }
+
     private int GetUserId() => HttpContext.Session.GetInt32("UserId") ?? 0;
 
     /// <summary>代价说明：这一步错了要赔多少。门禁弹窗和预览面板都用它，避免「确认」变成无信息的点头。</summary>

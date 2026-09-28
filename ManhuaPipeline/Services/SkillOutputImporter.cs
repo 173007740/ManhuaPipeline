@@ -49,9 +49,11 @@ public class SkillOutputImporter
     };
 
     public ImportResult Import(string target, string? outputJson, string? outputText,
-                               int projectId, int episodeId, string? inputText = null)
+                               int projectId, int episodeId, string? inputText = null,
+                               int runId = 0, int stepId = 0, string? stageKey = null)
     {
-        if (projectId <= 0)
+        // 交付物例外：它只是存档，不属于任何项目的业务数据，没绑项目也该留住
+        if (projectId <= 0 && target != "deliverable")
             return new ImportResult(0, "本次运行没绑定项目，只留文本不入库");
 
         try
@@ -62,6 +64,7 @@ public class SkillOutputImporter
                 "asset_prompts" => ImportAssetPrompts(outputJson, outputText, projectId),
                 "frames" => ImportFrames(outputJson, outputText, projectId, episodeId),
                 "prompts" => ImportPrompts(outputText ?? "", projectId, inputText),
+                "deliverable" => ImportDeliverable(runId, stepId, stageKey, outputJson, outputText, projectId, episodeId),
                 _ => new ImportResult(0, null)
             };
         }
@@ -258,6 +261,41 @@ public class SkillOutputImporter
         _db.SaveFramesIncremental(episodeId, projectId, frames);
         return new ImportResult(frames.Count, null);
     }
+
+    // ========== 交付物：立项 / 剧本 / 资产清单 / 图册 / 质检（P0 P1 P2b P2d P5）==========
+
+    private ImportResult ImportDeliverable(int runId, int stepId, string? stageKey, string? outputJson,
+                                           string? outputText, int projectId, int episodeId)
+    {
+        if (string.IsNullOrWhiteSpace(outputText))
+            return new ImportResult(0, "产出为空");
+
+        _db.InsertDeliverable(runId, stepId, stageKey ?? "", projectId, episodeId,
+                              DeliverableTitle(stageKey), outputText, outputJson);
+
+        // 剧本额外接一条线：Projects.ScriptContent 是老流水线阶段 3/4/6/7/8 的输入源。
+        // 写进去等于把剧本喂给它们，否则 P1 跑完只是一篇没人读的文本。
+        // 覆盖前把旧版另存一份——那是用户可能手动传过的剧本，不能静默冲掉。
+        if (stageKey == "P1" && projectId > 0)
+        {
+            var old = _db.GetProjectScriptContent(projectId);
+            if (!string.IsNullOrWhiteSpace(old) && old.Trim() != outputText.Trim())
+                _db.InsertDeliverable(runId, stepId, "P1", projectId, episodeId, "覆盖前旧剧本", old, null);
+            _db.SetProjectScriptContent(projectId, outputText);
+        }
+
+        return new ImportResult(1, null);
+    }
+
+    private static string DeliverableTitle(string? stageKey) => stageKey switch
+    {
+        "P0" => "立项锁定",
+        "P1" => "剧本",
+        "P2b" => "资产清单",
+        "P2d" => "资产图册",
+        "P5" => "质检报告",
+        _ => stageKey ?? "产出"
+    };
 
     // ========== 投喂提示词（P4）==========
 
