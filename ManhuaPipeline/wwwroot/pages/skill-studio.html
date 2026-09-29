@@ -519,7 +519,8 @@
          + (f.required ? ' <span style="color:#ff6b6b">*</span>' : '')
          + (f.tip ? ' <span style="color:#4f655b">' + esc(f.tip) + '</span>' : '')
          + '</span>';
-      var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"';
+      var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"'
+            + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '');
       if (f.type === 'select')
         h += '<select' + k + '>' + (f.options || []).map(function(o){
           return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
@@ -795,6 +796,21 @@
       // 提示词类型属于整次运行：P4 是自动串下来的，不会停下来让人再选一次
       inputsJson: JSON.stringify({ promptType: $('#promptType').val() })
     };
+    // 从中间阶段独立起跑，上游产出是带不进来的，素材只能自己贴。
+    // 不拦一下的话空着也照样能跑：LLM 对着空气提取实体，一次调用白花，还看不出素材是空的
+    var curKey = $('#startStage').val();
+    var firstKey = stages.length ? stages[0].stageKey : '';
+    if (curKey !== firstKey){
+      var miss = [];
+      $('#form [data-fk]').each(function(){
+        if (!$.trim($(this).val() || '')) miss.push($(this).data('fl'));
+      });
+      if (miss.length && !confirm('从 ' + curKey + ' 单独起跑，上游的产出带不进来。\n\n'
+          + '这几项目前是空的：\n  ' + miss.join('\n  ')
+          + '\n\n如果是接着上游往下跑，剧本、资产这类素材字段留空是对的（串起来的时候引擎会自己带进来）。'
+          + '\n确定就这么跑？')) return;
+    }
+
     starting = true;
     $('#btnStart').prop('disabled', true).html('启动中...');
     $.ajax({ url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json', data: JSON.stringify(payload) })
