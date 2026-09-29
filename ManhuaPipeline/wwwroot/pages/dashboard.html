@@ -52,6 +52,13 @@
         #dramaList .drama-desc, #projectList .project-desc { font-size: 11px; line-height: 1.7; }
         #projectList .project-actions { padding: 0; }
         #projectList .project-cover { height: auto; aspect-ratio: 16 / 9; }
+        /* 没图的封面：显示标题前两个字 + 一套固定底色，不再是那个 🎬 emoji。
+           参考站也是这个做法——它 .project-cover b 就是 34px 大字配渐变底。
+           三套底色按 id 取模分配，所以同一张卡每次刷新颜色都一样，不会乱跳。 */
+        .cover-text { font-size: 34px; font-weight: 600; letter-spacing: 6px; color: #dffcff; }
+        .cover-tone-a { background: linear-gradient(145deg, #155361, #07151c); }
+        .cover-tone-b { background: radial-gradient(circle, #174f79, #06131f 66%); }
+        .cover-tone-c { background: radial-gradient(circle, #843246, #1d0911 66%); }
         .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
         .card-enter { font-size: 10px; letter-spacing: 1px; color: var(--hud-cyan); }
         .drama-meta { margin-top: 0 !important; font-size: 11px; }
@@ -279,6 +286,15 @@
                 $("#dramaSortLabel").text(dramaSortOrder === "desc" ? "最新优先" : "最早优先");
                 loadDramas();
             }
+            /* 封面：有图就用图铺满，没图就显示标题前两个字 + 一套底色。
+               底色按 id 取模，同一张卡颜色固定，不会因为排序变化而换来换去。 */
+            var COVER_TONES = ["cover-tone-a", "cover-tone-b", "cover-tone-c"];
+            function coverBlock(cls, id, title, img) {
+                var t = String(title || "").trim();
+                if (img) return "<div class='" + cls + "' style='background-image:url(" + img + ");background-size:cover;background-position:center;'></div>";
+                var tone = COVER_TONES[(Number(id) || t.length) % COVER_TONES.length];
+                return "<div class='" + cls + " cover-text " + tone + "'>" + escHtml(t.slice(0, 2) || "·") + "</div>";
+            }
             function loadDramas() {
                 $.get("/api/drama", function (d) {
                     if (!d || d.length === 0) { $("#dramaList").empty(); $("#dramaEmpty").show(); return }
@@ -293,7 +309,7 @@
                     for (var i = 0; i < d.length; i++) {
                         var dr = d[i];
                         h += "<div class='drama-card hud-panel' onclick=\"openDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">";
-                        h += "<div class='drama-cover' style='" + (dr.coverImage ? "background-image:url(" + dr.coverImage + ");background-size:cover;background-position:center;" : "") + "'>" + (dr.coverImage ? "" : "🎬") + "</div>";
+                        h += coverBlock("drama-cover", dr.dramaId, dr.title, dr.coverImage);
                         h += "<div class='drama-info'>";
                         h += "<div class='drama-title'>" + escHtml(dr.title) + "</div>";
                         h += "<div class='drama-desc'>" + (dr.description ? escHtml(dr.description) : "暂无描述") + "</div>";
@@ -341,9 +357,8 @@
                         var p = d[i];
                         var st = ["草稿", "创意构思", "故事分析", "全局蓝图", "分集细化", "分镜脚本", "角色资产", "道具资产", "环境资产", "提示词生成", "衔接检查", "已完成"];
                         var label = st[p.currentStage] || "草稿";
-                        var picon = p.projectType === "ad" ? "📢" : p.projectType === "mv" ? "🎵" : "🎬";
                         h += "<div class='project-card hud-panel'>";
-                        h += "<div class='project-cover'>" + picon + "</div>";
+                        h += coverBlock("project-cover", p.projectId, p.title, p.coverImage);
                         h += "<div class='project-info'><div class='project-title'>" + escHtml(p.title) + "</div>";
                         h += "<div class='project-desc'>" + (p.description ? escHtml(p.description) : "暂无描述") + "</div>";
                         h += "<div class='card-foot'><span class='card-enter'>状态: " + label + "</span>";
