@@ -49,8 +49,9 @@
                      margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
         .eyebrow { display: block; font-size: 9px; letter-spacing: 2px; color: var(--accent); margin-bottom: 6px; }
         .page-head .head-desc { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
-        .quick-links { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
-        .quick-links .btn { padding: 6px 12px; font-size: 12px; }
+        /* 页头右側那一排：nowrap 保证始终是一排；屏幕实在放不下时整排沉到第二行，不拆散 */
+        .head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
+        .head-actions .btn { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
         @media (max-width: 1400px) { #dramaList, #projectList { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 1000px) { #dramaList, #projectList { grid-template-columns: repeat(2, 1fr); } .hud-metrics { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 650px) { #dramaList, #projectList, .hud-metrics { grid-template-columns: 1fr; } }
@@ -108,7 +109,15 @@
                         <div class="page-title" style="margin-bottom:0;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> 我的漫剧<span class="drama-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
                         <p class="head-desc">创建漫剧合集，按集推进完整制作流水线。</p>
                     </div>
-                    <div style="display:flex;align-items:center;gap:8px;">
+                    <div class="head-actions">
+                        <a href="asset-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 资产库</a>
+                        <a href="canvas.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
+                        <a href="skill-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
+                        <a href="fight-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
+                        <a href="camera-atom-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
+                        <a href="report.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</a>
+                        <a href="voice-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</a>
+                        <a href="works.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
                         <button class="btn btn-primary" onclick="showCreateDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 创建漫剧</button>
                         <button class="btn btn-outline" id="btnDramaSort" onclick="toggleDramaSort()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="dramaSortLabel">最新优先</span></button>
                     </div>
@@ -118,16 +127,6 @@
                     <div class="hud-metric hud-panel"><span class="m-label">02 / 单集项目</span><b class="m-value" id="mProject">–</b><span class="m-sub" id="mProjectSub">所有合集下的项目</span></div>
                     <div class="hud-metric hud-panel"><span class="m-label">03 / 出图任务</span><b class="m-value" id="mImage">–</b><span class="m-sub" id="mImageSub">近 7 天</span></div>
                     <div class="hud-metric hud-panel"><span class="m-label">04 / 运行中任务</span><b class="m-value" id="mRunning">–</b><span class="m-sub" id="mRunningSub">出图 + 视频</span></div>
-                </div>
-                <div class="quick-links">
-                        <a href="asset-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 资产库</a>
-                        <a href="canvas.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
-                        <a href="skill-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
-                        <a href="fight-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
-                        <a href="camera-atom-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
-                        <a href="report.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</a>
-                        <a href="voice-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</a>
-                        <a href="works.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
                 </div>
                 <div id="dramaList" class="drama-grid"></div>
                 <div id="dramaEmpty" class="empty-state" style="display:none;">
