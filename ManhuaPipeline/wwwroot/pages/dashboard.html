@@ -130,10 +130,11 @@
            窄屏（≤760px）不做固定高度——手机上这么切会把内容截掉，还是让页面正常滚。 */
         @media (min-width: 761px) {
             html, body { height: 100%; overflow: hidden; }
-            .container { max-width: none; height: calc(100vh - 56px); overflow-y: auto; padding: 22px 32px 40px; }
-            /* 标题行吸顶：列表滚起来之后还看得见自己在哪一层 */
+            .container { max-width: none; height: calc(100vh - 56px); overflow-y: auto; padding: 10px 10px 40px; }
+            /* 标题行吸顶：列表滚起来之后还看得见自己在哪一层。
+               top 要跟 .container 的 padding-top 对齐（现在是 10px），不然吸顶时标题上方会空出一条缝 */
             #dramaView > div:first-child, #projectView > .page-title {
-                position: sticky; top: -22px; z-index: 5; padding: 10px 0 12px;
+                position: sticky; top: -10px; z-index: 5; padding: 10px 0 12px;
                 background: linear-gradient(var(--bg) 72%, transparent);
             }
             #dramaView > div:first-child { margin-bottom: 8px; }
