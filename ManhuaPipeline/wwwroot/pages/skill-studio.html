@@ -463,6 +463,7 @@
              产出自动入库。<b>没有卡点、没有确认对话框</b>——中途不会停下来问你要东西。</p>
         </div>
         <div class="ss-actions">
+          <button id="btnDeliv" disabled>交付物 · 0 ↗</button>
           <button id="btnNew">↻ 从头再来</button>
         </div>
       </div>
@@ -535,11 +536,6 @@
       <!-- 工作区：当前阶段做出来的东西。左边点哪个阶段，这里就换成什么 -->
       <section class="ss-panel work-panel" id="workArea"></section>
 
-      <section class="ss-panel deliv-card" id="delivCard" style="display:none">
-        <div class="ss-minihead"><b>交付物</b><span>重跑留新版本，旧版不丢</span></div>
-        <div class="deliv-list" id="delivList"></div>
-        <div class="deliv-body" id="delivBody" style="display:none"></div>
-      </section>
     </div>
   </div>
   </div>
@@ -794,28 +790,19 @@
 
   // 交付物：立项 / 剧本 / 资产清单 / 图册 / 质检的产出是整篇文本，
   // 没有对应的业务表，以前只能躺在步骤记录里没人看。重跑留新版本，旧版都在。
+  /* 交付物不再占着主页面下半屏：每跑一步存一条，攒多了会把工作区整个挤下去。
+     主页面只留一个按钮，点开是独立一页，能慢慢翻。 */
   function loadDeliverables(){
-    var pid = $('#proj').val();
-    if (!pid){ $('#delivCard').hide(); return; }
+    var pid = $('#proj').val(), btn = $('#btnDeliv');
+    if (!pid){ btn.prop('disabled', true).text('交付物 · 0 ↗'); return; }
     $.get('/api/director-agent/deliverables', { projectId: pid }, function(d){
       var items = (d && d.items) || [];
-      if (!items.length){ $('#delivCard').hide(); return; }
-      $('#delivCard').show();
-      $('#delivBody').hide();
-      $('#delivList').html(items.map(function(it){
-        return '<div class="deliv-item" data-id="' + it.deliverableId + '">'
-             + '<span class="dk">' + esc(it.stageKey) + '</span>'
-             + '<span class="dt">' + esc(it.title || '') + '</span>'
-             + '<span class="dv">v' + it.version + ' · ' + esc(it.createdAt || '') + '</span></div>';
-      }).join(''));
+      btn.text('交付物 · ' + items.length + ' ↗').prop('disabled', !items.length);
     });
   }
-
-  $(document).on('click', '.deliv-item', function(){
-    var id = $(this).data('id');
-    $.get('/api/director-agent/deliverables/' + id, function(d){
-      $('#delivBody').text((d && d.content) || '（空）').show();
-    });
+  $('#btnDeliv').click(function(){
+    var pid = $('#proj').val();
+    if (pid) window.open('deliverables.html?projectId=' + pid, '_blank');
   });
 
   // 表单预填：上次填过的 > 字段自带 default > 空。

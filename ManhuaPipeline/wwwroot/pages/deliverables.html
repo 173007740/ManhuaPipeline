@@ -1,0 +1,178 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>交付物 · 漫创引擎</title>
+<style>
+  /* 交付物单独一页：流水线主页面只留一个按钮，攒下来的每步产出到这里慢慢翻。
+     配色跟 skill-studio 保持一致，免得切过来像换了个系统。 */
+  :root{--bg:#05090b;--panel:#081113;--mint:#58f2c5;--t2:#9fb4b0;--t3:#5f7574;--bd:#1a3536;
+        --mono:'JetBrains Mono',Consolas,monospace}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:#cfe0dc;font:14px/1.7 -apple-system,"Microsoft YaHei",sans-serif}
+  .dv-top{position:sticky;top:0;z-index:10;height:56px;display:flex;align-items:center;gap:18px;
+          padding:0 20px;background:rgba(2,9,15,.95);border-bottom:1px solid var(--bd)}
+  .dv-back{color:var(--mint);text-decoration:none;font-size:12px;flex:none}
+  .dv-back:hover{text-decoration:underline}
+  .dv-title b{display:block;font-size:14px;color:#eafff9}
+  .dv-title small{font:9px var(--mono);letter-spacing:1.5px;color:var(--t3)}
+  .dv-meta{margin-left:auto;font:10px var(--mono);color:var(--t3)}
+  .dv-shell{display:grid;grid-template-columns:290px 1fr;height:calc(100vh - 56px)}
+  .dv-side{border-right:1px solid var(--bd);overflow-y:auto;padding:12px 8px}
+  .dv-side-title{font:9px var(--mono);letter-spacing:1.4px;color:var(--t3);padding:4px 8px 10px}
+  .dv-item{padding:9px 11px;border:1px solid transparent;cursor:pointer;transition:.16s}
+  .dv-item:hover{background:rgba(88,242,197,.05)}
+  .dv-item.on{background:linear-gradient(90deg,rgba(88,242,197,.1),transparent 72%);border-color:#26564f}
+  .dv-item .k{font:9px var(--mono);color:var(--mint);letter-spacing:1px}
+  .dv-item b{display:block;font-size:12px;color:#cfe0dc;margin-top:2px}
+  .dv-item small{display:block;font:9px var(--mono);color:var(--t3);margin-top:3px}
+  .dv-main{overflow-y:auto;padding:24px 30px}
+  .dv-hint{color:var(--t3);font-size:12px}
+
+  .md h1,.md h2,.md h3,.md h4{color:#eafff9;margin:18px 0 8px;line-height:1.35}
+  .md h1{font-size:19px;border-bottom:1px solid var(--bd);padding-bottom:8px}
+  .md h2{font-size:16px} .md h3{font-size:14px}
+  .md p{margin:8px 0;color:#c3d6d2}
+  .md b{color:#eafff9}
+  .md table{border-collapse:collapse;width:100%;margin:12px 0;font-size:12px}
+  .md th,.md td{border:1px solid var(--bd);padding:7px 10px;text-align:left;vertical-align:top}
+  .md th{background:#0d1f21;color:#eafff9}
+  .md ul,.md ol{margin:8px 0;padding-left:22px}
+  .md li{margin:4px 0;color:#c3d6d2}
+  .md code{background:#0d1f21;padding:2px 5px;font:12px var(--mono);color:var(--mint)}
+  .md pre{background:#0a1618;border:1px solid var(--bd);padding:12px;overflow:auto}
+  .md blockquote{border-left:2px solid var(--mint);margin:10px 0;padding:6px 14px;color:var(--t2)}
+  .md hr{border:0;border-top:1px solid var(--bd);margin:16px 0}
+  @media(max-width:900px){.dv-shell{grid-template-columns:1fr}.dv-side{display:none}}
+</style>
+</head>
+<body>
+
+<header class="dv-top">
+  <a class="dv-back" id="dvBack" href="/pages/skill-studio.html">← 回到流水线</a>
+  <div class="dv-title"><b id="dvProj">—</b><small>DELIVERABLES</small></div>
+  <div class="dv-meta" id="dvMeta"></div>
+</header>
+
+<main class="dv-shell">
+  <aside class="dv-side">
+    <div class="dv-side-title">产出归档</div>
+    <div id="dvList"></div>
+  </aside>
+  <section class="dv-main"><div class="md" id="dvBody"><div class="dv-hint">加载中…</div></div></section>
+</main>
+
+<script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+<script>
+  var pid = new URLSearchParams(location.search).get('projectId') || '';
+  var items = [];
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' })[c];
+    });
+  }
+
+  /* 极简 Markdown 渲染：跟 skill-studio 用的是同一套，
+     免得同一份产出在流水线里一个样子、到这儿又是一个样子。 */
+  function mdInline(s){
+    return String(s)
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+  function mdRender(src){
+    var lines = String(src || '').split('\n'), out = [], i = 0, inCode = false, inList = false;
+    function closeList(){ if (inList){ out.push('</ul>'); inList = false; } }
+    for (; i < lines.length; i++){
+      var ln = esc(lines[i]);
+      if (/^```/.test(ln)){ closeList(); out.push(inCode ? '</code></pre>' : '<pre><code>'); inCode = !inCode; continue; }
+      if (inCode){ out.push(ln); continue; }
+      if (/^\s*\|/.test(ln) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])){
+        closeList();
+        var head = ln.split('|').slice(1, -1);
+        i += 2;
+        var body = [];
+        for (; i < lines.length && /^\s*\|/.test(lines[i]); i++) body.push(esc(lines[i]).split('|').slice(1, -1));
+        i--;
+        out.push('<table><thead><tr>' + head.map(function(c){ return '<th>' + mdInline(c) + '</th>'; }).join('')
+          + '</tr></thead><tbody>'
+          + body.map(function(r){ return '<tr>' + r.map(function(c){ return '<td>' + mdInline(c) + '</td>'; }).join('') + '</tr>'; }).join('')
+          + '</tbody></table>');
+        continue;
+      }
+      if (/^\s*\|/.test(ln)) continue;
+      var m = /^(#{1,6})\s+(.*)$/.exec(ln);
+      if (m){ closeList(); var lv = Math.min(m[1].length, 4); out.push('<h' + lv + '>' + mdInline(m[2]) + '</h' + lv + '>'); continue; }
+      if (/^\s*(-{3,}|\*{3,})\s*$/.test(ln)){ closeList(); out.push('<hr>'); continue; }
+      if (/^\s*>\s?/.test(ln)){ closeList(); out.push('<blockquote>' + mdInline(ln.replace(/^\s*>\s?/, '')) + '</blockquote>'); continue; }
+      if (/^\s*([-*+]|\d+\.)\s+/.test(ln)){
+        if (!inList){ out.push('<ul>'); inList = true; }
+        out.push('<li>' + mdInline(ln.replace(/^\s*([-*+]|\d+\.)\s+/, '')) + '</li>'); continue;
+      }
+      if (!ln.trim()){ closeList(); continue; }
+      closeList();
+      out.push('<p>' + mdInline(ln) + '</p>');
+    }
+    closeList();
+    if (inCode) out.push('</code></pre>');
+    return out.join('');
+  }
+
+  // 总览：把这次跑出来的东西列成一张表，一眼看全，不用一条条点
+  function overview(){
+    if (!items.length) return '<div class="dv-hint">这个项目还没有交付物。回流水线跑一步就会存一条。</div>';
+    var h = '<h1>交付物总览</h1><p>每一步跑完，它的整篇产出就在这儿存一份。重跑留新版本，旧版不丢。</p>'
+      + '<table><thead><tr><th>阶段</th><th>产出</th><th>版本</th><th>时间</th></tr></thead><tbody>';
+    items.forEach(function(it){
+      h += '<tr><td>' + esc(it.stageKey) + '</td><td>' + esc(it.title || '') + '</td>'
+         + '<td>v' + it.version + '</td><td>' + esc(String(it.createdAt || '').replace('T', ' ').slice(0, 19)) + '</td></tr>';
+    });
+    return h + '</tbody></table>';
+  }
+
+  function renderList(){
+    var h = '<div class="dv-item on" data-id="0"><span class="k">OVERVIEW</span><b>总览</b>'
+          + '<small>' + items.length + ' 条产出</small></div>';
+    h += items.map(function(it){
+      return '<div class="dv-item" data-id="' + it.deliverableId + '">'
+        + '<span class="k">' + esc(it.stageKey) + '</span><b>' + esc(it.title || '') + '</b>'
+        + '<small>v' + it.version + ' · ' + esc(String(it.createdAt || '').slice(0, 10)) + '</small></div>';
+    }).join('');
+    $('#dvList').html(h);
+    $('#dvList .dv-item').click(function(){
+      $('#dvList .dv-item').removeClass('on');
+      $(this).addClass('on');
+      open(+$(this).data('id'));
+    });
+  }
+
+  function open(id){
+    if (!id){ $('#dvBody').html(overview()); return; }
+    $('#dvBody').html('<div class="dv-hint">加载中…</div>');
+    $.get('/api/director-agent/deliverables/' + id, function(d){
+      $('#dvBody').html(mdRender((d && d.content) || '（空）'));
+    }).fail(function(){
+      $('#dvBody').html('<div class="dv-hint">这条产出读不出来（可能是没登录）</div>');
+    });
+  }
+
+  $(function(){
+    if (!pid){ $('#dvBody').html('<div class="dv-hint">没指定项目：deliverables.html?projectId=57</div>'); return; }
+    $('#dvBack').attr('href', '/pages/skill-studio.html?projectId=' + pid);
+    $.get('/api/project/' + pid, function(p){ $('#dvProj').text(p.title || ('项目 #' + pid)); })
+     .fail(function(){ $('#dvProj').text('项目 #' + pid); });
+
+    $.get('/api/director-agent/deliverables', { projectId: pid }, function(d){
+      items = (d && d.items) || [];
+      $('#dvMeta').text(items.length + ' 条产出');
+      renderList();
+      open(0);
+    }).fail(function(){
+      $('#dvBody').html('<div class="dv-hint">读不到交付物（可能是没登录）</div>');
+    });
+  });
+</script>
+</body>
+</html>
