@@ -9,8 +9,10 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/admin-theme.css">
     <style>
-        /* dashboard 特有：封面 180px，跟参考站 project-cover 对齐 */
-        .drama-cover { height: 180px; background: linear-gradient(135deg, rgba(157,116,255,0.10), rgba(109,230,238,0.07)); }
+        /* dashboard 特有：封面按 16:9 走，不再写死 180px——
+           参考站也是这么改的（它新加了 dashboard-ratio.css：width:100%;height:auto;aspect-ratio:16/9）。
+           写死高度时列宽一变，封面就跟着变形；用宽高比则四列三列两列都是同一个比例。 */
+        .drama-cover { height: auto; aspect-ratio: 16 / 9; background: linear-gradient(135deg, rgba(157,116,255,0.10), rgba(109,230,238,0.07)); }
 
         /* ---- 方块：形状 + 线色照抄参考站 /dashboard.html ----
            形状三件事：切角面板（右上切 13px）、右上角双色角标、4 列网格。
@@ -49,7 +51,7 @@
         #dramaList .drama-title, #projectList .project-title { font-size: 14px; margin: 12px 0 4px; }
         #dramaList .drama-desc, #projectList .project-desc { font-size: 11px; line-height: 1.7; }
         #projectList .project-actions { padding: 0; }
-        #projectList .project-cover { height: 180px; }
+        #projectList .project-cover { height: auto; aspect-ratio: 16 / 9; }
         .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
         .card-enter { font-size: 10px; letter-spacing: 1px; color: var(--hud-cyan); }
         .drama-meta { margin-top: 0 !important; font-size: 11px; }
