@@ -11,6 +11,19 @@
     <style>
         /* dashboard 特有：漫剧封面保持 160px 高度，底色用参考站渐变 */
         .drama-cover { height: 160px; background: linear-gradient(135deg, rgba(157,116,255,0.08), rgba(109,230,238,0.06)); }
+        /* 全屏工作台：顶栏固定 56px，下面那块铺满剩余高度自己滚，整页不再出现外层滚动条。
+           参照的是参考站 skill-studio 的 fullscreen 做法。
+           窄屏（≤760px）不做固定高度——手机上这么切会把内容截掉，还是让页面正常滚。 */
+        @media (min-width: 761px) {
+            html, body { height: 100%; overflow: hidden; }
+            .container { max-width: none; height: calc(100vh - 56px); overflow-y: auto; padding: 22px 32px 40px; }
+            /* 标题行吸顶：列表滚起来之后还看得见自己在哪一层 */
+            #dramaView > div:first-child, #projectView > .page-title {
+                position: sticky; top: -22px; z-index: 5; padding: 10px 0 12px;
+                background: linear-gradient(var(--bg) 72%, transparent);
+            }
+            #dramaView > div:first-child { margin-bottom: 8px; }
+        }
     </style>
 </head>
 <body>
