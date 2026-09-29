@@ -10,6 +10,44 @@
     <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
     <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
     <style>
+        /* ---- 按钮：整页统一成 dashboard.html 那颗 ----
+           40px 高、1px 描边、左上和右下各切 8px；主按钮青边青字压深青底，危险按钮红边红字，其余空心。
+           切角是 clip-path，所以 hover 别用 box-shadow（会被裁掉），只改底色和描边色。
+           变量值跟 dashboard.html 顶部那份一致，两页按钮必须长得一模一样。
+           本页有大量按钮带内联样式（background / border:none / border-radius），JS 生成的表格按钮尤其多，
+           内联优先级高于类选择器，所以这里一律 !important 顶回去，否则只有一半按钮会变。 */
+        :root {
+            --hud-cyan: #05e8f0;
+            --hud-red: #ff3852;
+            --hud-btn: #06313b;
+        }
+        .btn, button:not(.tab-btn) {
+            height: 40px !important; padding: 0 16px !important; font-size: 12px !important;
+            border: 1px solid #49626a !important; border-radius: 0 !important;
+            background-color: transparent !important; color: #dbe7e8 !important;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+            cursor: pointer;
+        }
+        /* 表格里那些密集小按钮：30px，不然一行被撑成 40px 高 */
+        .btn-sm, .btn-small, button:not(.btn):not(.tab-btn) {
+            height: 30px !important; padding: 0 10px !important; font-size: 11px !important;
+        }
+        .btn:hover, button:not(.tab-btn):hover {
+            border-color: var(--hud-cyan) !important; color: var(--hud-cyan) !important; background-color: #06313b80 !important;
+        }
+        .btn-primary {
+            border-color: var(--hud-cyan) !important; background-color: var(--hud-btn) !important; color: var(--hud-cyan) !important;
+        }
+        .btn-primary:hover {
+            border-color: var(--hud-cyan) !important; color: var(--hud-cyan) !important; background-color: #08424f !important;
+        }
+        .btn-danger {
+            border-color: var(--hud-red) !important; background-color: transparent !important; color: var(--hud-red) !important;
+        }
+        .btn-danger:hover {
+            border-color: var(--hud-red) !important; color: #fff !important; background-color: #3a0d14 !important;
+        }
+
         /* project 工作区结构（颜色已切到 admin-theme 变量） */
         .project-layout {
             display: flex;
@@ -153,7 +191,7 @@
                             <h3 style="margin:0;"><i class="fas fa-scroll"></i> 剧本编辑</h3>
                             <div style="display:flex;gap:8px;">
                                 <button class="btn btn-primary" id="btnEditScript"><i class="fas fa-edit"></i> 编辑剧本</button>
-                                <button class="btn btn-primary" id="btnContinueScript" style="background:#0b8f99;color:#fff;"><i class="fas fa-plus"></i> 续写剧本</button>
+                                <button class="btn btn-primary" id="btnContinueScript" ><i class="fas fa-plus"></i> 续写剧本</button>
                             </div>
                         </div>
                         <div class="script-area">
@@ -167,7 +205,7 @@
                                 <label style="font-weight:600;color:#6af7ff;display:block;margin-bottom:8px;"><i class="fas fa-feather-alt"></i> 续写内容</label>
                                 <textarea id="continueContent" style="width:100%;min-height:150px;font-size:14px;" placeholder="请输入续写的剧情内容..."></textarea>
                                 <div style="margin-top:8px;display:flex;gap:8px;">
-                                    <button class="btn btn-small btn-primary" id="btnSaveContinue" onclick="doContinue()" style="background:#0b8f99;"><i class="fas fa-check"></i> 确认续写</button>
+                                    <button class="btn btn-small btn-primary" id="btnSaveContinue" onclick="doContinue()" ><i class="fas fa-check"></i> 确认续写</button>
                                     <button class="btn btn-small" id="btnCancelContinue">取消</button>
                                 </div>
                             </div>
@@ -186,7 +224,7 @@
                                 <button class="btn btn-primary" id="btnGenerate"><i class="fas fa-bolt"></i> 生成</button>
                                 <button class="btn btn-primary" id="btnGenerateH3" style="display:none;background:#0e7490;border-color:#22d3ee;color:#fff;" title="按 H3 参考生视频模板批量生成/补齐 H3 提示词（跳过已生成的镜头，ComfyUI 引擎提交视频时使用）"><i class="fas fa-clapperboard"></i> 生成H3提示词</button>
                                 <button class="btn btn-primary" id="btnVoiceRefs" style="display:none;background:#6d28d9;border-color:#6af7ff;color:#fff;" title="为角色绑定音色参考音频：H3 生成视频时让该角色按参考音频的音色与说话方式说话（只借音色，不复制原台词与音乐）"><i class="fas fa-microphone-lines"></i> 音色参考</button>
-                                <button class="btn btn-primary" id="btnRegenH3" style="display:none;background:#0b8f99;border-color:#6af7ff;color:#fff;" title="覆盖重新生成整个项目的 H3 提示词（清空全部镜头旧内容后按最新模板重跑，耗时较长）"><i class="fas fa-rotate"></i> 覆盖重新生成H3</button>
+                                <button class="btn btn-primary" id="btnRegenH3" style="display:none;" title="覆盖重新生成整个项目的 H3 提示词（清空全部镜头旧内容后按最新模板重跑，耗时较长）"><i class="fas fa-rotate"></i> 覆盖重新生成H3</button>
                                 <button class="btn btn-primary" id="btnRetryH3" style="display:none;background:#b45309;border-color:#f59e0b;color:#fff;" title="只重跑上一次批量生成失败的镜头（失败清单见生成结束后的提示）"><i class="fas fa-rotate-right"></i> 重跑失败镜头</button>
                                 <button class="btn btn-primary" id="btnStage5Progress" style="display:none;background:#0e7490;border-color:#22d3ee;color:#fff;"><i class="fas fa-chart-line"></i> 进度</button>
                                 <button class="btn btn-primary" style="background:var(--primary);color:#fff;border:1px solid var(--primary-light);" id="btnEditStage"><i class="fas fa-pen"></i> 编辑</button>
@@ -223,7 +261,7 @@
                         <div id="targetDurationWrap" style="display:none;margin-bottom:16px;padding:12px;border-radius:8px;background:rgba(5,232,240,0.1);border:1px solid rgba(5,232,240,0.2);">
                             <label style="font-weight:600;color:#e2e8f0;"><i class="fas fa-hourglass-half" style="color:#6af7ff;"></i> 目标总时长：</label>
                             <input type="text" id="targetDurationInput" placeholder="如 3分05秒—3分20秒 / 200秒 / 3分钟" style="width:280px;padding:4px 8px;border-radius:4px;border:1px solid #475569;background:#061923;color:#e2e8f0;">
-                            <button class="btn btn-small" id="btnSetTargetDuration" style="margin-left:8px;background:#0b8f99;color:#fff;">应用</button>
+                            <button class="btn btn-small" id="btnSetTargetDuration" style="margin-left:8px;">应用</button>
                             <button class="btn btn-small" id="btnClearTargetDuration" style="margin-left:4px;">清除</button>
                             <div id="targetDurationHint" style="margin-top:6px;color:#789096;font-size:12px;line-height:1.6;"></div>
                         </div>
@@ -2567,7 +2605,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
             <textarea id="editText" style="flex:1;min-height:120px;background:#041017;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:12px;font-size:13px;font-family:monospace;resize:vertical;outline:none;"></textarea>
             <div style="margin-top:12px;display:flex;gap:8px;justify-content:flex-end;">
                 <button onclick="closeEdit()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">取消</button>
-                <button onclick="saveEdit()" style="background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">保存</button>
+                <button class="btn btn-primary" onclick="saveEdit()">保存</button>
             </div>
         </div>
         </div>
@@ -2588,7 +2626,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
             <textarea id="assetEditAttr" rows="4" placeholder="随身物品直接写在这即可（「随身物品：」前缀可省略），例如：深紫便携布包、粉色智能手机。这些物件会随本角色卡一起出图，不再单独占参考图槽；需要单独出镜、特写或交接的剧情道具不要写在这里。" style="background:#041017;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:8px 10px;font-size:13px;resize:vertical;outline:none;"></textarea>
             <div style="display:flex;gap:8px;justify-content:flex-end;margin-top:4px;">
                 <button onclick="closeAssetEdit()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">取消</button>
-                <button onclick="saveAssetEdit()" style="background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">保存</button>
+                <button class="btn btn-primary" onclick="saveAssetEdit()">保存</button>
             </div>
         </div>
     </div>
@@ -2624,7 +2662,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
                 <button onclick="closeAssetPromptModal()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">取消</button>
                 <button id="assetPromptGenTemp" title="用上面这段正文出图，但不写回资产卡（临时换装首选）" style="background:#0ea5e9;color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;"><i class="fas fa-bolt"></i> 临时出图（不保存）</button>
                 <button id="assetPromptGenSave" title="先把上面这段正文存回资产卡，再用它出图" style="background:#16a34a;color:#fff;border:none;border-radius:6px;padding:8px 14px;cursor:pointer;font-size:13px;"><i class="fas fa-image"></i> 保存并出图</button>
-                <button id="assetPromptSave" style="background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">保存</button>
+                <button id="assetPromptSave" class="btn btn-primary">保存</button>
             </div>
         </div>
     </div>
@@ -3225,7 +3263,7 @@ function saveEdit() { var txt = $("#editText").val(); var h3 = $("#editTextH3").
                 <div style="flex:1;">
                     <p style="color:#789096;font-size:12px;margin:0 0 6px;">② 服装参考图（只取款式与配色）</p>
                     <div id="deriveGarmentThumb" style="width:100%;aspect-ratio:16/9;border:1px dashed #475569;border-radius:6px;background:#041017;display:flex;align-items:center;justify-content:center;overflow:hidden;"></div>
-                    <button id="deriveGarmentBtn" onclick="pickDeriveGarment()" style="margin-top:6px;width:100%;background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:6px;cursor:pointer;font-size:12px;">上传服装图</button>
+                    <button id="deriveGarmentBtn" class="btn btn-primary" onclick="pickDeriveGarment()" style="margin-top:6px;width:100%;">上传服装图</button>
                     <input type="file" id="deriveGarmentFile" accept="image/*" style="display:none" onchange="uploadDeriveGarment(this)">
                 </div>
             </div>
@@ -3238,7 +3276,7 @@ function saveEdit() { var txt = $("#editText").val(); var h3 = $("#editTextH3").
             <textarea id="derivePrompt" placeholder="例：换成冬季校服外套并加一条围巾，保持站姿与表情不变" style="width:100%;height:90px;background:#041017;color:#e2e8f0;border:1px solid #334155;border-radius:6px;padding:8px;font-size:13px;resize:vertical;outline:none;box-sizing:border-box;"></textarea>
 
             <div style="margin-top:14px;display:flex;gap:8px;justify-content:flex-end;">
-                <button id="deriveSubmitBtn" onclick="submitDerive()" style="background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 18px;cursor:pointer;font-size:13px;"><i class="fas fa-wand-magic-sparkles" style="margin-right:4px;"></i>开始生成</button>
+                <button id="deriveSubmitBtn" class="btn btn-primary" onclick="submitDerive()"><i class="fas fa-wand-magic-sparkles" style="margin-right:4px;"></i>开始生成</button>
                 <button onclick="closeDeriveModal()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;cursor:pointer;font-size:13px;">取消</button>
             </div>
         </div>
