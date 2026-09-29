@@ -9,20 +9,97 @@
 <link rel="stylesheet" href="../css/style.css">
   <link rel="stylesheet" href="../css/admin-theme.css">
 <style>
-/* project-manage 特有 */
-.project-cover { height: 180px; font-size: 56px; background: linear-gradient(135deg, rgba(157,116,255,0.08), rgba(109,230,238,0.06)); }
 #editCoverPreview { max-width: 100%; max-height: 200px; border-radius: 8px; margin-bottom: 12px; object-fit: cover; }
+/* ---- 骨架照参考站 /collection.html：返回 → 页头 → hero 面板 → 小节标题 → 5 列项目墙 → 底部状态条 ----
+   尺寸层级照抄它：h1 32px、hero 标题 20px、卡片标题 14px、卡片副文 10px、眉标 9px 大字距。
+   配色仍吃本页主题变量（--panel/--line/--accent/--danger），不搬它那套青红 HUD 色板，
+   不然这一页跟其他页对不上；要换的话改这几个变量指向即可。 */
+/* 切角面板：跟 dashboard.html 那份一模一样（右上切 13px + 右上角双色角标），
+   那份定义在 dashboard 自己的 style 里，本页要用就得再写一遍。真想全站复用再提到 admin-theme.css。 */
+.hud-panel {
+    border-radius: 0;
+    clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+    position: relative;
+}
+.hud-panel::before {
+    content: ""; position: absolute; right: 8px; top: 8px; z-index: 2;
+    width: 30px; height: 8px;
+    border-top: 1px solid var(--accent); border-right: 1px solid var(--danger);
+}
+.pm-back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 16px; padding: 8px 14px;
+           font-size: 12px; color: var(--muted); text-decoration: none;
+           border: 1px solid var(--line); background: var(--panel2); }
+.pm-back:hover { color: var(--accent); border-color: var(--accent); }
+.pm-eyebrow { display: block; font: 9px Consolas, Monaco, monospace; letter-spacing: 2px; color: var(--accent); }
+.pm-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap;
+           margin-bottom: 22px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+.pm-head h1 { font-size: 32px; font-weight: 600; line-height: 1.1; margin: 8px 0 6px; }
+.pm-head p { margin: 0; font-size: 12px; color: var(--muted); }
+/* hero = 它的 .collection-hero：左边一个大方块 + 中间简介 + 右边三格统计 */
+.pm-hero { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 22px; align-items: center;
+           padding: 20px 22px; margin-bottom: 8px; }
+.pm-sigil { width: 150px; height: 150px; display: grid; place-content: center; font-size: 56px;
+            border: 1px solid var(--line); background: linear-gradient(145deg, rgba(157,116,255,0.14), rgba(109,230,238,0.06)); }
+.pm-sigil img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.pm-hero h2 { font-size: 20px; margin: 8px 0 6px; }
+.pm-hero p { margin: 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
+.pm-hero dl { display: flex; gap: 26px; margin: 0; }
+.pm-hero dt { font: 9px Consolas, Monaco, monospace; letter-spacing: 1px; color: var(--muted); }
+.pm-hero dd { margin: 4px 0 0; font-size: 22px; font-weight: 600; }
+.pm-section-title { display: flex; justify-content: space-between; align-items: flex-end; margin: 26px 0 14px; }
+.pm-section-title h2 { font-size: 22px; margin: 6px 0 0; }
+/* 项目墙 = 它的五列 .episode-table */
+.pm-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 10px; }
+.pm-card { display: flex; flex-direction: column; overflow: hidden; padding: 0 0 11px;
+           transition: transform .25s ease, border-color .25s ease; }
+.pm-card:hover { transform: translateY(-5px); border-color: var(--accent); }
+.pm-cover { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0; overflow: hidden;
+            display: grid; place-content: center; font-size: 40px;
+            background: linear-gradient(145deg, rgba(157,116,255,0.10), rgba(109,230,238,0.05));
+            border-bottom: 1px solid var(--line); }
+.pm-cover img { width: 100%; height: 100%; display: block; object-fit: cover; }
+.pm-cover figcaption { position: absolute; left: 10px; bottom: 8px; z-index: 2;
+                       font: 700 11px Consolas, Monaco, monospace; letter-spacing: 2px;
+                       color: var(--text); text-shadow: 0 1px 6px #000; }
+.pm-body { padding: 11px 11px 5px; min-height: 100px; }
+.pm-meta { margin-top: 6px; font-size: 9px; color: var(--muted); font-family: Consolas, Monaco, monospace; }
+.pm-state { display: inline-block; padding: 3px 7px; font-size: 10px; letter-spacing: 1px;
+            border: 1px solid rgba(167,139,250,0.45); background: rgba(167,139,250,0.08); color: var(--primary-light); }
+.pm-card h3 { font-size: 14px; margin: 8px 0 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pm-card p { font-size: 10px; line-height: 1.55; color: var(--muted); margin: 0;
+             display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
+.pm-card > strong { padding: 0 11px 6px; font-size: 10px; font-weight: 500; color: var(--muted); }
+.pm-card progress { width: calc(100% - 22px); height: 4px; margin: 0 11px 11px; }
+progress { -webkit-appearance: none; appearance: none; border: 0; }
+progress::-webkit-progress-bar { background: rgba(255,255,255,0.08); }
+progress::-webkit-progress-value { background: var(--accent); }
+progress::-moz-progress-bar { background: var(--accent); }
+.pm-enter { display: flex; align-items: center; justify-content: center; width: calc(100% - 22px); min-height: 32px;
+            margin: 0 11px; font-size: 11px; letter-spacing: 1px; text-decoration: none;
+            border: 1px solid var(--accent); color: var(--accent); background: rgba(124,58,237,0.10); }
+.pm-enter:hover { background: rgba(124,58,237,0.20); }
+.pm-row { display: flex; gap: 6px; padding: 10px 11px 0; }
+.pm-row .btn { flex: 1; padding: 5px 6px; font-size: 11px; justify-content: center; }
+.pm-detail { margin-top: 22px; }
+.pm-status { position: fixed; bottom: 0; left: 0; right: 0; height: 24px; z-index: 20; display: flex; align-items: center; gap: 30px;
+             padding: 0 14px; background: var(--bg); border-top: 1px solid var(--line);
+             font: 10px Consolas, Monaco, monospace; color: var(--muted); }
+.pm-status span { color: var(--accent); }
+.pm-status em { margin-left: auto; font-style: normal; }
+@media (max-width: 1400px) { .pm-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } }
+@media (max-width: 1100px) { .pm-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@media (max-width: 800px) { .pm-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 520px) { .pm-grid { grid-template-columns: 1fr; } }
+/* hero 在窄屏把三格统计沉到第二行，别挤成一条 */
+@media (max-width: 900px) { .pm-hero { grid-template-columns: 110px minmax(0, 1fr); } .pm-sigil { width: 110px; height: 110px; font-size: 40px; } .pm-hero dl { grid-column: 1 / -1; flex-wrap: wrap; gap: 18px; } }
 /* 全屏：顶栏固定 56px，下面那块铺满剩余高度自己滚，整页不出外层滚动条。
-   顶栏本身也拉通全屏宽度（.nav-inner 的全宽在 admin-theme.css 里，全站生效）。
-   窄屏（≤760px）不做固定高度，手机上这么切会把内容截掉，还是让页面正常滚。 */
+   窄屏（≤760px）不做固定高度，手机上这么切会把内容截掉，还是让页面正常滚。
+   padding-bottom 给底部状态条让出 24px + 一点余量。 */
 @media (min-width: 761px) {
     html, body { height: 100%; overflow: hidden; }
-    .container { max-width: none; height: calc(100vh - 56px); overflow-y: auto; padding: 22px 32px 40px; }
-    /* 标题行吸顶：项目多了往下滚，还看得见自己在项目管理这一层 */
-    .container > div:first-child {
-        position: sticky; top: -22px; z-index: 5; padding: 10px 0 12px;
-        background: linear-gradient(var(--bg) 72%, transparent);
-    }
+    .container { max-width: none; height: calc(100vh - 56px); overflow-y: auto; padding: 10px 10px 44px; }
+    /* 页头吸顶：项目多了往下滚，还看得见自己在哪一层。top 跟 .container 的 padding-top 对齐 */
+    .pm-head { position: sticky; top: -10px; z-index: 5; background: linear-gradient(var(--bg) 78%, transparent); }
     .empty-state { min-height: 60vh; }
 }
 </style>
@@ -52,22 +129,48 @@
   </div>
 </nav>
 <div class="container">
-  <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-  <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assignment</span> 项目管理<span class="project-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
-  <div style="display:flex;align-items:center;gap:8px;">
-    <button class="btn btn-primary" onclick="showCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</button>
-    <button class="btn btn-outline" onclick="toggleSort()" id="sortBtn"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="sortLabel">最新</span></button>
-  </div>
-</div>
-  <div class="summary-bar" id="durationStatBar" style="margin-bottom:10px;"></div>
-  <div id="durationStatDetail" style="margin-bottom:20px;"></div>
-  <div id="projectGrid" class="project-grid"></div>
+  <a class="pm-back" href="dashboard.html"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回工作台</a>
+  <header class="pm-head">
+    <div>
+      <span class="pm-eyebrow">// COLLECTION / PROJECTS</span>
+      <h1 id="pmTitle">项目管理</h1>
+      <p>单集控制中心 · 选择项目进入导演流水线</p>
+    </div>
+    <div style="display:flex;align-items:center;gap:8px;">
+      <button class="btn btn-primary" onclick="showCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</button>
+    </div>
+  </header>
+  <section class="pm-hero hud-panel">
+    <div class="pm-sigil" id="pmSigil">📁</div>
+    <div>
+      <span class="pm-eyebrow">PRODUCTION BRIEF</span>
+      <h2 id="pmHeroTitle">项目管理</h2>
+      <p id="pmHeroDesc">按集推进完整制作流水线：脚本 → 分镜 → 资产 → 出图 → 视频。</p>
+    </div>
+    <dl>
+      <dt>项目</dt><dd id="hCount">–</dd>
+      <dt>提示词</dt><dd id="hPrompt">–</dd>
+      <dt>已完成时长</dt><dd id="hDone">–</dd>
+    </dl>
+  </section>
+  <header class="pm-section-title">
+    <div>
+      <span class="pm-eyebrow">PROJECT QUEUE</span>
+      <h2>项目列表</h2>
+    </div>
+    <button class="btn btn-outline" onclick="toggleSort()" id="sortBtn"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="sortLabel">最新优先</span></button>
+  </header>
+  <section id="projectGrid" class="pm-grid"></section>
+  <div id="durationStatDetail" class="pm-detail"></div>
   <div id="emptyState" class="empty-state" style="display:none;">
     <div class="icon">📦</div>
     <p>还没有项目</p>
     <p style="margin-top:8px;"><a href="dashboard.html" style="color:var(--primary-light);">去工作台创建项目</a></p>
   </div>
 </div>
+<footer class="pm-status">
+  <span>● PIPELINE ONLINE</span><b id="stCount">PROJECTS 0</b><em>LOCAL WORKSPACE</em>
+</footer>
 <!-- 新建项目弹窗 -->
 <div id="createProjectModal" class="modal-overlay" style="display:none;">
   <div class="modal">
@@ -162,9 +265,14 @@ $(function(){
     var params=new URLSearchParams(window.location.search);
     var dramaId=params.get("dramaId");
     var dramaTitle=params.get("title");
-    if(dramaTitle)$(".page-title").html('<span class="material-icons" style="font-size:inherit;vertical-align:middle">assignment</span> '+dramaTitle+' - 项目管理<span class="project-count" style="color:#94a3b8;font-size:13px;font-weight:400;"></span>');
+    if(dramaTitle){
+      $("#pmTitle").text(dramaTitle + " · 项目管理");
+      $("#pmHeroTitle").text(dramaTitle);
+      /* hero 左边那个大方块：取标题里第一个非符号字，取不到就用「项」 */
+      var sig = String(dramaTitle).replace(/[\s·\-—_、.。,，]/g, "").charAt(0);
+      $("#pmSigil").text(sig || "项");
+    }
     loadAllProjects(dramaId);
-    loadDurationStats(dramaId);
   }).fail(function(){window.location.href="login.html"});
 });
 function fmtDur(sec){
@@ -179,58 +287,72 @@ function fmtDT(v){
   function pad(n){return n<10?"0"+n:""+n}
   return d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate())+" "+pad(d.getHours())+":"+pad(d.getMinutes());
 }
-function loadDurationStats(dramaId){
+/* 时长统计：既填 hero 那三格，也按 projectId 存一份给卡片用（卡片要显示提示词数和完成进度）。
+   项目列表和这份统计是两次请求，串行走——统计回来再渲染卡片，免得卡片上先闪一个空进度。 */
+var statMap = {};
+function loadDurationStats(dramaId,cb){
   var url=dramaId?"/api/project/duration-stats?dramaId="+dramaId:"/api/project/duration-stats";
   $.get(url,function(list){
-    if(!list||!list.length){$("#durationStatBar").empty();$("#durationStatDetail").empty();return}
-    var projects=list.length, prompts=0, total=0, done=0;
-    list.forEach(function(x){prompts+=(x.promptCount||0);total+=(x.totalDurationSec||0);done+=(x.completedDurationSec||0);});
-    $("#durationStatBar").html(
-      '<div class="summary-item"><span class="num">'+projects+'</span><span class="label">项目数</span></div>'+
-      '<div class="summary-item"><span class="num">'+prompts+'</span><span class="label">提示词总数</span></div>'+
-      '<div class="summary-item"><span class="num" style="color:#22c55e;">'+fmtDur(total)+'</span><span class="label">提示词总时长</span></div>'+
-      '<div class="summary-item"><span class="num" style="color:#a78bfa;">'+fmtDur(done)+'</span><span class="label">已完成视频时长</span></div>'
-    );
+    list=list||[];
+    statMap={};
+    var prompts=0,total=0,done=0;
+    list.forEach(function(x){statMap[x.projectId]=x;prompts+=(x.promptCount||0);total+=(x.totalDurationSec||0);done+=(x.completedDurationSec||0);});
+    $("#hPrompt").text(prompts);
+    $("#hDone").text(fmtDur(done));
     var rows=list.map(function(x){
       return '<span style="display:inline-block;background:#1e293b;border-radius:6px;padding:6px 10px;font-size:12px;margin:0 6px 6px 0;color:#94a3b8;">'+
         escHtml(x.title)+' · '+fmtDur(x.totalDurationSec||0)+' ('+(x.promptCount||0)+'条)</span>';
     }).join("");
-    $("#durationStatDetail").html('<div style="font-size:12px;color:#64748b;margin-bottom:6px;">按项目明细（提示词口径）</div>'+rows);
-  }).fail(function(){});
+    $("#durationStatDetail").html(list.length?'<div style="font-size:12px;color:#64748b;margin-bottom:6px;">按项目明细（提示词口径 · 总时长 '+fmtDur(total)+'）</div>'+rows:'');
+    if(cb)cb();
+  }).fail(function(){if(cb)cb()});
 }
 function loadAllProjects(dramaId){
   var url=dramaId?"/api/drama/"+dramaId+"/projects":"/api/project";
   $.get(url,function(projects){
-    var $grid=$("#projectGrid"),$empty=$("#emptyState");
-    $grid.empty();
-    if(!projects||!projects.length){$grid.hide();$empty.show();return}
-    $grid.show();$empty.hide();
-    $('.project-count').text('共 '+projects.length+' 个项目');
-    projects.sort(function(a,b){
-      var da=new Date(a.createdAt||a.updatedAt).getTime();
-      var db=new Date(b.createdAt||b.updatedAt).getTime();
-      return sortOrder==="desc" ? db-da : da-db;
-    });
-    projects.forEach(function(p){
-      $grid.append(
-        '<div class="project-card">' +
-        '<div class="project-cover" style="'+(p.coverImage?'background-image:url('+p.coverImage+');background-size:cover;background-position:center;':'')+'">'+(p.coverImage?'':'📁')+'</div>' +
-        '<div class="project-info"><h3>'+escHtml(p.title)+'</h3>' +
-        (p.description?'<p class="project-desc">'+escHtml(p.description)+'</p>':'') +
-        '<div class="meta">创建 '+fmtDT(p.createdAt||p.updatedAt)+'<br>更新 '+fmtDT(p.updatedAt||p.createdAt)+'<br>阶段 '+p.currentStage+'/10</div></div>' +
-        '<div class="project-actions">' +
-        '<a href="skill-studio.html?projectId='+p.projectId+'" class="btn btn-primary btn-small"><span class="material-icons" style="font-size:inherit;vertical-align:middle">auto_awesome</span> 流水线</a>' +
-        '<a href="project.html?id='+p.projectId+'" class="btn btn-outline btn-small"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_forward</span> 进入</a>' +
-        '<button class="btn btn-outline btn-small btn-edit-project" data-id="'+p.projectId+'" data-title="'+escAttr(p.title)+'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">image</span> 编辑</button>' +
-        '<button class="btn btn-outline btn-small btn-del-project" data-id="'+p.projectId+'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button></div></div>'
-      );
-    });
+    loadDurationStats(dramaId,function(){renderProjects(projects||[])});
+  }).fail(function(){renderProjects([])});
+}
+function pad2(n){return n<10?"0"+n:""+n}
+function renderProjects(projects){
+  var $grid=$("#projectGrid"),$empty=$("#emptyState");
+  $grid.empty();
+  $("#hCount").text(projects.length);
+  $("#stCount").text("PROJECTS "+projects.length);
+  if(!projects.length){$grid.hide();$empty.show();return}
+  $grid.show();$empty.hide();
+  projects.sort(function(a,b){
+    var da=new Date(a.createdAt||a.updatedAt).getTime();
+    var db=new Date(b.createdAt||b.updatedAt).getTime();
+    return sortOrder==="desc" ? db-da : da-db;
+  });
+  projects.forEach(function(p,i){
+    var st=statMap[p.projectId]||{};
+    var pcnt=st.promptCount||0;
+    var pct=pcnt?Math.round((st.completedCount||0)/pcnt*100):0;
+    var cover=p.coverImage?'<img src="'+p.coverImage+'" alt="">':'📁';
+    $grid.append(
+      '<article class="pm-card hud-panel">' +
+      '<figure class="pm-cover">'+cover+'<figcaption>NO.'+pad2(i+1)+'</figcaption></figure>' +
+      '<div class="pm-body"><span class="pm-state">阶段 '+(p.currentStage||0)+'/10</span>' +
+      '<h3>'+escHtml(p.title)+'</h3>' +
+      '<p>'+(p.description?escHtml(p.description):'暂无描述')+'</p>' +
+      '<div class="pm-meta">创建 '+fmtDT(p.createdAt||p.updatedAt)+' · 更新 '+fmtDT(p.updatedAt||p.createdAt)+'</div></div>' +
+      '<strong>'+pcnt+' 提示词 · 已完成 '+fmtDur(st.completedDurationSec||0)+'</strong>' +
+      '<progress value="'+pct+'" max="100"></progress>' +
+      '<a class="pm-enter" href="skill-studio.html?projectId='+p.projectId+'">进入流水线 →</a>' +
+      '<div class="pm-row">' +
+      '<a class="btn btn-outline" href="project.html?id='+p.projectId+'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_forward</span> 进入</a>' +
+      '<button class="btn btn-outline btn-edit-project" data-id="'+p.projectId+'" data-title="'+escAttr(p.title)+'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">image</span> 编辑</button>' +
+      '<button class="btn btn-outline btn-del-project" data-id="'+p.projectId+'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button>' +
+      '</div></article>'
+    );
   });
 }
 var sortOrder = "desc";
 function toggleSort(){
   sortOrder = sortOrder === "desc" ? "asc" : "desc";
-  $("#sortLabel").text(sortOrder === "desc" ? "最新" : "最早");
+  $("#sortLabel").text(sortOrder === "desc" ? "最新优先" : "最早优先");
   loadAllProjects(new URLSearchParams(window.location.search).get("dramaId"));
 }
 function showCreateProject(){
