@@ -317,7 +317,11 @@ select { color-scheme: light; }
 .stage-result table thead th,
 #episodeListContainer table thead th,
 #episodeSection table thead th {
-  background: var(--accent-gradient) !important;
+  /* 原来是 --accent-gradient 铺底、白字。色板换成青之后这个渐变变成亮青（#05e8f0→#0bb8c4），
+     白字压在亮青上完全看不清。改成深青底 + 亮青字：底压得住，字也够亮 */
+  background: #06212a !important;
+  color: #6af7ff !important;
+  border-color: #14505d !important;
 }
 .stage-result table tbody tr:hover {
   background: rgba(5,232,240,0.04) !important;

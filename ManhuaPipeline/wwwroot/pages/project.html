@@ -88,10 +88,26 @@
             border-color: var(--border) !important;
             color: var(--text) !important;
         }
-        .storyboard-table th, #episodeListContainer table th, #episodeSection table th {
-            background: var(--panel2) !important;
-            color: var(--text) !important;
-            border-color: var(--line) !important;
+        /* 表头：本页所有表格统一成深青底 + 亮青字。
+           原来 style.css 里给表头铺的是 --accent-gradient，色板换青之后那成了亮青渐变，
+           白字在上面糊成一片。这里连 thead 一起写，是为了压过 style.css 那条
+           （它的选择器是 #xxx table thead th，比 #xxx table th 更具体，少了 thead 就盖不住）。 */
+        .stage-result table thead th,
+        #episodeListContainer table thead th,
+        #episodeSection table thead th,
+        .storyboard-table th,
+        #frameListContainer table th,
+        #assetListContainer table th,
+        .project-main table th {
+            background: #06212a !important;
+            color: #6af7ff !important;
+            border-color: #14505d !important;
+        }
+        /* 奇数行稍微压一点底，长表格不靠斑马纹也能分清行 */
+        .storyboard-table tbody tr:nth-child(even),
+        #frameListContainer table tbody tr:nth-child(even),
+        #assetListContainer table tbody tr:nth-child(even) {
+            background: rgba(5, 232, 240, 0.03);
         }
         #episodeListContainer table th:nth-child(1) { width: 60px; min-width: 60px; }
         #episodeListContainer table th:nth-child(2) { width: 80px; min-width: 80px; }
