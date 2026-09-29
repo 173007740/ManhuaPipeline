@@ -145,6 +145,11 @@ public class DirectorAgentController : ControllerBase
             return Ok(new { started = false, message = $"这次运行已经结掉了（{st}），要重来请「新开一次」" });
         if (!_running.TryAdd(runId, 0)) return Ok(new { started = false, message = "这次运行正在跑" });
 
+        // 先把状态落库再动手。后台任务要等排上队、跑到第一个阶段才会写 running，
+        // 前端点火后立刻轮询到的会是点火前那个状态，于是判定「没在跑」把轮询停掉——
+        // 按钮就一直停在「重跑」，刷新页面才变。这里同步写一次，让点火和可见状态同一时刻发生
+        _db.UpdateSkillRun(runId, body.StageKey, "running");
+
         _ = Task.Run(async () =>
         {
             try { await _agent.RunFromAsync(uid, runId, body.StageKey, body.InputText ?? "",
@@ -166,6 +171,9 @@ public class DirectorAgentController : ControllerBase
         var uid = GetUserId();
         if (uid == 0) return Unauthorized();
         if (!_running.TryAdd(runId, 0)) return Ok(new { started = false, message = "这次运行正在跑" });
+
+        // 同 RunAll：状态先落库，别让前端点火后的第一次轮询读到「await_confirm」就收摊
+        _db.UpdateSkillRun(runId, null, "running");
 
         _ = Task.Run(async () =>
         {

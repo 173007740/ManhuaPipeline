@@ -134,6 +134,9 @@
     .ss-content>*{min-width:0}
     .ss-command-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
                      padding-bottom:20px;border-bottom:1px solid var(--line)}
+    /* 「怎么用」这句话跟按钮同一行：它是整页的说明，不是某个面板的标题，
+       所以去掉 .ss-desc 原本的 margin-top，免得在这行里被顶下去 */
+    .ss-command-head .ss-desc{margin:0;max-width:680px;line-height:1.7}
     .ss-actions{display:flex;gap:10px;flex:none}
     .ss-actions button{height:40px;padding:0 18px;border:1px solid #23474a;background:#0a1517;color:#9cb3b1;
                        font-size:12px;letter-spacing:.4px;cursor:pointer;transition:.16s}
@@ -191,16 +194,7 @@
     /* 面板顶缘一道由亮到暗的高光：成本一行，层次感全靠它 */
     .ss-panel:before{content:"";position:absolute;top:0;left:0;right:0;height:1px;pointer-events:none;
                      background:linear-gradient(90deg,rgba(88,242,197,.4),rgba(88,242,197,.05) 35%,transparent 60%)}
-    .ss-setup{padding:26px}
-    .ss-panel-title{display:flex;align-items:center;gap:14px;border-bottom:1px solid #16302f;padding-bottom:18px;flex-wrap:wrap}
-    .ss-panel-title>span{width:44px;height:44px;flex:none;border:1px solid #2b5f56;display:grid;place-items:center;
-                         font:600 15px var(--mono);color:var(--mint);background:#0c2422;
-                         box-shadow:inset 0 0 18px rgba(88,242,197,.12)}
-    .ss-panel-title>div{min-width:0;flex:1}
-    .ss-panel-title small{display:block;font:9px var(--mono);letter-spacing:1.8px;color:var(--mint)}
-    .ss-panel-title h2{font-size:21px;margin:5px 0 0;font-weight:700;letter-spacing:-.3px}
-    .ss-panel-title em{margin-left:auto;font:9px var(--mono);letter-spacing:1.2px;color:var(--green);
-                       border:1px solid #27543f;background:#0c2422;padding:5px 9px;font-style:normal}
+    .ss-setup{padding:0}
     .ss-desc{font-size:12px;line-height:1.85;color:var(--t2);margin:15px 0 0;max-width:780px}
     .ss-start-row{display:flex;align-items:center;gap:9px;margin:18px 0 0;font-size:12px;color:var(--t2);flex-wrap:wrap}
     .ss-start-row select{width:auto;min-width:260px;height:38px;background:#081113;border:1px solid #1d3a3c;
@@ -342,8 +336,8 @@
     /* ── 五步流程：一步一张卡，每张卡自己带表单、状态和「生成」按钮 ──
        门禁、确认、卡点这些编排概念全部收进引擎，页面只回答三件事：
        这一步跑没跑完、要等多久、出来的东西是什么 */
-    .ss-steps{display:grid;gap:10px;margin-top:18px}
-    .ss-step{border:1px solid #1a3536;background:rgba(8,17,19,.6);padding:15px 16px;display:grid;
+    .ss-steps{display:grid;gap:10px;margin-top:0}
+    .ss-step{border:0;background:rgba(8,17,19,.6);padding:15px 16px;display:grid;
              grid-template-columns:36px minmax(0,1fr) auto;gap:14px;align-items:start;transition:.18s}
     .ss-step:hover{border-color:#2a5557;background:rgba(12,26,28,.7)}
     .ss-step.is-run{border-color:#2f7f68;background:linear-gradient(90deg,rgba(88,242,197,.07),transparent 60%)}
@@ -409,7 +403,7 @@
       .ss-progress{display:none}.ss-stats{grid-template-columns:1fr 1fr}.ss-content{padding:22px 20px 40px}}
     @media(max-width:760px){.ss-content{padding:16px}
       .ss-radar-row{grid-template-columns:65px 1fr;height:105px;padding:0 12px}
-      .ss-flow-track button b{display:none}.ss-stats{grid-template-columns:1fr 1fr}.ss-setup{padding:16px}
+      .ss-flow-track button b{display:none}.ss-stats{grid-template-columns:1fr 1fr}.ss-setup{padding:0}
       .ss-step{grid-template-columns:32px 1fr;gap:10px}.ss-step-act{grid-column:1/-1;flex-direction:row}
       .ss-step-form{grid-template-columns:1fr}}
   </style>
@@ -472,6 +466,8 @@
 
     <div class="ss-content">
       <div class="ss-command-head">
+        <p class="ss-desc" id="formDesc">一步一步往下点，每一步的产出会自动喂给下一步。
+           需要你拿主意的东西单独放在该步的卡片里，别的都不问。</p>
         <div class="ss-actions" style="margin-left:auto">
           <button id="btnConsole">终端 ◧</button>
           <button id="btnDeliv" disabled>交付物 · 0 ↗</button>
@@ -499,14 +495,9 @@
 
       <div class="ss-workspace">
         <section class="ss-panel ss-setup">
-          <div class="ss-panel-title">
-            <span>①</span>
-            <div><small>CURRENT STAGE</small><h2 id="workTitle">项目立项</h2></div>
-            <em id="overallBadge">待开始</em>
-          </div>
-          <p class="ss-desc" id="formDesc">一步一步往下点，每一步的产出会自动喂给下一步。
-             需要你拿主意的东西单独放在该步的卡片里，别的都不问。</p>
-
+          <!-- 原来这儿有个面板标题（① CURRENT STAGE + 阶段名 + n/9），
+               跟下面阶段卡片上的标题是同一个名字，一个面板里出现两遍。
+               阶段名只在卡片上留一份；进度看左栏「生产阶段」旁边的 x / 9 -->
           <div class="ss-steps" id="stepList"></div>
 
           <div class="ss-form-actions">
@@ -567,6 +558,8 @@
   // 图片风格库（立项「画风方向」下拉的数据源）与项目上已存的资产画风
   var IMG_STYLES = [], PROJ_IMG_STYLE = 0;
   var runStartAt = 0, tickTimer = null, seenStatus = {}, logLines = 0;
+  var sawRunning = false;                 // 这次点火之后，轮询有没有亲眼看到 running
+  var START_GRACE = 15000;                // 点火到后台落状态之间的宽限期
   var NL = String.fromCharCode(10);
 
   function esc(s){ return $('<div>').text(s == null ? '' : s).html(); }
@@ -882,10 +875,14 @@
          video = 终稿提示词批量出视频 */
     { title:'项目立项', desc:'定画幅、交付形态与题材调性',     from:'P0',  to:'P0',  form:'P0', view:{kind:'text'} },
     { title:'剧本生成', desc:'一句话前提、五道剧本门、分集',   from:'P1',  to:'P1',  form:'P1', view:{kind:'text'} },
+    /* 顺序按后台批次走：P2c2 出场景、P2c3 出「道具与特效」。
+       以前道具站从 P2c2 起跑，于是场景批被写了两遍（环境站还排在它后面），白烧一次调用。 */
     { title:'角色资产', desc:'角色卡与出图提示词',             from:'P2a', to:'P2c1', form:null, view:{kind:'frame', stage:6} },
-    { title:'道具资产', desc:'道具卡与出图提示词',             from:'P2c2', to:'P2c3', form:null, view:{kind:'frame', stage:7} },
     { title:'环境资产', desc:'场景卡与出图提示词',             from:'P2c2', to:'P2c2', form:null, view:{kind:'frame', stage:8} },
-    { title:'特效资产', desc:'特效卡与出图提示词',             from:'P2c3', to:'P2d',  form:null, view:{kind:'frame', stage:11} },
+    /* 道具与特效同属 P2c3 一批，这一跑两类的提示词都出来了。
+       所以特效站不再从 P2c3 起跑——那等于把这一批又跑一遍、把刚写好的覆盖掉 */
+    { title:'道具资产', desc:'道具卡与出图提示词',             from:'P2c3', to:'P2c3', form:null, view:{kind:'frame', stage:7} },
+    { title:'特效资产', desc:'特效卡与出图提示词',             from:'P2d', to:'P2d',  form:null, view:{kind:'frame', stage:11} },
     { title:'导演分镜', desc:'镜头调度与帧表',                 from:'P3',  to:'P3',   form:null, view:{kind:'frame', stage:5} },
     { title:'提示词生成', desc:'投喂出图 / 视频模型的终稿',     from:'P4',  to:'P4',   form:null, view:{kind:'frame', stage:9} },
     /* 视频生成这一步不跑模型：它把上一步的终稿提示词批量提交给出视频模型。
@@ -1037,11 +1034,8 @@
     if (!stages || !stages.length) return;
     window.lastSteps = steps || window.lastSteps;   // 切阶段时要拿最近一次的状态重画
     STEP_STATE = calcSteps(steps);
-    var doneCnt = STEP_STATE.filter(function(s){ return s.tier === 'done'; }).length;
     $('#stepList').html(stepCard(activeStep));
     if (STEPS[activeStep].form) renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
-    $('#overallBadge').text(doneCnt === STEPS.length ? '全部跑完' : doneCnt + ' / ' + STEPS.length);
-    $('#workTitle').text(STEPS[activeStep].title);
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
     renderWork();
   }
@@ -1374,12 +1368,23 @@
     if (reset || !runStartAt){
       runStartAt = Date.now();
       localStorage.setItem('skillStudioStartAt', runStartAt);
+      sawRunning = false;
+      markStarting();     // 点火那一刻先把按钮按下去，别等第一次轮询回来才变
     }
     seenStatus = {};
     clearInterval(tickTimer);
     tickTimer = setInterval(updateTick, 1000);        // 1 秒一跳：让它看得出还活着
     timer = setInterval(pollOnce, 2500);
     pollOnce();
+  }
+
+  // 点火了但后台还没把状态写成 running 的那几秒：界面先按「跑着呢」画。
+  // 人刚按下按钮，最要紧的是立刻看见它被按下去了，而不是等一次网络往返
+  function markStarting(){
+    toggleRunButtons(true);
+    setIdle(false);
+    $('#rbStage').text('点火中…');
+    $('#rbSub').text('刚点下去，马上开始');
   }
 
   // 雷达条常显：没跑的时候回到待命态，不假装还在转
@@ -1451,6 +1456,14 @@
     if (!runId) return;
     $.get('/api/director-agent/runs/' + runId, function(d){
       if (!d || !d.runId){ forgetRun('上次记下的运行已经不在了'); return; }
+      if (d.status === 'running') sawRunning = true;
+      /* 刚点火的头几秒，后台任务还在排队，库里的状态还是点火前那一个。
+         照着旧状态判定「没在跑」会把轮询直接停掉——表现就是点了「重跑」按钮纹丝不动，
+         非得刷新页面才变成「跑着呢」。没亲眼看到 running 之前，先宽限一段时间继续轮询。 */
+      if (!sawRunning && Date.now() - runStartAt < START_GRACE){
+        markStarting();
+        return;
+      }
       lastRun = d;                                  // 阶段列表晚到时要拿它补画一次
       logChanges(d.steps); renderSteps(d.steps); renderPipe(d.steps); updateStats(d); updateRunBar(d);
       toggleRunButtons(d.status === 'running');

@@ -211,10 +211,10 @@ public class DirectorAgentService
         var input = firstInput;
 
         // 点了某一步的「生成」却没带素材进来 —— 这一步页面上没有表单（资产/分镜/提示词都靠上游），
-        // 人自然没什么可填。这里自动把它上一个阶段的产出接上，
-        // 否则 LLM 会拿着一份空输入开工，对着空气提取实体
-        if (string.IsNullOrWhiteSpace(input) && idx > 0)
-            input = ChainHead(stages[idx - 1].StageKey) + LastOutputOf(runId, stages[idx - 1].StageKey);
+        // 人自然没什么可填。这里自动把该给的素材接上（多数时候是上一个阶段的产出，
+        // P2c 三批则是资产台账），否则 LLM 会拿着一份空输入开工，对着空气提取实体
+        if (string.IsNullOrWhiteSpace(input))
+            input = ChainInputFor(runId, stages, idx);
 
         for (int i = idx; i < stages.Count; i++)
         {
@@ -245,6 +245,13 @@ public class DirectorAgentService
                 return;
             }
             input = ChainHead(st.StageKey) + (r.Output ?? "");   // 自动串联：上一步的产出就是下一步的素材
+            // 下一站要是 P2c 的某一批，它要的是台账，不是这一批的提示词
+            if (i + 1 < stages.Count)
+            {
+                var src = ChainSourceOf(stages[i + 1].StageKey);
+                var ledger = src != null ? LastOutputOf(runId, src) : "";
+                if (!string.IsNullOrWhiteSpace(ledger)) input = ChainHead(src!) + ledger;
+            }
         }
         _db.UpdateSkillRun(runId, stages[^1].StageKey, "done");
     }
@@ -281,8 +288,15 @@ public class DirectorAgentService
             _db.UpdateSkillRun(runId, last.StageKey, "done");
             return;
         }
-        await RunFromAsync(userId, runId, stages[idx].StageKey,
-                           ChainHead(last.StageKey) + (last.OutputText ?? ""), stopStageKey: stopStageKey);
+        /* 下一站是 P2c 的某一批时，素材得换成台账：这批的出图依据是 P2b 的资产清单，
+           不是上一批的提示词产出。拿错了模型只能照剧本编名字，回填时一条也对不上 */
+        var nextKey = stages[idx].StageKey;
+        var src = ChainSourceOf(nextKey);
+        var ledger = src != null ? LastOutputOf(runId, src) : "";
+        await RunFromAsync(userId, runId, nextKey,
+                           !string.IsNullOrWhiteSpace(ledger) ? ChainHead(src!) + ledger
+                                                              : ChainHead(last.StageKey) + (last.OutputText ?? ""),
+                           stopStageKey: stopStageKey);
     }
 
     /// <summary>
@@ -303,6 +317,29 @@ public class DirectorAgentService
               .OrderByDescending(s => s.StepId)
               .Select(s => s.OutputText)
               .FirstOrDefault() ?? "";
+
+    /// <summary>
+    /// 某些阶段的上家不是它前面那一个，而是更早那一站的定稿。
+    /// 资产台账（P2b）自己写着「本清单为 P2c 三批次出图的唯一依据」，
+    /// 所以第二批（场景）、第三批（道具与特效）都得回头拿台账。
+    /// 接上一批的提示词产出会怎样：模型手头没有资产清单，就照着剧本自己编场景名，
+    /// 写出来的是「SCN-城市出租屋」这种台账上没有的东西，回填时对不上，入库 0 条。
+    /// </summary>
+    private static string? ChainSourceOf(string stageKey)
+        => stageKey.StartsWith("P2c", StringComparison.OrdinalIgnoreCase) ? "P2b" : null;
+
+    /// <summary>给第 idx 个阶段找素材：默认接上一个阶段的产出，P2c 三批则回头拿台账。</summary>
+    private string ChainInputFor(int runId, List<DbService.SkillStageRow> stages, int idx)
+    {
+        if (idx <= 0 || idx >= stages.Count) return "";
+        var src = ChainSourceOf(stages[idx].StageKey);
+        if (src != null)
+        {
+            var ledger = LastOutputOf(runId, src);
+            if (!string.IsNullOrWhiteSpace(ledger)) return ChainHead(src) + ledger;
+        }
+        return ChainHead(stages[idx - 1].StageKey) + LastOutputOf(runId, stages[idx - 1].StageKey);
+    }
 
     // ========== 3c. 单步执行的核心：单跑和连跑都走这里 ==========
 
