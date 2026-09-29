@@ -1197,13 +1197,16 @@
     var track = STEPS.map(function(sp, i){
       var s = st[i] || {};
       var lit = (s.tier === 'done' || s.tier === 'run') ? 'lit' : '';
-      return '<button data-i="' + i + '"><span>' + (i + 1) + '</span>'
+      return '<button class="' + (i === activeStep ? 'active' : '') + '" data-i="' + i + '"><span>' + (i + 1) + '</span>'
            + '<i class="' + lit + '"></i><b>' + esc(sp.title) + '</b></button>';
     }).join('');
     $('#pipeTrack').html(track);
     // 点左侧菜单 = 切到那个阶段，右侧整块工作区跟着换
     $('#pipeNav button, #pipeTrack button').click(function(){
       activeStep = +$(this).data('i');
+      /* 选中态是 renderPipe 写进按钮 class 里的。只重画右侧工作区的话，
+         右边跟着换了、左边却还锁在原来那一项上，看着像没点中。 */
+      renderPipe(window.lastSteps || []);
       renderSteps(window.lastSteps || []);
       var w = $('#workArea')[0];
       if (w) w.scrollIntoView({ behavior:'smooth', block:'start' });
