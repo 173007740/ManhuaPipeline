@@ -303,6 +303,16 @@
                       background:#0b1f21;color:#9fe8d5;cursor:pointer}
     .land-btns button:hover{border-color:var(--mint);background:#0e2b2c}
     .land-btns button:disabled{opacity:.4;cursor:not-allowed}
+    /* 工作区：资产 / 分镜 / 提示词这些直接把 project.html 对应 stage 搬过来（iframe + embed=1） */
+    .work-panel{margin-top:14px;padding:0;overflow:hidden}
+    .work-frame{display:block;width:100%;height:80vh;min-height:520px;border:0;background:#061011}
+    .wv-list{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px;
+             max-height:360px;overflow:auto}
+    .wv-item{border:1px solid #1a3536;background:#061011;padding:8px}
+    .wv-item video{width:100%;height:112px;object-fit:cover;background:#000;display:block}
+    .wv-meta{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px;font-size:11px}
+    .wv-meta b{font-weight:600;color:#c3d6d2;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .wv-meta a{color:var(--mint);text-decoration:none;font:9px var(--mono);flex:none}
     .deliv-card{margin-top:14px}
     .deliv-list{display:grid;gap:6px;padding:14px 16px 16px}
     .deliv-item{display:flex;align-items:center;gap:11px;padding:9px 13px;border:1px solid #1a3536;
@@ -429,7 +439,7 @@
         <b>规则包</b><span id="packName">—</span>
       </div>
 
-      <div class="ss-side-label"><span>流水线 · 点一步从那开始</span><em id="pipeCount"></em></div>
+      <div class="ss-side-label"><span>生产阶段 · 点一个切过去</span><em id="pipeCount"></em></div>
       <nav class="ss-stage-list" id="pipeNav"><div class="empty-hint">加载中</div></nav>
 
       <div class="ss-model">
@@ -479,7 +489,7 @@
         <section class="ss-panel ss-setup">
           <div class="ss-panel-title">
             <span>①</span>
-            <div><small>DIRECTOR PIPELINE</small><h2>五步做一部漫剧</h2></div>
+            <div><small>CURRENT STAGE</small><h2 id="workTitle">项目立项</h2></div>
             <em id="overallBadge">待开始</em>
           </div>
           <p class="ss-desc" id="formDesc">一步一步往下点，每一步的产出会自动喂给下一步。
@@ -522,40 +532,8 @@
         </aside>
       </div>
 
-      <!-- 落地：出图 / 出视频。
-           以前这两件事要跳到 project.html 才能做。那一跳麻烦的不是多点一次，
-           是刚跑出来的东西得重新对一遍：这五个角色卡对不对、提示词生成到第几条了。
-           挪到产出旁边，跑完就地出图、就地出视频。 -->
-      <section class="ss-panel land-card" id="landCard" style="display:none">
-        <div class="ss-minihead"><b>落地 · 出图与出视频</b><span id="landHint">LOADOUT</span></div>
-        <div class="land-grid">
-          <div class="land-box">
-            <div class="land-head"><b>资产出图</b><em id="imgStat">—</em></div>
-            <div class="land-nums" id="imgNums"><div class="empty-hint">加载中</div></div>
-            <div class="land-line" id="imgTaskLine"></div>
-            <div class="land-btns">
-              <button id="btnImgMissing">补齐缺图</button>
-              <button id="btnImgAll">全部重出</button>
-              <button id="btnImgRetry" style="display:none">重试失败</button>
-            </div>
-          </div>
-
-          <div class="land-box">
-            <div class="land-head"><b>批量出视频</b><em id="vidStat">—</em></div>
-            <div class="land-nums" id="vidNums"><div class="empty-hint">加载中</div></div>
-            <div class="land-params">
-              <label>比例<select id="lvRatio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:3</option><option>3:4</option></select></label>
-              <label>分辨率<select id="lvRes"><option>480p</option><option selected>720p</option><option>1080p</option></select></label>
-              <label>像素档<select id="lvMp"><option value="0.5">0.5</option><option value="1" selected>1</option><option value="2">2</option></select></label>
-              <label><input type="checkbox" id="lvAudio" checked> 音频</label>
-              <label><input type="checkbox" id="lvWm"> 水印</label>
-            </div>
-            <div class="land-btns">
-              <button id="btnVidBatch">批量生成视频</button>
-            </div>
-          </div>
-        </div>
-      </section>
+      <!-- 工作区：当前阶段做出来的东西。左边点哪个阶段，这里就换成什么 -->
+      <section class="ss-panel work-panel" id="workArea"></section>
 
       <section class="ss-panel deliv-card" id="delivCard" style="display:none">
         <div class="ss-minihead"><b>交付物</b><span>重跑留新版本，旧版不丢</span></div>
@@ -733,6 +711,14 @@
     $('#vidStat').text(prompts.length ? pv + ' / ' + prompts.length + ' 已出' : '—');
     $('#btnVidBatch').prop('disabled', !(prompts.length - pv - busy));
 
+    // 视频那一步没有编排阶段，它的完成度就是这几条数字，顺手刷新菜单和工作区
+    landVid = { total: prompts.length, done: pv, busy: busy };
+    window.landPrompts = prompts;
+    if (STEPS[activeStep] && STEPS[activeStep].view.kind === 'video'){
+      if ($('#wvList').length) renderVidList(); else renderWork();
+    }
+    renderPipe(window.lastSteps || []);
+
     // 有活儿在跑才轮询，都跑完了就别空转
     if (q || r || busy){ if (!landTimer) landTimer = setInterval(refreshLand, 5000); }
     else stopLandPoll();
@@ -838,15 +824,25 @@
   // 以前页面上摆着十一个编排阶段，每个还挂着门禁和卡点，人得先把这套编排学明白才敢下手。
   // 编排是引擎的事：from/to 之间那几个内部阶段跑几次、怎么串，页面上不该出现
   var STEPS = [
-    /* 立项跑到 P1 才收手：登记完画幅/集数/时长这些基准，本来就是为了让剧本跑起来，
-       让人再单独点一次剧本没有意义。剧本那一步留着，只是给它一个看产出的地方。 */
-    { title:'立项',   desc:'定画幅、交付形态与题材调性，并直接跑出剧本', from:'P0', to:'P1', form:'P0' },
-    { title:'剧本',   desc:'一句话前提、五道剧本门、分集', from:'P1',  to:'P1',  form:'P1' },
-    { title:'资产',   desc:'实体提取 → 清单 → 三批出图提示词', from:'P2a', to:'P2d', form:null },
-    { title:'分镜',   desc:'镜头调度与帧表',               from:'P3',  to:'P3',  form:null },
-    { title:'提示词', desc:'投喂出图 / 视频模型的终稿',     from:'P4',  to:'P4',  form:null }
+    /* view 说明这一步做完的东西在哪看：
+         text  = 整篇文本产出（立项 / 剧本），在本页渲染
+         frame = 业务表里的数据，直接把 project.html 对应 stage 搬过来（iframe 加载 &embed=1）
+         video = 终稿提示词批量出视频 */
+    { title:'项目立项', desc:'定画幅、交付形态与题材调性',     from:'P0',  to:'P0',  form:'P0', view:{kind:'text'} },
+    { title:'剧本生成', desc:'一句话前提、五道剧本门、分集',   from:'P1',  to:'P1',  form:'P1', view:{kind:'text'} },
+    { title:'角色资产', desc:'角色卡与出图提示词',             from:'P2a', to:'P2c1', form:null, view:{kind:'frame', stage:6} },
+    { title:'道具资产', desc:'道具卡与出图提示词',             from:'P2c2', to:'P2c3', form:null, view:{kind:'frame', stage:7} },
+    { title:'环境资产', desc:'场景卡与出图提示词',             from:'P2c2', to:'P2c2', form:null, view:{kind:'frame', stage:8} },
+    { title:'特效资产', desc:'特效卡与出图提示词',             from:'P2c3', to:'P2d',  form:null, view:{kind:'frame', stage:11} },
+    { title:'导演分镜', desc:'镜头调度与帧表',                 from:'P3',  to:'P3',   form:null, view:{kind:'frame', stage:5} },
+    { title:'提示词生成', desc:'投喂出图 / 视频模型的终稿',     from:'P4',  to:'P4',   form:null, view:{kind:'frame', stage:9} },
+    /* 视频生成这一步不跑模型：它把上一步的终稿提示词批量提交给出视频模型。
+       所以没有 from / to，状态按「提示词里已经出过几条视频」算 */
+    { title:'视频生成', desc:'把终稿提示词批量提交出视频', noRun:true, view:{kind:'video'} }
   ];
   var STEP_STATE = [];
+  var activeStep = 0;
+  var landVid = { total:0, done:0 };   // 视频那一步的状态靠它：终稿提示词条数 / 已出视频条数
 
   // 把一步内部那几个编排阶段合成一个状态。人只关心这一步做完没有，
   // 「资产」内部是六次调用还是三次，是引擎自己的事
@@ -865,6 +861,13 @@
     });
     var order = stages.map(function(s){ return s.stageKey; });
     return STEPS.map(function(sp){
+      // 视频那一步没有编排阶段，它的进度就是「提示词里出过了几条视频」
+      if (sp.noRun){
+        return { tier: landVid.total && landVid.done >= landVid.total ? 'done'
+                     : landVid.done ? 'part' : 'idle',
+                 doneN: landVid.done, total: landVid.total,
+                 running: null, bad: null, imported: landVid.done, viewId: 0 };
+      }
       var keys = [];
       for (var i = order.indexOf(sp.from); i >= 0 && i < order.length; i++){
         keys.push(order[i]);
@@ -931,47 +934,144 @@
     return parts.join(NL);
   }
 
-  // 五步主面板：每步一张卡，自己带表单、状态和「生成」
+  // 主面板只摆「当前阶段」这一张卡。九个阶段靠左边菜单切，不铺九张卡占一屏
   function renderSteps(steps){
     if (!stages || !stages.length) return;
+    window.lastSteps = steps || window.lastSteps;   // 切阶段时要拿最近一次的状态重画
     STEP_STATE = calcSteps(steps);
-    var prevDone = true, doneCnt = 0;
-    var h = STEP_STATE.map(function(s, i){
-      var sp = STEPS[i];
-      if (s.tier === 'done') doneCnt++;
-      var cls = s.tier === 'run' ? 'is-run' : s.tier === 'bad' ? 'is-bad' : s.tier === 'done' ? 'is-done' : '';
-      var can = prevDone;
-      if (!can) cls += ' dim';
-      var sub = '';
-      if (s.tier === 'run')
-        sub = '跑中 · 内部第 ' + (s.doneN + 1) + '/' + s.total + ' 步'
-            + (s.running ? ' · ' + (s.running.name || s.running.stageKey) : '');
-      else if (s.tier === 'done')
-        sub = '已完成' + (s.imported ? ' · 入库 ' + s.imported + ' 条' : '')
-            + (s.total > 1 ? ' · 内含 ' + s.total + ' 个子阶段' : '');
-      else if (s.tier === 'part') sub = '跑了 ' + s.doneN + '/' + s.total + '，没跑完';
-      else if (s.tier === 'bad')  sub = '这一步没跑出东西（' + (s.bad ? s.bad.stageKey : '') + '）';
-      else sub = can ? '还没跑' : '等上一步跑完';
-      prevDone = (s.tier === 'done');
-      var label = s.tier === 'done' ? '重跑' : s.tier === 'part' ? '接着跑' : '生成';
-      return '<div class="ss-step ' + cls + '" data-i="' + i + '">'
-           + '<div class="ss-step-no">' + (i + 1) + '</div>'
-           + '<div class="ss-step-body"><b>' + esc(sp.title) + ' <em>' + esc(sp.desc) + '</em></b>'
-           + '<small>' + esc(sub) + '</small>'
-           + (sp.form ? '<div class="ss-step-form" id="sf' + i + '"></div>' : '')
-           + '<div class="ss-step-out" id="so' + i + '"></div></div>'
-           + '<div class="ss-step-act">'
-           +   '<button class="go" data-run="' + i + '"' + (can ? '' : ' disabled') + '>' + label + '</button>'
-           +   (s.viewId ? '<button data-view="' + i + '">看产出</button>' : '')
-           + '</div></div>';
-    }).join('');
-    $('#stepList').html(h);
-    STEP_STATE.forEach(function(s, i){
-      if (STEPS[i].form) renderStepForm($('#sf' + i), STEPS[i].form);
-    });
+    var doneCnt = STEP_STATE.filter(function(s){ return s.tier === 'done'; }).length;
+    $('#stepList').html(stepCard(activeStep));
+    if (STEPS[activeStep].form) renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
     $('#overallBadge').text(doneCnt === STEPS.length ? '全部跑完' : doneCnt + ' / ' + STEPS.length);
+    $('#workTitle').text(STEPS[activeStep].title);
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
-    $('[data-view]').click(function(){ viewOut(+$(this).data('view')); });
+    renderWork();
+  }
+
+  // 一张阶段卡：状态 + 表单（只有立项 / 剧本要人拿主意）+ 运行按钮
+  function stepCard(i){
+    var s = STEP_STATE[i] || {}, sp = STEPS[i];
+    var cls = s.tier === 'run' ? 'is-run' : s.tier === 'bad' ? 'is-bad' : s.tier === 'done' ? 'is-done' : '';
+    var sub = '';
+    if (s.tier === 'run')
+      sub = '跑中 · 内部第 ' + (s.doneN + 1) + '/' + s.total + ' 步'
+          + (s.running ? ' · ' + (s.running.name || s.running.stageKey) : '');
+    else if (s.tier === 'done')
+      sub = '已完成' + (s.imported ? ' · 入库 ' + s.imported + ' 条' : '')
+          + (s.total > 1 ? ' · 内含 ' + s.total + ' 个子阶段' : '');
+    else if (s.tier === 'part') sub = '跑了 ' + s.doneN + '/' + s.total + '，没跑完';
+    else if (s.tier === 'bad')  sub = '这一步没跑出东西（' + (s.bad ? s.bad.stageKey : '') + '）';
+    else sub = sp.noRun ? '等终稿提示词跑出来' : '还没跑';
+    var label = sp.noRun ? '去生成视频'
+              : s.tier === 'done' ? '重跑' : s.tier === 'part' ? '接着跑' : '生成';
+    return '<div class="ss-step ' + cls + '" data-i="' + i + '">'
+         + '<div class="ss-step-no">' + (i + 1) + '</div>'
+         + '<div class="ss-step-body"><b>' + esc(sp.title) + ' <em>' + esc(sp.desc) + '</em></b>'
+         + '<small>' + esc(sub) + '</small>'
+         + (sp.form ? '<div class="ss-step-form" id="sf' + i + '"></div>' : '')
+         + '<div class="ss-step-out" id="so' + i + '"></div></div>'
+         + '<div class="ss-step-act">'
+         +   '<button class="go" data-run="' + i + '">' + label + '</button>'
+         + '</div></div>';
+  }
+
+  /* 工作区：当前阶段做出来的东西就摆在这儿。
+     文本类（立项 / 剧本）在本页渲染；资产 / 分镜 / 提示词这些是业务表里的东西，
+     直接把 project.html 对应 stage 搬过来（iframe 加载 project.html?...&embed=1）——
+     那边的出图、改提示词、批量出视频都是现成的，重写一遍没有任何好处，只会让两边长得不一样。 */
+  function renderWork(){
+    var sp = STEPS[activeStep], s = STEP_STATE[activeStep] || {}, pid = $('#proj').val();
+    var box = $('#workArea');
+
+    if (sp.view.kind === 'frame'){
+      if (!pid){ box.html('<div class="empty-hint">先在左边选好落点项目</div>'); return; }
+      box.html('<iframe class="work-frame" src="project.html?id=' + pid
+             + '&stage=' + sp.view.stage + '&embed=1"></iframe>');
+      return;
+    }
+    if (sp.view.kind === 'video'){
+      if (!pid){ box.html('<div class="empty-hint">先在左边选好落点项目</div>'); return; }
+      box.html(videoPanel());
+      bindVideoPanel();
+      return;
+    }
+    // text：把这一步的整篇产出渲染出来
+    if (!s.viewId){ box.html('<div class="empty-hint">这一步还没跑出内容，点上面的「生成」</div>'); return; }
+    box.html('<div class="md">加载中…</div>');
+    $.get('/api/director-agent/steps/' + s.viewId + '/output', function(o){
+      box.html('<div class="md">' + mdRender((o && o.output) || '（空）') + '</div>');
+    });
+  }
+
+  function videoPanel(){
+    var t = landVid.total, d = landVid.done, b = landVid.busy || 0;
+    return '<div class="ss-minihead"><b>视频生成</b><span>'
+      + (t ? d + ' / ' + t + ' 已出' : '还没有终稿提示词') + '</span></div>'
+      + '<div class="land-grid">'
+      +   '<div class="land-box">'
+      +     '<div class="land-head"><b>批量提交</b><em>所有没出视频的提示词</em></div>'
+      +     '<div class="land-nums">'
+      +       '<div class="land-num"><span>终稿提示词</span><b>' + t + '</b><i>条</i></div>'
+      +       '<div class="land-num"><span>已出视频</span><b>' + d + '</b><i>/ ' + t + '</i></div>'
+      +       '<div class="land-num"><span>生成中</span><b>' + b + '</b><i>条</i></div>'
+      +     '</div>'
+      +     '<div class="land-params">'
+      +       '<label>比例<select id="wvRatio"><option>16:9</option><option>9:16</option>'
+      +         '<option>1:1</option><option>4:3</option><option>3:4</option></select></label>'
+      +       '<label>分辨率<select id="wvRes"><option>480p</option><option selected>720p</option>'
+      +         '<option>1080p</option></select></label>'
+      +       '<label>像素档<select id="wvMp"><option value="0.5">0.5</option>'
+      +         '<option value="1" selected>1</option><option value="2">2</option></select></label>'
+      +       '<label><input type="checkbox" id="wvAudio" checked> 音频</label>'
+      +       '<label><input type="checkbox" id="wvWm"> 水印</label>'
+      +     '</div>'
+      +     '<div class="land-btns"><button id="wvBatch"' + (t - d - b > 0 ? '' : ' disabled')
+      +       '>批量生成视频</button></div>'
+      +   '</div>'
+      +   '<div class="land-box">'
+      +     '<div class="land-head"><b>已出视频</b><em>' + d + ' 条</em></div>'
+      +     '<div id="wvList" class="wv-list"></div>'
+      +   '</div>'
+      + '</div>';
+  }
+
+  function bindVideoPanel(){
+    renderVidList();
+    $('#wvBatch').off('click').on('click', function(){
+      var pid = $('#proj').val(); if (!pid) return;
+      var btn = $(this);
+      var pend = landVid.total - landVid.done - (landVid.busy || 0);
+      if (pend <= 0) return;
+      if (!confirm('把 ' + pend + ' 条还没出视频的提示词一次性提交给出视频模型。要花时间也要花钱，确定？')) return;
+      btn.prop('disabled', true).text('提交中...');
+      $.ajax({ url:'/api/project/' + pid + '/video/batch-generate', method:'POST',
+               contentType:'application/json',
+               data: JSON.stringify({ settings:{
+                 ratio: $('#wvRatio').val(), watermark: $('#wvWm').is(':checked'),
+                 generateAudio: $('#wvAudio').is(':checked'), resolution: $('#wvRes').val(),
+                 megapixels: parseFloat($('#wvMp').val()) || 1 }}) })
+        .done(function(r){
+          say('✓ ' + (r.message || '已提交') + (r.count ? '（' + r.count + ' 条）' : ''), 'lok');
+          if (r.failures && r.failures.length) say('× 其中 ' + r.failures.length + ' 条提交失败', 'lerr');
+          refreshLand();
+        })
+        .fail(function(xhr){
+          say('× 提交失败：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
+          btn.prop('disabled', false).text('批量生成视频');
+        });
+    });
+  }
+
+  function renderVidList(){
+    var ps = (window.landPrompts || []).filter(function(p){ return !!(p.videoUrl || p.localVideoUrl); });
+    if (!ps.length){ $('#wvList').html('<div class="empty-hint">还没出过视频</div>'); return; }
+    $('#wvList').html(ps.map(function(p){
+      var u = p.localVideoUrl || p.videoUrl;
+      var nm = (p.episodeNumber ? '第' + p.episodeNumber + '集 ' : '') + (p.shotLabel || ('#' + p.promptId));
+      return '<div class="wv-item"><video src="' + esc(u) + '" controls preload="none"></video>'
+        + '<div class="wv-meta"><b>' + esc(nm) + '</b>'
+        + '<a href="' + esc(u) + '" target="_blank" rel="noopener">下载 ↗</a></div></div>';
+    }).join(''));
   }
 
   /* 极简 Markdown 渲染。
@@ -1038,6 +1138,12 @@
   // 跑一步：只跑到这一步的最后一个内部阶段就收手，不越界替他把下一步也做了
   function doStep(i){
     var sp = STEPS[i];
+    // 视频那一步不跑模型，它的「运行」就是把工作区切到出视频那块
+    if (sp.noRun){
+      renderWork();
+      var w = $('#workArea')[0]; if (w) w.scrollIntoView({ behavior:'smooth', block:'start' });
+      return;
+    }
     var tier = STEP_STATE[i] ? STEP_STATE[i].tier : 'idle';
     var txt = collectFrom($('#sf' + i));
     if (sp.form){
@@ -1109,7 +1215,7 @@
       var ex  = s.tier === 'done' ? (s.imported ? '入库 ' + s.imported : '已完成')
               : s.tier === 'run'  ? '跑中 ' + s.doneN + '/' + s.total
               : s.tier === 'bad'  ? '没跑出东西' : '';
-      return '<button class="' + cls + '" data-i="' + i + '">'
+      return '<button class="' + cls + (i === activeStep ? ' active' : '') + '" data-i="' + i + '">'
            + '<span class="ss-node"><i>' + ico + '</i></span>'
            + '<span class="ss-stage-copy"><b>' + esc(sp.title) + '</b>'
            + '<small>' + esc(ex) + '</small></span></button>';
@@ -1124,9 +1230,12 @@
            + '<i class="' + lit + '"></i><b>' + esc(sp.title) + '</b></button>';
     }).join('');
     $('#pipeTrack').html(track);
+    // 点左侧菜单 = 切到那个阶段，右侧整块工作区跟着换
     $('#pipeNav button, #pipeTrack button').click(function(){
-      var el = $('.ss-step[data-i=' + $(this).data('i') + ']')[0];
-      if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
+      activeStep = +$(this).data('i');
+      renderSteps(window.lastSteps || []);
+      var w = $('#workArea')[0];
+      if (w) w.scrollIntoView({ behavior:'smooth', block:'start' });
     });
   }
 
