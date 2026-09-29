@@ -552,12 +552,10 @@
   function loadAll(){
     var pStages = $.get('/api/director-skill/packs').then(function(list){
       if (!list || !list.length){
-        $('#packName2').text('没有规则包');
         $('#pipeNav').html('<div class="empty-hint">规则包里没有启用的阶段</div>');   // 别把「加载中」一直挂在那儿
         return [];
       }
       pack = list[0];
-      $('#packName2').text(pack.name);
       $('#packName').text(pack.name);
       return $.get('/api/director-skill/packs/' + pack.packId + '/stages').then(function(st){
         stages = (st || []).filter(function(s){ return s.isEnabled; })
