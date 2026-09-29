@@ -73,7 +73,9 @@ body {
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
 }
 .nav-inner {
-  max-width: 1440px;
+  /* 顶栏全宽铺到屏幕两边，不跟着内容区一起收 1440——参考站就是这么做的：
+     顶栏拉通，下面的正文才收宽度，这样一眼看得出「栏」和「内容」是两层 */
+  max-width: none;
   margin: 0 auto;
   height: 100%;
   padding: 0 28px;
