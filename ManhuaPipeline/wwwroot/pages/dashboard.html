@@ -9,8 +9,51 @@
     <link rel="stylesheet" href="../css/style.css">
     <link rel="stylesheet" href="../css/admin-theme.css">
     <style>
-        /* dashboard 特有：漫剧封面保持 160px 高度，底色用参考站渐变 */
-        .drama-cover { height: 160px; background: linear-gradient(135deg, rgba(157,116,255,0.08), rgba(109,230,238,0.06)); }
+        /* dashboard 特有：封面 180px，跟参考站 project-cover 对齐 */
+        .drama-cover { height: 180px; background: linear-gradient(135deg, rgba(157,116,255,0.10), rgba(109,230,238,0.07)); }
+
+        /* ---- 方块：形状照抄参考站 /dashboard.html ----
+           它那套方块就三件事：切角面板（右上切 13px）、右上角双色角标、4 列网格。
+           尺寸层级也照它：封面 180px、标题 14px、副文 11px、角标链接 10px、metric 数字 32px。
+           配色仍吃本页的主题变量（--panel/--line/--accent/--danger），不把它的青红 HUD 色板硬搬进来，
+           否则这一页跟其他页对不上。真要换成青红那套，改这四个变量指向即可。 */
+        .hud-panel {
+            border-radius: 0;
+            clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+            position: relative;
+        }
+        .hud-panel::before {
+            content: ""; position: absolute; right: 8px; top: 8px; z-index: 2;
+            width: 30px; height: 8px;
+            border-top: 1px solid var(--accent); border-right: 1px solid var(--danger);
+        }
+        /* 顶部四个数字块 = 它的 .metrics / .metric */
+        .hud-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
+        .hud-metric { padding: 18px; min-height: 105px; }
+        .hud-metric .m-label { display: block; font-size: 9px; letter-spacing: 2px; color: var(--accent); }
+        .hud-metric .m-value { display: block; font-size: 32px; font-weight: 600; line-height: 1.1; margin-top: 10px; color: var(--text); }
+        .hud-metric .m-sub { display: block; font-size: 10px; color: var(--muted); margin-top: 6px; }
+        /* 卡片网格 = 它的 .card-grid：四列 */
+        #dramaList, #projectList { grid-template-columns: repeat(4, 1fr); gap: 14px; }
+        #dramaList .drama-card, #projectList .project-card { padding: 14px; cursor: pointer; }
+        #dramaList .drama-info, #projectList .project-info { padding: 0; }
+        #dramaList .drama-title, #projectList .project-title { font-size: 14px; margin: 12px 0 4px; }
+        #dramaList .drama-desc, #projectList .project-desc { font-size: 11px; line-height: 1.7; }
+        #projectList .project-actions { padding: 0; }
+        #projectList .project-cover { height: 180px; }
+        .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
+        .card-enter { font-size: 10px; letter-spacing: 1px; color: var(--accent); }
+        .drama-meta { margin-top: 0 !important; font-size: 11px; }
+        /* 页头 = 它的 .page-head：眉标 + 大标题 + 一行说明，底下压一条分隔线 */
+        .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+                     margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
+        .eyebrow { display: block; font-size: 9px; letter-spacing: 2px; color: var(--accent); margin-bottom: 6px; }
+        .page-head .head-desc { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
+        .quick-links { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 20px; }
+        .quick-links .btn { padding: 6px 12px; font-size: 12px; }
+        @media (max-width: 1400px) { #dramaList, #projectList { grid-template-columns: repeat(3, 1fr); } }
+        @media (max-width: 1000px) { #dramaList, #projectList { grid-template-columns: repeat(2, 1fr); } .hud-metrics { grid-template-columns: repeat(2, 1fr); } }
+        @media (max-width: 650px) { #dramaList, #projectList, .hud-metrics { grid-template-columns: 1fr; } }
         /* 全屏工作台：顶栏固定 56px，下面那块铺满剩余高度自己滚，整页不再出现外层滚动条。
            参照的是参考站 skill-studio 的 fullscreen 做法。
            窄屏（≤760px）不做固定高度——手机上这么切会把内容截掉，还是让页面正常滚。 */
@@ -23,6 +66,7 @@
                 background: linear-gradient(var(--bg) 72%, transparent);
             }
             #dramaView > div:first-child { margin-bottom: 8px; }
+            #dramaEmpty { min-height: 60vh; }
         }
     </style>
 </head>
@@ -58,20 +102,32 @@
                 <a onclick="showDramas()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回漫剧列表</a>
             </div>
             <div id="dramaView">
-                <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-                    <div class="page-title" style="margin-bottom:0;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> 我的漫剧<span class="drama-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
-                    <div class="action-bar" style="margin-bottom:0;">
-                        <button class="btn btn-primary" onclick="showCreateDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建漫剧</button>
-                        <a href="asset-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 资产库</a>
-                        <a href="canvas.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
-                        <a href="skill-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
-                        <a href="fight-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
-<a href="camera-atom-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
-<a href="report.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</a>
-                        <a href="voice-library.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</a>
-                        <a href="works.html" target="_blank" class="btn btn-primary" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
+                <div class="page-head">
+                    <div>
+                        <span class="eyebrow">// PRODUCTION CENTER</span>
+                        <div class="page-title" style="margin-bottom:0;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> 我的漫剧<span class="drama-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+                        <p class="head-desc">创建漫剧合集，按集推进完整制作流水线。</p>
+                    </div>
+                    <div style="display:flex;align-items:center;gap:8px;">
+                        <button class="btn btn-primary" onclick="showCreateDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 创建漫剧</button>
                         <button class="btn btn-outline" id="btnDramaSort" onclick="toggleDramaSort()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="dramaSortLabel">最新优先</span></button>
                     </div>
+                </div>
+                <div class="hud-metrics">
+                    <div class="hud-metric hud-panel"><span class="m-label">01 / 漫剧合集</span><b class="m-value" id="mDrama">–</b><span class="m-sub" id="mDramaSub">合集总数</span></div>
+                    <div class="hud-metric hud-panel"><span class="m-label">02 / 单集项目</span><b class="m-value" id="mProject">–</b><span class="m-sub" id="mProjectSub">所有合集下的项目</span></div>
+                    <div class="hud-metric hud-panel"><span class="m-label">03 / 出图任务</span><b class="m-value" id="mImage">–</b><span class="m-sub" id="mImageSub">近 7 天</span></div>
+                    <div class="hud-metric hud-panel"><span class="m-label">04 / 运行中任务</span><b class="m-value" id="mRunning">–</b><span class="m-sub" id="mRunningSub">出图 + 视频</span></div>
+                </div>
+                <div class="quick-links">
+                        <a href="asset-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 资产库</a>
+                        <a href="canvas.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
+                        <a href="skill-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
+                        <a href="fight-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
+                        <a href="camera-atom-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
+                        <a href="report.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</a>
+                        <a href="voice-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</a>
+                        <a href="works.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
                 </div>
                 <div id="dramaList" class="drama-grid"></div>
                 <div id="dramaEmpty" class="empty-state" style="display:none;">
@@ -152,7 +208,7 @@
         <script src="../js/app.js?v=2"></script>
         <script>
             var currentDramaId = 0;
-            $(function () { $.get("/api/auth/me", function (u) { if (u && u.userId) loadDramas(); else window.location.href = "login.html" }).fail(function () { window.location.href = "login.html" }) });
+            $(function () { $.get("/api/auth/me", function (u) { if (u && u.userId) { loadDramas(); loadMetrics(); } else window.location.href = "login.html" }).fail(function () { window.location.href = "login.html" }) });
             var dramaSortOrder = "desc";
             function toggleDramaSort() {
                 dramaSortOrder = dramaSortOrder === "desc" ? "asc" : "desc";
@@ -172,16 +228,42 @@
                     var h = "";
                     for (var i = 0; i < d.length; i++) {
                         var dr = d[i];
-                        h += "<div class='drama-card' onclick=\"openDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">";
+                        h += "<div class='drama-card hud-panel' onclick=\"openDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">";
                         h += "<div class='drama-cover' style='" + (dr.coverImage ? "background-image:url(" + dr.coverImage + ");background-size:cover;background-position:center;" : "") + "'>" + (dr.coverImage ? "" : "🎬") + "</div>";
-                        h += "<div class='drama-info'><div class='drama-title'><span class='material-icons' style='font-size:inherit;vertical-align:middle;color:var(--primary-light)'>movie</span> " + escHtml(dr.title) + "</div>";
-                        if (dr.description) h += "<div class='drama-desc'>" + escHtml(dr.description) + "</div>";
-                        h += "<div class='drama-meta' id='dramaMeta" + dr.dramaId + "'>加载中...</div></div>" +
-                            "<div class='drama-actions'><button class='btn btn-outline btn-sm' onclick=\"event.stopPropagation();showEditDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\"><span class='material-icons' style='font-size:inherit;vertical-align:middle'>edit</span> 编辑</button></div></div>";
+                        h += "<div class='drama-info'>";
+                        h += "<div class='drama-title'><span class='material-icons' style='font-size:inherit;vertical-align:middle;color:var(--primary-light)'>movie</span> " + escHtml(dr.title) + "</div>";
+                        h += "<div class='drama-desc'>" + (dr.description ? escHtml(dr.description) : "暂无描述") + "</div>";
+                        h += "<div class='card-foot'><span class='card-enter'>进入合集 →</span>" +
+                            "<span style='display:flex;align-items:center;gap:8px;'><span class='drama-meta' id='dramaMeta" + dr.dramaId + "'>加载中...</span>" +
+                            "<button class='btn btn-outline btn-sm' onclick=\"event.stopPropagation();showEditDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\"><span class='material-icons' style='font-size:inherit;vertical-align:middle'>edit</span></button></span></div>";
+                        h += "</div></div>";
                     }
                     $("#dramaList").html(h);
                     $(".drama-count").text("共 " + d.length + " 个漫剧");
-                    for (var i = 0; i < d.length; i++) { (function (id) { $.get("/api/drama/" + id + "/projects", function (ps) { $("#dramaMeta" + id).text("项目数: " + (ps || []).length) }) })(d[i].dramaId) }
+                    $("#mDrama").text(d.length);
+                    var projTotal = 0, done = 0;
+                    for (var i = 0; i < d.length; i++) {
+                        (function (id) {
+                            $.get("/api/drama/" + id + "/projects", function (ps) {
+                                var n = (ps || []).length;
+                                $("#dramaMeta" + id).text("项目 " + n);
+                                projTotal += n; done++;
+                                $("#mProject").text(projTotal);
+                                $("#mProjectSub").text("已汇总 " + done + "/" + d.length + " 个合集");
+                            });
+                        })(d[i].dramaId)
+                    }
+                });
+            }
+            /* 顶部四个数字块的后两个：出图 / 运行中，直接取系统报告那份统计（近 7 天）。
+               取不到就留 –，不编数字。 */
+            function loadMetrics() {
+                $.get("/api/dashboard/report?days=7", function (r) {
+                    var img = r.images || {}, vid = r.videos || {};
+                    $("#mImage").text(img.total || 0);
+                    $("#mImageSub").text("近 7 天 · 完成 " + (img.done || 0) + " · 失败 " + (img.failed || 0));
+                    $("#mRunning").text((img.running || 0) + (vid.running || 0));
+                    $("#mRunningSub").text("出图 " + (img.running || 0) + " · 视频 " + (vid.running || 0));
                 });
             }
             function openDrama(id, title) { window.location.href = "project-manage.html?dramaId=" + id + "&title=" + encodeURIComponent(title) }
@@ -195,12 +277,15 @@
                         var p = d[i];
                         var st = ["草稿", "创意构思", "故事分析", "全局蓝图", "分集细化", "分镜脚本", "角色资产", "道具资产", "环境资产", "提示词生成", "衔接检查", "已完成"];
                         var label = st[p.currentStage] || "草稿";
-                        h += "<div class='project-card'><h4>" + escHtml(p.title) + "</h4>";
-                        if (p.description) h += "<p>" + escHtml(p.description) + "</p>";
-                        h += "<p style='margin-top:8px;font-size:12px;'><span style='color:var(--primary-light);'>状态: " + label + "</span></p>";
+                        var picon = p.projectType === "ad" ? "📢" : p.projectType === "mv" ? "🎵" : "🎬";
+                        h += "<div class='project-card hud-panel'>";
+                        h += "<div class='project-cover'>" + picon + "</div>";
+                        h += "<div class='project-info'><div class='project-title'>" + escHtml(p.title) + "</div>";
+                        h += "<div class='project-desc'>" + (p.description ? escHtml(p.description) : "暂无描述") + "</div>";
+                        h += "<div class='card-foot'><span class='card-enter'>状态: " + label + "</span>";
                         h += "<div class='project-actions'><a href='project.html?id=" + p.projectId + "' class='btn btn-primary btn-sm'><span class='material-icons' style='font-size:inherit;vertical-align:middle'>arrow_forward</span> 进入</a>";
                         h += "<button class='btn btn-outline btn-sm' onclick=\"editProject('" + p.projectId + "','" + escAttr(p.title) + "')\"><span class='material-icons' style='font-size:inherit;vertical-align:middle'>edit</span> 编辑</button>";
-                        h += "<button class='btn btn-danger btn-sm' onclick='deleteProject(" + p.projectId + ")'><span class='material-icons' style='font-size:inherit;vertical-align:middle'>trash</span></button></div></div>"
+                        h += "<button class='btn btn-danger btn-sm' onclick='deleteProject(" + p.projectId + ")'><span class='material-icons' style='font-size:inherit;vertical-align:middle'>trash</span></button></div></div></div></div>"
                     }
                     $("#projectList").html(h);
                 });
