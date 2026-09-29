@@ -78,7 +78,7 @@ body {
   max-width: none;
   margin: 0 auto;
   height: 100%;
-  padding: 0 28px;
+  padding: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
