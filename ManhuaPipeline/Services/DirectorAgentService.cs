@@ -83,6 +83,11 @@ public class DirectorAgentService
             sb.AppendLine("门禁未通过时：正文第一行必须恰好是 `BLOCKED:`，后跟你要用户补充或确认的具体问题，");
             sb.AppendLine("此外不产出任何内容（不要表格、不要正文、不要 json 块）。");
             sb.AppendLine("门禁通过时：正常产出，全篇不得出现 BLOCKED 字样。");
+            // 怎么算「已锁定」说死。之前契约里写过一遍，模型照样把明明填了值的项判成未锁定，
+            // 于是整条线被一个误判锁住。放在引擎侧所有有门禁的阶段都生效，不指望每个契约各自写清楚
+            sb.AppendLine("【怎么判定有没有锁定】输入区中出现过的每一项取值，都是用户在表单里逐项选定的，");
+            sb.AppendLine("一律视为已锁定。判定某项「未锁定」前，必须先在输入区里找它的值——找不到才是真缺失；");
+            sb.AppendLine("不得以「表述不够明确」「需要用户再确认一次」「请用 A/B/C 标签回答」为由判缺失。");
         }
         // 产出要入库的阶段，顺便要求 LLM 附一个 json 块：解析就不用猜格式，这是可靠与能跑的分界线
         var schema = SkillOutputImporter.OutputSchemaFor(stage.OutputTarget);
@@ -236,9 +241,12 @@ public class DirectorAgentService
 
         var last = steps.OrderByDescending(s => s.SortOrder).FirstOrDefault()
                    ?? throw new InvalidOperationException("这次运行还没跑过任何阶段");
-        // 门禁没过的那一步没有产出，拿它往下串只会把一句拒绝通知传给下游
-        if (last.Status == "blocked")
-            throw new InvalidOperationException("上一步门禁没过，没有产出。按提示补充后从那一步重跑");
+        // 门禁被判阻断时，放不放行由人说了算。LLM 会误判——输入里明明白纸黑字写着
+        // 「画幅：16:9 横屏」，它照样判「未锁定」。人点了「继续」就是他认为这一关可以过，
+        // 引擎不替人做这个决定，否则一个误判就把整条流水线锁死了
+        foreach (var b in steps.Where(s => s.Status == "blocked"))
+            _db.ConfirmSkillStep(b.StepId);
+
         var packId = _db.GetRunPackId(runId);
         var stages = _db.GetSkillStages(packId).Where(s => s.IsEnabled).OrderBy(s => s.SortOrder).ToList();
         var idx = stages.FindIndex(s => s.StageKey == last.StageKey) + 1;
