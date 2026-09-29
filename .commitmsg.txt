@@ -1,0 +1,8 @@
+feat: P2c 出图提示词走 JSON 模式，不再让解析器追着模型的排版跑
+
+- P2c1/2/3 的产出契约里定死 JSON 格式：code 必须逐字照抄台账（回填资产的唯一
+  依据），多组件用 code 后缀区分，母版那一条排在最前面
+- ExecuteStepAsync: asset_prompts 阶段开 jsonMode
+- TryExtractJson: 认裸 JSON 和对象壳，不再只认 ```json 围栏
+- ReadJsonArray: 剥围栏、跳过前导废话、认对象壳里的数组
+- ImportAssetPrompts: 只清确实要重写的类别，避免一条都没写进去却把整类提示词清空

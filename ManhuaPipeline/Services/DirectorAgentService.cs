@@ -371,9 +371,15 @@ public class DirectorAgentService
         var sys = build.SystemPrompt + "\n\n# 输入（用户提供的素材）\n" + inputText;
         try
         {
+            /* 出图提示词这几批要走 JSON 模式。它们的产出是要回填到资产卡上的结构化数据，
+               让模型自由排版的话，标题写法每批都不一样（## SCN-01 · 老屋堂屋 / ## 01 · SCN-… /
+               **中文正式提示词**…），解析器只能一路追着补，追不上就整批入库 0 条。
+               定死格式比事后猜格式省事得多。 */
             var raw = await _llm.CallAsync(cfg.ApiUrl ?? "", cfg.ApiKey, cfg.ModelName ?? "", sys,
                                            "请严格按「本阶段产出要求」输出，不要输出多余解释。",
-                                           jsonMode: false, temperature: 0.7, thinkingMode: cfg.ThinkingMode);
+                                           jsonMode: string.Equals(stage.OutputTarget, "asset_prompts",
+                                                                   StringComparison.OrdinalIgnoreCase),
+                                           temperature: 0.7, thinkingMode: cfg.ThinkingMode);
 
             if (LooksBlocked(raw))
             {
@@ -460,13 +466,26 @@ public class DirectorAgentService
     private static string? TryExtractJson(string raw)
     {
         if (string.IsNullOrWhiteSpace(raw)) return null;
+
         var s = raw.IndexOf("```json", StringComparison.OrdinalIgnoreCase);
-        if (s < 0) return null;
-        s += 7;
-        var e = raw.IndexOf("```", s, StringComparison.Ordinal);
-        if (e < 0) return null;
-        var body = raw[s..e].Trim();
-        try { using var doc = JsonDocument.Parse(body); return doc.RootElement.GetRawText(); }
+        if (s >= 0)
+        {
+            s += 7;
+            var e = raw.IndexOf("```", s, StringComparison.Ordinal);
+            if (e >= 0)
+            {
+                var body = raw[s..e].Trim();
+                try { using var doc = JsonDocument.Parse(body); return doc.RootElement.GetRawText(); }
+                catch { return null; }
+            }
+        }
+
+        /* 开了 JSON 模式后模型直接吐裸 JSON，没有围栏可找：
+           可能是数组，也可能裹一层对象壳（{"assets":[...]}）。
+           不认下来就退化成 md 兜底，而 md 兜底解析不了裸 JSON——整批入库 0 条。 */
+        var t = raw.Trim();
+        if (t.Length == 0 || (t[0] != '[' && t[0] != '{')) return null;
+        try { using var doc = JsonDocument.Parse(t); return doc.RootElement.GetRawText(); }
         catch { return null; }
     }
 }
