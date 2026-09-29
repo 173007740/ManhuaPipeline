@@ -60,9 +60,9 @@
         .cover-tone-b { background: radial-gradient(circle, #174f79, #06131f 66%); }
         .cover-tone-c { background: radial-gradient(circle, #843246, #1d0911 66%); }
         .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
-        /* 参考站这条链接是 9px 等宽，但那是给英文数字准备的：同样的 9px 落在这儿的中文上会糊成一团，
-           实测看不清。所以放大到 11px，跟卡片副文同级，等宽和青色保留。还想再大就改这一个数。 */
-        .card-enter { font-size: 11px; font-family: monospace; letter-spacing: 1px; color: var(--hud-cyan); }
+        /* 按你给的值：20px / 700。等宽和字距撤掉了——20px 粗体下等宽字体的中文会发虚，
+           大字距也没意义了。青色保留。还要等宽的话把 font-family 加回来就行。 */
+        .card-enter { font-size: 20px; font-weight: 700; color: var(--hud-cyan); }
         .drama-meta { margin-top: 0 !important; font-size: 11px; }
         /* 页头 = 它的 .page-head：眉标 + 大标题 + 一行说明，底下压一条分隔线 */
         .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
