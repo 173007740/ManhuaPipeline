@@ -719,7 +719,7 @@
       + '<div class="gateout" id="blkOut" style="color:#617069;font:10px monospace">加载中…</div>'
       + '<div class="ss-btn-row" style="margin-top:10px">'
       +   '<button class="wa" id="btnRetry">补充后重跑这一步</button>'
-      +   '<button class="go" id="btnForce" title="LLM 会误判：明明填了值的项它照样说未锁定。你核对过确实不缺，就放行">信息都齐，直接往下跑</button>'
+      +   '<button class="go" id="btnForce" title="LLM 会误判：输入里明写着画幅值它照样说未锁定。你核对过确实不缺，就放行重跑这一步">信息没问题，重跑这一步</button>'
       + '</div></div>');
     $.get('/api/director-agent/steps/' + b.stepId + '/output', function(o){
       $('#blkOut').text(((o && o.output) || '（没有内容）').replace(/^\s*BLOCKED\s*:?\s*/i, ''));
@@ -737,7 +737,7 @@
     $('#btnForce').click(function(){
       var $t = $(this).prop('disabled', true).text('继续中…');
       $('#gate').empty();
-      say('你放行了 ' + b.stageKey + ' 的门禁判断，接着往下跑', 'lwait');
+      say('你放行了 ' + b.stageKey + ' 的门禁，会用同样的素材重跑这一步', 'lwait');
       $.post('/api/director-agent/runs/' + runId + '/continue', function(){
         $t.prop('disabled', false); startPoll(true);
       }, 'json').fail(function(){ $t.prop('disabled', false).text('放行失败'); });

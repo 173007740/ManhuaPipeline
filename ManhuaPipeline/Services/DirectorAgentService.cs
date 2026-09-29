@@ -236,16 +236,21 @@ public class DirectorAgentService
     public async Task ContinueAsync(int userId, int runId)
     {
         var steps = _db.GetSkillSteps(runId);
-        var pending = steps.Where(s => s.Status == "await_confirm").OrderBy(s => s.SortOrder).FirstOrDefault();
-        if (pending != null) _db.ConfirmSkillStep(pending.StepId);
-
         var last = steps.OrderByDescending(s => s.SortOrder).FirstOrDefault()
                    ?? throw new InvalidOperationException("这次运行还没跑过任何阶段");
-        // 门禁被判阻断时，放不放行由人说了算。LLM 会误判——输入里明明白纸黑字写着
-        // 「画幅：16:9 横屏」，它照样判「未锁定」。人点了「继续」就是他认为这一关可以过，
-        // 引擎不替人做这个决定，否则一个误判就把整条流水线锁死了
-        foreach (var b in steps.Where(s => s.Status == "blocked"))
-            _db.ConfirmSkillStep(b.StepId);
+
+        // 停在门禁阻断：这一步根本没产出，OutputText 里躺的是一句拒绝通知。
+        // 「放行」是人说这一关可以过，那就用这一步原本的素材重跑它本身。
+        // 跳过去会让这一阶段的产出永久缺失；拿那句拒绝当素材喂给下游，
+        // 则是让每个下游礼貌地再拒绝一遍 —— 跑完一片空白，还查不出源头
+        if (last.Status == "blocked")
+        {
+            _db.ConfirmSkillStep(last.StepId);
+            await RunFromAsync(userId, runId, last.StageKey, ConfirmedHead(steps) + (last.InputText ?? ""));
+            return;
+        }
+
+        if (last.Status == "await_confirm") _db.ConfirmSkillStep(last.StepId);
 
         var packId = _db.GetRunPackId(runId);
         var stages = _db.GetSkillStages(packId).Where(s => s.IsEnabled).OrderBy(s => s.SortOrder).ToList();
@@ -255,7 +260,22 @@ public class DirectorAgentService
             _db.UpdateSkillRun(runId, last.StageKey, "done");
             return;
         }
-        await RunFromAsync(userId, runId, stages[idx].StageKey, last.OutputText ?? "");
+        await RunFromAsync(userId, runId, stages[idx].StageKey, ConfirmedHead(steps) + (last.OutputText ?? ""));
+    }
+
+    /// <summary>
+    /// 「上游已经被人确认过了」这件事必须明写在素材里，不能指望下游自己猜。
+    /// 人工卡点阶段产出的就是一张写着「请逐项回复」的确认表，人点过确认之后文本原样流下去，
+    /// 下游看到这张待填写的表，就判「清单未经确认」再拒绝一遍 —— P2c1 就是这么被拦住的。
+    /// </summary>
+    private static string ConfirmedHead(List<DbService.SkillStepRow> steps)
+    {
+        var c = steps.Where(s => !string.IsNullOrEmpty(s.ConfirmedAt))
+                     .OrderByDescending(s => s.SortOrder).FirstOrDefault();
+        if (c == null) return "";
+        return $"【工作流状态·引擎注入】上游 {c.StageKey} 已于 {c.ConfirmedAt} 经用户人工确认放行。"
+             + "下面引用的内容即最终确认版本，其中「请逐项回复」「待确认」之类的措辞只是阶段产出模板的残留，"
+             + "不代表仍有待完成的事项，不得据以判定前置条件未满足。\n\n";
     }
 
     // ========== 3c. 单步执行的核心：单跑和连跑都走这里 ==========
