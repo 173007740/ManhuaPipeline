@@ -83,7 +83,23 @@ body::before {
     linear-gradient(rgba(5, 232, 240, 0.03) 1px, transparent 1px),
     linear-gradient(90deg, rgba(5, 232, 240, 0.03) 1px, transparent 1px);
   background-size: 54px 54px;
-  animation: hud-drift 18s linear infinite;
+  /* 两个动画一起跑：binary-assemble 定时把整段字符换成另一串（steps 所以是硬切，不是渐变），
+     binary-drift 让整层缓慢位移 + 明暗呼吸。少了前一个就只剩网格在动、字看着是死的 */
+  animation: binary-assemble 8s steps(1, end) infinite, binary-drift 18s linear infinite;
+}
+/* 字符硬切成另一串（参考站 @keyframes binary-assemble，8s 一轮 steps 切换） */
+@keyframes binary-assemble {
+  0%, 14%   { content: "01010000 01001111 01010111 01000101 01010010\A 01010101 00110010 11001010 00101101 10100110\A 00110101 11100010 01010101 10010110 01101001"; }
+  15%, 29%  { content: "01 0  010   1 01  001  0 10  1  011\A 01010000 01001111 01010111 01000101 01010010\A 0 101  00 1  011 0  10  001  01"; }
+  30%, 49%  { content: "010101 001100 101010 110001 010101\A               P O W E R\A 101001 110010 010101 001011 101100"; }
+  50%, 64%  { content: "01001101 01000001 01001110 01000111 01000001\A 01000101 01001110 01000111 01001001 01001110 01000101\A 00110001 00110010 00110011 00110100 00110101"; }
+  65%, 100% { content: "01001100 01001111 01000001 01000100  /  POWER\A 00110101 01001110 01000111 01001001 01001110 01000101\A 01000100 01001001 01010010 01000101 01000011 01010100 01001111 01010010"; }
+}
+/* 整层缓慢位移 + 明暗呼吸 */
+@keyframes binary-drift {
+  0%   { transform: translate3d(0, -8px, 0); opacity: 0.55; }
+  50%  { transform: translate3d(16px, 8px, 0); opacity: 1; }
+  100% { transform: translate3d(0, -8px, 0); opacity: 0.55; }
 }
 body::after {
   content: "";
@@ -109,8 +125,40 @@ body::after {
   filter: drop-shadow(0 0 9px rgba(5, 232, 240, 0.33));
 }
 @keyframes hud-orbit { to { transform: rotate(360deg); } }
-@keyframes hud-drift { from { background-position: 0 0; } to { background-position: 54px 54px; } }
-@media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
+@keyframes hud-orbit-reverse { to { transform: rotate(-360deg); } }
+/* 参考站 .page::after 那道斜向青光：115° 的一束亮线扫过屏幕（9s 一趟，中间有停顿） */
+@keyframes hud-scan {
+  0%, 18%   { background-position: 180% 0; }
+  75%, 100% { background-position: -80% 0; }
+}
+html::after {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  inset: 56px 0 0;
+  background: linear-gradient(115deg, transparent 0 38%,
+              rgba(5, 232, 240, 0.03) 48%, rgba(5, 232, 240, 0.15) 49%, transparent 50% 100%);
+  background-size: 220% 100%;
+  animation: hud-scan 9s ease-in-out infinite;
+}
+/* 参考站 .page::before：左下角那个套了好几圈的同心大圆环，72s 慢慢反转 */
+html::before {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  left: -25vw;
+  bottom: -54vw;
+  width: min(88vw, 1100px);
+  aspect-ratio: 1;
+  border-radius: 50%;
+  border: 1px solid rgba(5, 232, 240, 0.17);
+  box-shadow: 0 0 0 42px rgba(5, 232, 240, 0.03), 0 0 0 43px rgba(5, 232, 240, 0.13),
+              0 0 0 105px rgba(255, 56, 82, 0.02), 0 0 0 106px rgba(255, 56, 82, 0.13);
+  animation: hud-orbit-reverse 72s linear infinite;
+}
+@media (prefers-reduced-motion: reduce) { body::before, body::after, html::before, html::after { animation: none; } }
 /* 内容层抬到背景之上：::before/::after 是 fixed z-index 0 的定位元素，
    不抬的话会盖在没有定位的正文上面（不吃点击，但网格会压字） */
 .container, main, .page, .wrap { position: relative; z-index: 1; }
