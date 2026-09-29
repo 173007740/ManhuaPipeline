@@ -94,6 +94,9 @@
         /* 间距（gap / padding / margin）写在行内 style 上，行内优先级高于样式表，这里改不动，别在这儿白改 */
         #videoParamBar > * { display: inline-flex; align-items: center; gap: 8px; white-space: nowrap; }
         #videoParamBar select, #videoParamBar input { flex-shrink: 0; }
+        /* 每项左边空出 20px，把「⚙️ 视频参数」这个标题和后面的参数项分开。
+           只作用于 label，标题那个 span 和「管理」链接不受影响 */
+        #videoParamBar label { padding-left: 20px; }
 
         /* 表头：本页所有表格统一成深青底 + 亮青字。
            原来 style.css 里给表头铺的是 --accent-gradient，色板换青之后那成了亮青渐变，
