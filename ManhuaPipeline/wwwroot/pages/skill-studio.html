@@ -133,6 +133,20 @@
     .deliv-body{margin-top:8px;background:#0e0f14;border:1px solid #23252c;border-radius:8px;padding:12px;
                 font-size:11px;line-height:1.75;color:#c9cbd2;white-space:pre-wrap;max-height:320px;overflow:auto;
                 font-family:ui-monospace,Menlo,monospace;}
+    /* 运行中横幅：跑到哪了必须写在视线正前方。
+       一次连跑十几分钟，侧栏角落的小字等于没有——人不会盯着角落等，会以为死了。 */
+    .runbar{display:flex;align-items:center;gap:14px;margin-top:16px;padding:13px 18px;border-radius:11px;
+            border:1px solid #46308a;background:linear-gradient(135deg,#1a1430,#12111c);
+            box-shadow:0 6px 24px #6f4bd422;}
+    .runbar .rbd{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 1.2s infinite;}
+    .runbar .rbm{flex:1;min-width:0;}
+    .runbar .rbm b{display:block;font-size:13px;color:#e6e2f5;}
+    .runbar .rbm span{display:block;font-size:10.5px;color:#8f8ba6;margin-top:3px;}
+    .runbar .rbp{width:170px;height:4px;border-radius:3px;background:#252030;overflow:hidden;flex:none;}
+    .runbar .rbf{height:100%;background:linear-gradient(90deg,#7c4ddb,#9d74ff);transition:width .4s;}
+    .runbar .rbt{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--cyan);flex:none;min-width:96px;text-align:right;}
+    .log .lk{color:#5f6470;font-family:ui-monospace,Menlo,monospace;margin-right:6px;}
+    .log .lok{color:var(--ok);} .log .lrun{color:var(--accent);} .log .lwait{color:var(--amber);} .log .lerr{color:var(--bad);}
     @keyframes sideScan{from{top:-35%}to{top:100%}}
     @keyframes pulse{50%{opacity:.45}}
     @media(max-width:1050px){.app-shell{grid-template-columns:1fr}.sidebar{display:none}.form-stage{grid-template-columns:1fr}}
@@ -216,6 +230,16 @@
           <div><span>人工卡点</span><b id="sGate">0</b><small id="sGateSub">需要你拍板的地方</small></div>
         </div>
 
+        <div class="runbar" id="runBarTop" style="display:none">
+          <span class="rbd"></span>
+          <div class="rbm">
+            <b id="rbStage">正在启动…</b>
+            <span id="rbSub">—</span>
+          </div>
+          <div class="rbp"><div class="rbf" id="rbFill" style="width:0%"></div></div>
+          <span class="rbt" id="rbTime">0:00</span>
+        </div>
+
         <div class="form-stage">
           <div class="form-card">
             <span class="form-index" id="formIndex">STEP · 设定</span>
@@ -273,9 +297,15 @@
   <script src="../js/app.js?v=2"></script>
   <script>
   var pack = null, stages = [], runId = 0, timer = null;
+  var runStartAt = 0, tickTimer = null, seenStatus = {};
 
   function esc(s){ return $('<div>').text(s == null ? '' : s).html(); }
-  function say(t){ $('#log').prepend('<div>' + esc(t) + '</div>'); }
+  function mmss(sec){ return Math.floor(sec/60) + ':' + ('0' + (sec%60)).slice(-2); }
+  function say(t, cls){
+    var n = new Date();
+    var ts = ('0'+n.getHours()).slice(-2) + ':' + ('0'+n.getMinutes()).slice(-2) + ':' + ('0'+n.getSeconds()).slice(-2);
+    $('#log').prepend('<div><span class="lk">' + ts + '</span><span class="' + (cls || '') + '">' + esc(t) + '</span></div>');
+  }
   function w(n){ return n >= 10000 ? (n/10000).toFixed(1) + '万' : n + ''; }
 
   function loadAll(){
@@ -457,18 +487,66 @@
     $('#stateHint').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了' }[d.status] || '');
   }
 
-  function startPoll(){
+  function startPoll(reset){
     clearInterval(timer);
+    if (reset || !runStartAt){
+      runStartAt = Date.now();
+      localStorage.setItem('skillStudioStartAt', runStartAt);
+    }
+    seenStatus = {};
+    clearInterval(tickTimer);
+    tickTimer = setInterval(updateTick, 1000);        // 1 秒一跳：让它看得出还活着
     timer = setInterval(pollOnce, 2500);
     pollOnce();
+  }
+
+  function stopTick(){ clearInterval(tickTimer); tickTimer = null; $('#runBarTop').hide(); }
+
+  // 计时 + 剩余估算。十几分钟的等待，不知道还要多久是最难熬的部分
+  function updateTick(){
+    if (!runStartAt) return;
+    var el = Math.floor((Date.now() - runStartAt) / 1000);
+    var done = +($('#sDone').text() || 0), total = stages.length || 0;
+    var txt = mmss(el);
+    if (done > 0 && total > done) txt += ' · 还需约 ' + mmss(Math.round(el / done * (total - done)));
+    $('#rbTime').text(txt);
+  }
+
+  // 步骤流转日志：每步状态一变就落一行。
+  // 光有个静态列表不够——人盯着不动的页面三分钟就会以为死了
+  function logChanges(steps){
+    (steps || []).forEach(function(s){
+      if (seenStatus[s.stageKey] === s.status) return;
+      seenStatus[s.stageKey] = s.status;
+      var nm = s.stageKey + ' ' + (s.name || '');
+      if (s.status === 'running') say('▶ ' + nm + ' 开始', 'lrun');
+      else if (s.status === 'done') say('✓ ' + nm + ' 完成' + (s.imported ? '，入库 ' + s.imported + ' 条' : ''), 'lok');
+      else if (s.status === 'await_confirm') say('⏸ ' + nm + ' 停下等你确认', 'lwait');
+      else if (s.status === 'error') say('× ' + nm + ' 失败' + (s.error ? '：' + s.error : ''), 'lerr');
+    });
+  }
+
+  // 跑到哪了写在视线正前方，不放在侧栏角落——人不会盯着角落等
+  function updateRunBar(d){
+    var list = d.steps || [];
+    var running = list.filter(function(s){ return s.status === 'running'; })[0];
+    if (d.status !== 'running' || !running){ if (d.status !== 'running') $('#runBarTop').hide(); return; }
+    var idx = stages.map(function(s){ return s.stageKey; }).indexOf(running.stageKey) + 1;
+    var imp = +($('#sImp').text() || 0);
+    $('#runBarTop').show();
+    $('#rbStage').text('正在跑 ' + running.stageKey + ' · ' + (running.name || ''));
+    $('#rbSub').text('第 ' + (idx > 0 ? idx : '?') + ' / ' + stages.length + ' 步'
+      + ' · 已完成 ' + ($('#sDone').text() || 0) + ' 步'
+      + (imp ? '，入库 ' + imp + ' 条' : ''));
+    $('#rbFill').css('width', Math.round(list.length / stages.length * 100) + '%');
   }
 
   function pollOnce(){
     if (!runId) return;
     $.get('/api/director-agent/runs/' + runId, function(d){
-      renderPipe(d.steps); updateStats(d);
+      logChanges(d.steps); renderPipe(d.steps); updateStats(d); updateRunBar(d);
       if (d.status === 'running') return;          // 还在跑，继续轮询
-      clearInterval(timer);
+      clearInterval(timer); stopTick();
       loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
       if (d.status === 'done') { say('全部跑完'); $('#gate').html('<div class="gatebox" style="border-color:#2c5540;background:linear-gradient(145deg,#101c16,#101117)"><div class="gh" style="color:#6bd3a1">流水线跑完了</div><div class="gm" style="color:#9fb8a8">产出已入库，左侧可以看到每步的入库条数。</div></div>'); }
       else if (d.status === 'error') say('出错，看左侧红的那一步');
@@ -502,7 +580,7 @@
     });
     $('#btnGoOn').click(function(){
       $('#gate').empty(); say('已确认，继续往下跑');
-      $.post('/api/director-agent/runs/' + runId + '/continue', function(){ startPoll(); }, 'json');
+      $.post('/api/director-agent/runs/' + runId + '/continue', function(){ startPoll(true); }, 'json');
     });
   }
 
@@ -535,7 +613,7 @@
          .done(function(r){
             if (!r.started){ alert(r.message || '没启动'); return; }
             say('从 ' + $('#startStage').val() + ' 开始跑，自动串下去');
-            startPoll();
+            startPoll(true);
          })
          .always(function(){ $('#btnStart').prop('disabled', false).html('▶ 开始跑'); });
      })
@@ -543,7 +621,8 @@
   });
 
   $('#btnNew').click(function(){
-    clearInterval(timer); runId = 0; localStorage.removeItem('skillStudioRun');
+    clearInterval(timer); stopTick(); runId = 0; runStartAt = 0;
+    localStorage.removeItem('skillStudioRun'); localStorage.removeItem('skillStudioStartAt');
     $('#gate').empty(); $('#log').empty(); $('#stateHint').text('');
     $('#runStat').text('尚未开始'); $('#runBar').css('width', '0'); $('#runSub').text('已重置，可以新开一次运行');
     $('#sDone').text('0'); $('#sImp').text('0');
@@ -554,7 +633,11 @@
     loadAll();
     $('#eps').html('<option value="">（先选项目）</option>');
     var saved = localStorage.getItem('skillStudioRun');
-    if (saved){ runId = +saved; say('接上上次运行 #' + runId); startPoll(); }
+    if (saved){
+      runId = +saved; say('接上上次运行 #' + runId);
+      runStartAt = +(localStorage.getItem('skillStudioStartAt') || 0);   // 计时接上，不要从 0 重来
+      startPoll();
+    }
   });
   </script>
 </body>
