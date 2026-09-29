@@ -231,6 +231,9 @@
                      border-top:1px solid #16302f;margin-top:20px;padding-top:18px;
                      font:10px var(--mono);letter-spacing:.6px;color:var(--t3)}
     .ss-rightcol{display:flex;flex-direction:column;gap:14px}
+    /* 终端和指南搬进抽屉后，右栏只剩门禁面板——它平时是空的。
+       空着还占 344px 就是白留一条空列，收掉让工作区铺满。 */
+    .ss-workspace.no-col{grid-template-columns:minmax(0,1fr)}
     .ss-minihead{height:46px;padding:0 16px;border-bottom:1px solid #16302f;display:flex;align-items:center;justify-content:space-between}
     .ss-minihead b{font-size:12px;letter-spacing:.3px}
     .ss-minihead span{font:9px var(--mono);letter-spacing:1.2px;color:var(--t3)}
@@ -246,6 +249,27 @@
                  display:grid;place-items:center;font-size:12px}
     .ss-tip b{font-size:12px;letter-spacing:.3px}
     .ss-tip p{margin:6px 0 0;font-size:11px;line-height:1.75;color:var(--t2)}
+    /* 右侧抽屉：装运行终端和指南。原来它们常驻右栏，工作区被挤窄；
+       这俩是排查时才看的东西，收进抽屉，平时不占地。 */
+    .ss-drawer{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:92vw;z-index:80;
+               background:#060f11;border-left:1px solid var(--line);display:flex;flex-direction:column;
+               transform:translateX(101%);transition:transform .22s ease;
+               box-shadow:-24px 0 60px rgba(0,0,0,.55)}
+    .ss-drawer.on{transform:none}
+    .ss-drawer-mask{position:fixed;inset:0;z-index:75;background:rgba(0,0,0,.45);display:none}
+    .ss-drawer-mask.on{display:block}
+    .ss-drawer-head{flex:none;height:52px;display:flex;align-items:center;gap:6px;padding:0 10px;
+                    border-bottom:1px solid #16302f}
+    .ss-dtab{height:32px;padding:0 12px;border:1px solid transparent;background:transparent;
+             color:#6e8686;font-size:12px;cursor:pointer;transition:.16s}
+    .ss-dtab span{font:9px var(--mono);color:var(--t3);margin-left:5px}
+    .ss-dtab:hover{color:#b9d4d0;background:rgba(88,242,197,.05)}
+    .ss-dtab.on{border-color:#26564f;color:#eafff9;background:rgba(88,242,197,.08)}
+    .ss-dclose{margin-left:auto;width:32px;height:32px;flex:none;border:1px solid #23474a;background:#0a1517;
+               color:#9cb3b1;cursor:pointer;font-size:13px;transition:.16s}
+    .ss-dclose:hover{border-color:var(--mint);color:var(--mint)}
+    .ss-drawer-body{flex:1;overflow-y:auto}
+    .ss-drawer-body .ss-log{max-height:none}   /* 抽屉里由 body 滚，别再锁 230px */
     .empty-hint{color:var(--t3);font:10px var(--mono);letter-spacing:1px;padding:20px;text-align:center}
     /* 卡点：门禁 + 代价 + 确认并继续摆在一起。没有代价的确认就是形式主义 */
     .gatebox{border:1px solid #6b4a25;background:linear-gradient(145deg,#1a1408,#080f10);padding:16px}
@@ -449,6 +473,7 @@
     <div class="ss-content">
       <div class="ss-command-head">
         <div class="ss-actions" style="margin-left:auto">
+          <button id="btnConsole">终端 ◧</button>
           <button id="btnDeliv" disabled>交付物 · 0 ↗</button>
           <button id="btnNew">↻ 从头再来</button>
         </div>
@@ -492,30 +517,6 @@
 
         <aside class="ss-rightcol">
           <div id="gate"></div>
-
-          <section class="ss-panel">
-            <div class="ss-minihead"><b>运行终端</b><span id="logCount">0 行</span></div>
-            <div class="ss-log" id="log"></div>
-          </section>
-
-          <section class="ss-panel">
-            <div class="ss-minihead"><b>怎么个跑法</b><span>GUIDE</span></div>
-            <div class="ss-tip">
-              <span>▶</span>
-              <div>
-                <b>串下去，只在卡点停</b>
-                <p>点「开始跑」后从你选的那一步一路往下串，上一步产出自动喂给下一步。
-                   橙色标记的步骤会停下来等你，其余一路跑完不打扰。左侧每一步后面就是入库条数。</p>
-              </div>
-            </div>
-            <div class="ss-tip" style="border-top:1px solid #16302f">
-              <span>!</span>
-              <div>
-                <b>没入库就等于没跑</b>
-                <p>没选项目时引擎只留文本不入库。左边「产出落点」选好项目，产出才会写进业务表。</p>
-              </div>
-            </div>
-          </section>
         </aside>
       </div>
 
@@ -525,6 +526,39 @@
     </div>
   </div>
   </div>
+
+  <!-- 运行终端 + 怎么个跑法：这俩只在排查问题和第一次上手时才看，
+       常驻右栏等于长期占着工作区的宽度，改成右侧抽屉，点顶部「终端」开，✕ / 遮罩 / ESC 关。 -->
+  <div class="ss-drawer-mask" id="drawMask"></div>
+  <aside class="ss-drawer" id="ssDrawer">
+    <div class="ss-drawer-head">
+      <button class="ss-dtab on" data-t="log">运行终端<span id="logCount">0 行</span></button>
+      <button class="ss-dtab" data-t="guide">怎么个跑法</button>
+      <button class="ss-dclose" id="drawClose" title="关闭（ESC）">✕</button>
+    </div>
+    <div class="ss-drawer-body">
+      <div id="drawLog">
+        <div class="ss-log" id="log"></div>
+      </div>
+      <div id="drawGuide" style="display:none">
+        <div class="ss-tip">
+          <span>▶</span>
+          <div>
+            <b>串下去，只在卡点停</b>
+            <p>点「开始跑」后从你选的那一步一路往下串，上一步产出自动喂给下一步。
+               橙色标记的步骤会停下来等你，其余一路跑完不打扰。左侧每一步后面就是入库条数。</p>
+          </div>
+        </div>
+        <div class="ss-tip" style="border-top:1px solid #16302f">
+          <span>!</span>
+          <div>
+            <b>没入库就等于没跑</b>
+            <p>没选项目时引擎只留文本不入库。左边「产出落点」选好项目，产出才会写进业务表。</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </aside>
 
   <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
   <script src="../js/app.js?v=2"></script>
@@ -788,6 +822,33 @@
     var pid = $('#proj').val();
     if (pid) window.open('deliverables.html?projectId=' + pid, '_blank');
   });
+
+  /* 终端抽屉。日志照旧往 #log 里写，只是容器搬进了抽屉——收起来也在记，
+     打开就能看到刚才那段，不会因为关着就丢。 */
+  function drawerTab(t){
+    $('#ssDrawer .ss-dtab').removeClass('on').filter('[data-t="' + t + '"]').addClass('on');
+    $('#drawLog').toggle(t === 'log');
+    $('#drawGuide').toggle(t === 'guide');
+  }
+  function openDrawer(t){ $('#ssDrawer, #drawMask').addClass('on'); drawerTab(t || 'log'); }
+  function closeDrawer(){ $('#ssDrawer, #drawMask').removeClass('on'); }
+  $('#btnConsole').click(function(){ openDrawer('log'); });
+  $('#drawClose, #drawMask').click(closeDrawer);
+  $('#ssDrawer').on('click', '.ss-dtab', function(){ drawerTab($(this).data('t')); });
+  $(document).on('keydown', function(e){ if (e.key === 'Escape') closeDrawer(); });
+
+  /* 右栏空就收起，别留一条空列。门禁面板是好几处各自往里画的，
+     与其在每个入口都补一次判断，不如盯着 #gate 自己变。 */
+  function syncRightCol(){
+    var empty = !$('#gate').children().length && !$.trim($('#gate').text());
+    $('.ss-rightcol').toggle(!empty);
+    $('.ss-workspace').toggleClass('no-col', empty);
+  }
+  syncRightCol();
+  if (window.MutationObserver && $('#gate').length){
+    new MutationObserver(syncRightCol).observe($('#gate')[0],
+      { childList: true, subtree: true, characterData: true });
+  }
 
   // 表单预填：上次填过的 > 字段自带 default > 空。
   // 画幅/交付/平台这类参数一部剧定一次就够了，不该每次跑都手填一遍。
