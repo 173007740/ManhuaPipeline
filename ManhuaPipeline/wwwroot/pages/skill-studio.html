@@ -134,15 +134,6 @@
     .ss-content>*{min-width:0}
     .ss-command-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
                      padding-bottom:20px;border-bottom:1px solid var(--line)}
-    .ss-kicker{font:9px var(--mono);letter-spacing:2.2px;color:var(--mint)}
-    .ss-command-head h1{margin:10px 0 7px;font-weight:700;letter-spacing:-.5px;color:#eafff9;
-                        font-size:clamp(26px,3vw,34px);line-height:1.2}
-    /* 标题渐变只在支持的浏览器上开：不支持时上面那句纯色兜底，不至于整行变透明看不见 */
-    @supports (-webkit-background-clip:text){
-      .ss-command-head h1{background:linear-gradient(92deg,#eafff9,#8fd9c8 70%);
-        -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}}
-    .ss-command-head p{margin:0;color:var(--t2);font-size:12px;max-width:680px;line-height:1.85}
-    .ss-command-head p b{color:var(--amber)}
     .ss-actions{display:flex;gap:10px;flex:none}
     .ss-actions button{height:40px;padding:0 18px;border:1px solid #23474a;background:#0a1517;color:#9cb3b1;
                        font-size:12px;letter-spacing:.4px;cursor:pointer;transition:.16s}
@@ -392,7 +383,7 @@
     @media(max-width:1180px){.ss-root{grid-template-columns:1fr}.ss-sidebar{display:none}
       .ss-workspace{grid-template-columns:1fr}.ss-radar-row{grid-template-columns:80px 1fr}
       .ss-progress{display:none}.ss-stats{grid-template-columns:1fr 1fr}.ss-content{padding:22px 20px 40px}}
-    @media(max-width:760px){.ss-content{padding:16px}.ss-command-head h1{font-size:26px}
+    @media(max-width:760px){.ss-content{padding:16px}
       .ss-radar-row{grid-template-columns:65px 1fr;height:105px;padding:0 12px}
       .ss-flow-track button b{display:none}.ss-stats{grid-template-columns:1fr 1fr}.ss-setup{padding:16px}
       .ss-step{grid-template-columns:32px 1fr;gap:10px}.ss-step-act{grid-column:1/-1;flex-direction:row}
