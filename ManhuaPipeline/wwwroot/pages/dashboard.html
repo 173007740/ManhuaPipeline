@@ -29,6 +29,10 @@
         .hud-panel {
             border-radius: 0;
             border-color: var(--hud-line);
+            /* 卡片做成半透明——参考站 .panel 的 #031017dd 就是这个意思：后两位 dd 是 alpha，
+               221/255 ≈ 87% 不透明，所以背景那道光带和圆环能透过卡片看见，卡片像是浮在特效上。
+               我们的面板色是 --panel #111218 = rgb(17,18,24)，按同样的 87% 给。 */
+            background: rgba(17, 18, 24, .87);
             clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
             position: relative;
         }
@@ -46,7 +50,8 @@
         /* 卡片网格 = 它的 .card-grid：四列 */
         #dramaList, #projectList { grid-template-columns: repeat(4, 1fr); gap: 14px; }
         #dramaList .drama-card, #projectList .project-card { padding: 14px; cursor: pointer; border-color: var(--hud-line); }
-        #dramaList .drama-card:hover, #projectList .project-card:hover { border-color: var(--hud-cyan); background: var(--panel2); }
+        /* hover 也要保持半透明，不然一悬停卡片就变成实心，透出来的特效突然消失 */
+        #dramaList .drama-card:hover, #projectList .project-card:hover { border-color: var(--hud-cyan); background: rgba(22, 23, 30, .87); }
         #dramaList .drama-info, #projectList .project-info { padding: 0; }
         #dramaList .drama-title, #projectList .project-title { font-size: 14px; margin: 12px 0 4px; }
         #dramaList .drama-desc, #projectList .project-desc { font-size: 11px; line-height: 1.7; }
