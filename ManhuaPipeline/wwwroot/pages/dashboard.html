@@ -12,46 +12,70 @@
         /* dashboard 特有：封面 180px，跟参考站 project-cover 对齐 */
         .drama-cover { height: 180px; background: linear-gradient(135deg, rgba(157,116,255,0.10), rgba(109,230,238,0.07)); }
 
-        /* ---- 方块：形状照抄参考站 /dashboard.html ----
-           它那套方块就三件事：切角面板（右上切 13px）、右上角双色角标、4 列网格。
-           尺寸层级也照它：封面 180px、标题 14px、副文 11px、角标链接 10px、metric 数字 32px。
-           配色仍吃本页的主题变量（--panel/--line/--accent/--danger），不把它的青红 HUD 色板硬搬进来，
-           否则这一页跟其他页对不上。真要换成青红那套，改这四个变量指向即可。 */
+        /* ---- 方块：形状 + 线色照抄参考站 /dashboard.html ----
+           形状三件事：切角面板（右上切 13px）、右上角双色角标、4 列网格。
+           尺寸层级照它：封面 180px、标题 14px、副文 11px、角标链接 10px、metric 数字 32px。
+           线色也照它：面板描边 #164b56、分隔线 #17434d、强调青 #05e8f0、角标另半截红 #ff3852。
+           这一页因此是 HUD 青红，跟其他页的紫罗兰不是一套——要换回去改下面这四个变量即可。 */
+        :root {
+            --hud-cyan: #05e8f0;
+            --hud-red: #ff3852;
+            --hud-line: #164b56;
+            --hud-rule: #17434d;
+            --hud-btn: #06313b;
+        }
         .hud-panel {
             border-radius: 0;
+            border-color: var(--hud-line);
             clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
             position: relative;
         }
         .hud-panel::before {
             content: ""; position: absolute; right: 8px; top: 8px; z-index: 2;
             width: 30px; height: 8px;
-            border-top: 1px solid var(--accent); border-right: 1px solid var(--danger);
+            border-top: 1px solid var(--hud-cyan); border-right: 1px solid var(--hud-red);
         }
         /* 顶部四个数字块 = 它的 .metrics / .metric */
         .hud-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
         .hud-metric { padding: 18px; min-height: 105px; }
-        .hud-metric .m-label { display: block; font-size: 9px; letter-spacing: 2px; color: var(--accent); }
+        .hud-metric .m-label { display: block; font-size: 9px; letter-spacing: 2px; color: var(--hud-cyan); }
         .hud-metric .m-value { display: block; font-size: 32px; font-weight: 600; line-height: 1.1; margin-top: 10px; color: var(--text); }
         .hud-metric .m-sub { display: block; font-size: 10px; color: var(--muted); margin-top: 6px; }
         /* 卡片网格 = 它的 .card-grid：四列 */
         #dramaList, #projectList { grid-template-columns: repeat(4, 1fr); gap: 14px; }
-        #dramaList .drama-card, #projectList .project-card { padding: 14px; cursor: pointer; }
+        #dramaList .drama-card, #projectList .project-card { padding: 14px; cursor: pointer; border-color: var(--hud-line); }
+        #dramaList .drama-card:hover, #projectList .project-card:hover { border-color: var(--hud-cyan); background: var(--panel2); }
         #dramaList .drama-info, #projectList .project-info { padding: 0; }
         #dramaList .drama-title, #projectList .project-title { font-size: 14px; margin: 12px 0 4px; }
         #dramaList .drama-desc, #projectList .project-desc { font-size: 11px; line-height: 1.7; }
         #projectList .project-actions { padding: 0; }
         #projectList .project-cover { height: 180px; }
         .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
-        .card-enter { font-size: 10px; letter-spacing: 1px; color: var(--accent); }
+        .card-enter { font-size: 10px; letter-spacing: 1px; color: var(--hud-cyan); }
         .drama-meta { margin-top: 0 !important; font-size: 11px; }
         /* 页头 = 它的 .page-head：眉标 + 大标题 + 一行说明，底下压一条分隔线 */
         .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-                     margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--line); }
-        .eyebrow { display: block; font-size: 9px; letter-spacing: 2px; color: var(--accent); margin-bottom: 6px; }
+                     margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--hud-rule); }
+        .eyebrow { display: block; font-size: 9px; letter-spacing: 2px; color: var(--hud-cyan); margin-bottom: 6px; }
         .page-head .head-desc { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
         /* 页头右側那一排：nowrap 保证始终是一排；屏幕实在放不下时整排沉到第二行，不拆散 */
         .head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
-        .head-actions .btn { padding: 6px 10px; font-size: 12px; white-space: nowrap; }
+        .head-actions .btn { padding: 0 12px; font-size: 12px; white-space: nowrap; }
+
+        /* ---- 按钮：整页统一成参考站那颗 ----
+           40px 高、1px 描边、左上和右下各切 8px；主按钮是青边青字压深青底，其余是空心的。
+           切角用 clip-path，所以 hover 别用 box-shadow（会被裁掉），只改底色和描边色。 */
+        .btn {
+            height: 40px; padding: 0 16px; font-size: 12px;
+            border-radius: 0; border: 1px solid #49626a; background: transparent; color: #dbe7e8;
+            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+        }
+        .btn:hover { border-color: var(--hud-cyan); color: var(--hud-cyan); background: #06313b80; }
+        .btn-primary { border-color: var(--hud-cyan); background: var(--hud-btn); color: var(--hud-cyan); }
+        .btn-primary:hover { border-color: var(--hud-cyan); color: var(--hud-cyan); background: #08424f; }
+        .btn-danger { border-color: var(--hud-red); background: transparent; color: var(--hud-red); }
+        .btn-danger:hover { border-color: var(--hud-red); color: #fff; background: #3a0d14; }
+        .btn-sm { height: 30px; padding: 0 10px; font-size: 11px; }
         @media (max-width: 1400px) { #dramaList, #projectList { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 1000px) { #dramaList, #projectList { grid-template-columns: repeat(2, 1fr); } .hud-metrics { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 650px) { #dramaList, #projectList, .hud-metrics { grid-template-columns: 1fr; } }
