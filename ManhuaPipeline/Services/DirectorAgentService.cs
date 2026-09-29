@@ -249,8 +249,12 @@ public class DirectorAgentService
         _db.UpdateSkillRun(runId, stages[^1].StageKey, "done");
     }
 
-    /// <summary>确认卡点，然后接着往下跑到下一个卡点（或跑完）。</summary>
-    public async Task ContinueAsync(int userId, int runId)
+    /// <summary>
+    /// 确认卡点，然后接着往下跑到下一个卡点（或跑到 stopStageKey 为止）。
+    /// 五步界面里每一步都是人单独点的，「接着跑」只该把这一步跑完，
+    /// 不该顺手替他把后面几步也做了——所以允许调用方给个终点。
+    /// </summary>
+    public async Task ContinueAsync(int userId, int runId, string? stopStageKey = null)
     {
         var steps = _db.GetSkillSteps(runId);
         var last = steps.OrderByDescending(s => s.SortOrder).FirstOrDefault()
@@ -263,7 +267,7 @@ public class DirectorAgentService
         if (last.Status == "blocked")
         {
             _db.ConfirmSkillStep(last.StepId);
-            await RunFromAsync(userId, runId, last.StageKey, last.InputText ?? "");
+            await RunFromAsync(userId, runId, last.StageKey, last.InputText ?? "", stopStageKey: stopStageKey);
             return;
         }
 
@@ -277,7 +281,8 @@ public class DirectorAgentService
             _db.UpdateSkillRun(runId, last.StageKey, "done");
             return;
         }
-        await RunFromAsync(userId, runId, stages[idx].StageKey, ChainHead(last.StageKey) + (last.OutputText ?? ""));
+        await RunFromAsync(userId, runId, stages[idx].StageKey,
+                           ChainHead(last.StageKey) + (last.OutputText ?? ""), stopStageKey: stopStageKey);
     }
 
     /// <summary>

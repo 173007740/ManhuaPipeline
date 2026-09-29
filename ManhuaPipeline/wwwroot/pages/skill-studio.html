@@ -666,6 +666,7 @@
   // 跑一步：只跑到这一步的最后一个内部阶段就收手，不越界替他把下一步也做了
   function doStep(i){
     var sp = STEPS[i];
+    var tier = STEP_STATE[i] ? STEP_STATE[i].tier : 'idle';
     var txt = collectFrom($('#sf' + i));
     if (sp.form){
       var form = {};
@@ -673,8 +674,21 @@
       localStorage.setItem('skillStudioForm_' + sp.form, JSON.stringify(form));
     }
     $('#so' + i).empty().hide();
-    say('开始跑第 ' + (i + 1) + ' 步 · ' + sp.title);
+    // 半途停下的那一步要「接着跑」，不能从头再来：这一步内部可能已经跑好了前几个子阶段
+    // （资产这步内含 P2a/P2b），从 from 起跑等于把做好的部分重做一遍，白烧一次调用
+    say((tier === 'part' ? '接着跑第 ' : '开始跑第 ') + (i + 1) + ' 步 · ' + sp.title);
     ensureRun(function(rid){
+      if (tier === 'part'){
+        $.ajax({ url: '/api/director-agent/runs/' + rid + '/continue', method: 'POST',
+                 contentType: 'application/json',
+                 data: JSON.stringify({ stopStageKey: sp.to }) })   // 只跑到这一步的边界，不越界替他做下一步
+         .done(function(r){
+            if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); return; }
+            startPoll(true);
+         })
+         .fail(function(xhr){ say('× 继续失败：' + (xhr.status || ''), 'lerr'); });
+        return;
+      }
       $.ajax({ url: '/api/director-agent/runs/' + rid + '/run-all', method: 'POST',
                contentType: 'application/json',
                data: JSON.stringify({ stageKey: sp.from, inputText: txt, stopStageKey: sp.to,

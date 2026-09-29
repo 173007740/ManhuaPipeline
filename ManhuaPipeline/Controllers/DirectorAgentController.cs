@@ -161,7 +161,7 @@ public class DirectorAgentController : ControllerBase
 
     /// <summary>确认卡点，然后接着往下跑到下一个卡点。</summary>
     [HttpPost("runs/{runId:int}/continue")]
-    public IActionResult Continue(int runId)
+    public IActionResult Continue(int runId, [FromBody] RunStepBody? body)
     {
         var uid = GetUserId();
         if (uid == 0) return Unauthorized();
@@ -169,7 +169,7 @@ public class DirectorAgentController : ControllerBase
 
         _ = Task.Run(async () =>
         {
-            try { await _agent.ContinueAsync(uid, runId); }
+            try { await _agent.ContinueAsync(uid, runId, body?.StopStageKey); }
             catch (Exception ex)
             {
                 _log.LogError(ex, "continue failed run={RunId}", runId);
