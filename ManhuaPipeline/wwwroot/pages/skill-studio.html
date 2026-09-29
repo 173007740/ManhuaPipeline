@@ -1083,8 +1083,15 @@
 
     if (sp.view.kind === 'frame'){
       if (!pid){ box.html('<div class="empty-hint">先在左边选好落点项目</div>'); return; }
-      box.html('<iframe class="work-frame" src="project.html?id=' + pid
-             + '&stage=' + sp.view.stage + '&embed=1"></iframe>');
+      // 轮询每 2.5 秒会重画一次工作区。这里要是无条件重建 iframe，跑的过程中里面那页就跟着
+      // 每 2.5 秒整页重载一次 —— 看着像页面一直在刷，滚动位置也被一次次顶回顶部。
+      // 只在换了项目 / 换了阶段、或者这一步真有新东西入库时重建；跑的中间别动它。
+      var src = 'project.html?id=' + pid + '&stage=' + sp.view.stage + '&embed=1';
+      var stamp = 'frame:' + pid + ':' + sp.view.stage + ':'
+                + (s.tier === 'run' ? 'run' : (s.tier + '/' + (s.doneN || 0) + '/' + (s.imported || 0)));
+      if (box.data('wk') === stamp && box.children('iframe').attr('src') === src) return;
+      box.data('wk', stamp);
+      box.html('<iframe class="work-frame" src="' + src + '"></iframe>');
       return;
     }
     if (sp.view.kind === 'video'){
@@ -1093,8 +1100,11 @@
       bindVideoPanel();
       return;
     }
-    // text：把这一步的整篇产出渲染出来
+    // text：把这一步的整篇产出渲染出来。同理别每 2.5 秒重新拉一次，只在内容真的换了时重取
     if (!s.viewId){ box.html('<div class="empty-hint">这一步还没跑出内容，点上面的「生成」</div>'); return; }
+    var tStamp = 'text:' + s.viewId + ':' + (s.tier === 'run' ? 'run' : (s.tier + '/' + (s.doneN || 0)));
+    if (box.data('wk') === tStamp) return;
+    box.data('wk', tStamp);
     box.html('<div class="md">加载中…</div>');
     $.get('/api/director-agent/steps/' + s.viewId + '/output', function(o){
       box.html('<div class="md">' + mdRender((o && o.output) || '（空）') + '</div>');
