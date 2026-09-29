@@ -424,8 +424,9 @@
         <span class="ss-project-cover">落</span>
         <select id="proj"></select>
       </div>
+      <!-- 剧集下拉先藏起来：分集是剧本阶段才产出的，立项完这儿必然是空的，
+           摆着只会让人以为漏了什么。入库时没有集会兜底建第 1 集，不影响跑。 -->
       <div class="ss-project-meta">
-        <b>剧集</b><select id="eps"></select>
         <b>当前</b><span id="wsTarget">未绑定项目</span>
         <b>规则包</b><span id="packName">—</span>
       </div>
