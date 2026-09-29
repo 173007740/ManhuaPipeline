@@ -26,6 +26,16 @@
     width: 30px; height: 8px;
     border-top: 1px solid var(--accent); border-right: 1px solid var(--danger);
 }
+/* 主按钮 = 参考站 .primary：青边框 + 深青底 + 青字 + 右上左下各切 8px */
+.pm-primary { display: inline-flex; align-items: center; gap: 6px; height: 40px; padding: 0 18px;
+              border: 1px solid var(--cyan); background: #06313b; color: var(--cyan);
+              font-size: 13px; cursor: pointer;
+              clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px); }
+.pm-primary:hover { background: #084a58; }
+/* 次级按钮 = 它的 .hud-button（排序那个就是这个样式） */
+.pm-hud-button { display: inline-flex; align-items: center; gap: 6px; padding: 10px 16px;
+                 border: 1px solid #13dce6; background: #06212a; color: #69f7ff; font-size: 12px; cursor: pointer; }
+.pm-hud-button:hover { background: #0a3542; }
 .pm-back { display: inline-flex; align-items: center; gap: 6px; margin: 0 0 16px; padding: 8px 14px;
            font-size: 12px; color: var(--muted); text-decoration: none;
            border: 1px solid var(--line); background: var(--panel2); }
@@ -137,7 +147,7 @@ progress::-moz-progress-bar { background: var(--accent); }
       <p>单集控制中心 · 选择项目进入导演流水线</p>
     </div>
     <div style="display:flex;align-items:center;gap:8px;">
-      <button class="btn btn-primary" onclick="showCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</button>
+      <button class="pm-primary" onclick="showCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建剧集</button>
     </div>
   </header>
   <section class="pm-hero hud-panel">
@@ -159,7 +169,7 @@ progress::-moz-progress-bar { background: var(--accent); }
       <span class="pm-eyebrow">PROJECT QUEUE</span>
       <h2>项目列表</h2>
     </div>
-    <button class="btn btn-outline" onclick="toggleSort()" id="sortBtn"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="sortLabel">最新优先</span></button>
+    <button class="pm-hud-button" onclick="toggleSort()" id="sortBtn"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="sortLabel">最新优先</span></button>
   </header>
   <section id="projectGrid" class="pm-grid"></section>
   <div id="emptyState" class="empty-state" style="display:none;">
@@ -171,10 +181,10 @@ progress::-moz-progress-bar { background: var(--accent); }
 <footer class="pm-status">
   <span>● PIPELINE ONLINE</span><b id="stCount">PROJECTS 0</b><em>LOCAL WORKSPACE</em>
 </footer>
-<!-- 新建项目弹窗 -->
+<!-- 新建剧集弹窗 -->
 <div id="createProjectModal" class="modal-overlay" style="display:none;">
   <div class="modal">
-    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:var(--primary-light)">add</span> 新建项目</h3>
+    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:var(--primary-light)">add</span> 新建剧集</h3>
     <input type="hidden" id="createProjectDramaId">
     <label>项目名称</label>
     <input type="text" id="createProjectTitle" placeholder="输入项目名称">
@@ -332,7 +342,9 @@ function renderProjects(projects){
     var st=statMap[p.projectId]||{};
     var pcnt=st.promptCount||0;
     var pct=pcnt?Math.round((st.completedCount||0)/pcnt*100):0;
-    var cover=p.coverImage?'<img src="'+p.coverImage+'" alt="">':'📁';
+    /* 没有封面就按类型出图标，跟 dashboard.html 的项目卡一个逻辑：ad→📢、mv→🎵、其余 🎬 */
+    var picon=p.projectType==="ad"?"📢":p.projectType==="mv"?"🎵":"🎬";
+    var cover=p.coverImage?'<img src="'+p.coverImage+'" alt="">':picon;
     $grid.append(
       '<article class="pm-card hud-panel">' +
       '<figure class="pm-cover">'+cover+'<figcaption>NO.'+pad2(i+1)+'</figcaption></figure>' +
