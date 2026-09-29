@@ -31,6 +31,40 @@ ORDER BY SortOrder, DocId", conn);
         return list;
     }
 
+    /// <summary>
+    /// 找同一项目下同规则包还没跑完的运行。
+    /// 存在的理由很实在：页面上一个「开始跑」点下去就是一次 LLM 调用，连点几下就多出几份 P0、几份剧本，
+    /// 还都是 pending 在那没跑完的孤儿。开跑之前先问一句「上次那个完了吗」。
+    /// </summary>
+    public int? FindUnfinishedSkillRun(int packId, int? projectId)
+    {
+        if (projectId == null) return null;
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+SELECT TOP 1 RunId
+FROM DirectorSkillRuns
+WHERE PackId=@pk AND ProjectId=@pid AND Status IN ('running','await_confirm','blocked')
+ORDER BY RunId DESC", conn);
+        cmd.Parameters.AddWithValue("@pk", packId);
+        cmd.Parameters.AddWithValue("@pid", projectId);
+        var v = cmd.ExecuteScalar();
+        return v == null ? null : Convert.ToInt32(v);
+    }
+
+    /// <summary>
+    /// 丢弃一次运行。产出已经进交付物表了，丢的是「还没跑完的进度」，不是跑出来的东西。
+    /// 用户要重新来一次时得有个明确的动作把它收掉，否则那条记录会一直挂着，把后面每次开跑都拦下来。
+    /// </summary>
+    public void AbandonSkillRun(int runId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+UPDATE DirectorSkillRuns SET Status='abandoned', UpdatedAt=SYSDATETIME()
+WHERE RunId=@id AND Status IN ('running','await_confirm','blocked')", conn);
+        cmd.Parameters.AddWithValue("@id", runId);
+        cmd.ExecuteNonQuery();
+    }
+
     /// <summary>开一次运行。projectId/episodeId 决定产出往哪入库，不传就只跑文本不落业务表。</summary>
     public int CreateSkillRun(int packId, int? projectId, int? episodeId, string? title, string? inputsJson)
     {
@@ -150,6 +184,16 @@ FROM DirectorSkillRunSteps WHERE RunId = @r ORDER BY SortOrder, StepId", conn);
         cmd.Parameters.AddWithValue("@id", runId);
         var v = cmd.ExecuteScalar();
         return v == null ? 0 : Convert.ToInt32(v);
+    }
+
+    /// <summary>查一次运行当前处在什么状态。重启之前判一下，别对已经结掉的那次下手。</summary>
+    public string? GetSkillRunStatus(int runId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT Status FROM DirectorSkillRuns WHERE RunId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", runId);
+        var v = cmd.ExecuteScalar();
+        return v == null || v == DBNull.Value ? null : Convert.ToString(v);
     }
 
     /// <summary>单步完整产出：原文 + 结构化结果 + 本次加载的规则清单。</summary>

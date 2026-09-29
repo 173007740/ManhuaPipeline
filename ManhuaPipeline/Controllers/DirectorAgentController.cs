@@ -87,8 +87,27 @@ public class DirectorAgentController : ControllerBase
     public IActionResult CreateRun([FromBody] CreateRunBody body)
     {
         if (GetUserId() == 0) return Unauthorized();
+        // 同一项目上一次还没跑完就再来一次，只会多出一份重复的立项/剧本。
+        // 宁可在这里挡下来让他先处理完，也不要事后让他从一堆同名交付物里挑哪个是新的
+        var running = _db.FindUnfinishedSkillRun(body.PackId, body.ProjectId);
+        if (running != null)
+            return Conflict(new
+            {
+                message = $"这个项目还有一次没跑完的运行（#{running}）。先把它处理完；确实要重来，就点「新开一次」把那次丢掉。",
+                runId = running
+            });
         var id = _db.CreateSkillRun(body.PackId, body.ProjectId, body.EpisodeId, body.Title, body.InputsJson);
         return Ok(new { runId = id });
+    }
+
+    /// <summary>丢弃一次没跑完的运行。跑出来的产出已经进交付物表，不会跟着丢。</summary>
+    [HttpPost("runs/{runId:int}/abort")]
+    public IActionResult AbortRun(int runId)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        if (_running.ContainsKey(runId)) return Ok(new { ok = false, message = "这次运行正在跑，停不下来" });
+        _db.AbandonSkillRun(runId);
+        return Ok(new { ok = true });
     }
 
     /// <summary>跑一步。门禁阶段（HumanConfirm=1）跑完会停在 await_confirm，等人确认。</summary>
@@ -120,6 +139,10 @@ public class DirectorAgentController : ControllerBase
     {
         var uid = GetUserId();
         if (uid == 0) return Unauthorized();
+        // 已经跑完或被丢掉的那次不许再点火：重跑一遍只会多一份同名产出
+        var st = _db.GetSkillRunStatus(runId);
+        if (st is "done" or "abandoned")
+            return Ok(new { started = false, message = $"这次运行已经结掉了（{st}），要重来请「新开一次」" });
         if (!_running.TryAdd(runId, 0)) return Ok(new { started = false, message = "这次运行正在跑" });
 
         _ = Task.Run(async () =>

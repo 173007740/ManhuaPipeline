@@ -653,8 +653,12 @@
     if (!runId) return;
     $.get('/api/director-agent/runs/' + runId, function(d){
       logChanges(d.steps); renderPipe(d.steps); updateStats(d); updateRunBar(d);
+      // 跑的过程中不许再点「开始跑」——后端也会拦，这里是让按钮自己把话说清楚
+      $('#btnStart').prop('disabled', d.status === 'running').html(d.status === 'running' ? '跑着呢…' : '▶ 开始跑');
       if (d.status === 'running') return;          // 还在跑，继续轮询
       clearInterval(timer); stopTick();
+      // 结掉的那次不该再被「接上次运行」捞起来
+      if (d.status === 'done' || d.status === 'abandoned') localStorage.removeItem('skillStudioRun');
       loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
       if (d.status === 'done') { say('全部跑完'); $('#gate').html('<div class="gatebox ok"><div class="gh">流水线跑完了</div><div class="gm">产出已入库，左侧可以看到每步的入库条数。</div></div>'); }
       else if (d.status === 'error') say('出错，看左侧红的那一步');
@@ -680,9 +684,14 @@
     $.get('/api/director-agent/steps/' + b.stepId + '/output', function(o){
       $('#blkOut').text(((o && o.output) || '（没有内容）').replace(/^\s*BLOCKED\s*:?\s*/i, ''));
     });
+    // 从这一步重跑 = 换一次新运行；不先作废旧的那次，后端会以为「还有没跑完的」继续拦着
     $('#btnRetry').click(function(){
+      if (runId){
+        $.post('/api/director-agent/runs/' + runId + '/abort', function(){}, 'json');
+        runId = 0; localStorage.removeItem('skillStudioRun');
+      }
       $('#startStage').val(b.stageKey); renderForm(); $('#gate').empty();
-      say('已切到 ' + b.stageKey + '，改完上面的内容点「开始跑」', 'lwait');
+      say('已作废这次运行并切到 ' + b.stageKey + '，改完上面的内容点「开始跑」', 'lwait');
     });
     // 放行权在人手里：LLM 判「未锁定」不代表真的缺，它经常看漏已经填好的值
     $('#btnForce').click(function(){
@@ -727,7 +736,11 @@
 
   $('#startStage').change(function(){ renderForm(); markStart(); $('#gate').empty(); });
 
+  // 连点保护：一个「开始跑」下去就是一次 LLM 调用，多按几下就多一份产出。
+  // 后端也会拦（同一项目有没跑完的运行就拒绝新建），按钮这边先把第一轮扛住
+  var starting = false;
   $('#btnStart').click(function(){
+    if (starting) return;
     var txt = collectInput();
     if (!txt.trim()){ alert('先填设定（上面表单或补充原文）'); return; }
 
@@ -743,6 +756,7 @@
       // 提示词类型属于整次运行：P4 是自动串下来的，不会停下来让人再选一次
       inputsJson: JSON.stringify({ promptType: $('#promptType').val() })
     };
+    starting = true;
     $('#btnStart').prop('disabled', true).html('启动中...');
     $.ajax({ url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json', data: JSON.stringify(payload) })
      .done(function(d){
@@ -756,12 +770,30 @@
             say('从 ' + $('#startStage').val() + ' 开始跑，自动串下去');
             startPoll(true);
          })
-         .always(function(){ $('#btnStart').prop('disabled', false).html('▶ 开始跑'); });
+         .always(function(){ starting = false; $('#btnStart').prop('disabled', false).html('▶ 开始跑'); });
      })
-     .fail(function(){ $('#btnStart').prop('disabled', false).html('▶ 开始跑'); });
+     .fail(function(xhr){
+        starting = false; $('#btnStart').prop('disabled', false).html('▶ 开始跑');
+        var d = xhr.responseJSON || {};
+        // 409 = 这个项目还有一次没跑完。不新建，直接把页面接到那次上，让他先处理完
+        if (xhr.status === 409){
+          say('× ' + (d.message || '还有一次没跑完的运行'), 'lwait');
+          alert(d.message || '还有一次没跑完的运行');
+          if (d.runId){
+            runId = d.runId; localStorage.setItem('skillStudioRun', runId);
+            say('改为接上运行 #' + runId);
+            startPoll();
+          }
+        }
+        else alert('启动失败：' + (d.message || xhr.status));
+     });
   });
 
   $('#btnNew').click(function(){
+    if (runId){
+      if (!confirm('这次还没跑完的运行会被作废，然后重开一次。已经跑出来的产出保留在交付物里，不会跟着丢。确定？')) return;
+      $.post('/api/director-agent/runs/' + runId + '/abort', function(){}, 'json');
+    }
     clearInterval(timer); stopTick(); runId = 0; runStartAt = 0; logLines = 0;
     localStorage.removeItem('skillStudioRun'); localStorage.removeItem('skillStudioStartAt');
     $('#gate').empty(); $('#log').empty(); $('#logCount').text('0 行'); $('#stateHint').text('');
