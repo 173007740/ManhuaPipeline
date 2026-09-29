@@ -295,11 +295,11 @@
                         h += "<div class='drama-card hud-panel' onclick=\"openDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">";
                         h += "<div class='drama-cover' style='" + (dr.coverImage ? "background-image:url(" + dr.coverImage + ");background-size:cover;background-position:center;" : "") + "'>" + (dr.coverImage ? "" : "🎬") + "</div>";
                         h += "<div class='drama-info'>";
-                        h += "<div class='drama-title'><span class='material-icons' style='font-size:inherit;vertical-align:middle;color:var(--primary-light)'>movie</span> " + escHtml(dr.title) + "</div>";
+                        h += "<div class='drama-title'>" + escHtml(dr.title) + "</div>";
                         h += "<div class='drama-desc'>" + (dr.description ? escHtml(dr.description) : "暂无描述") + "</div>";
                         h += "<div class='card-foot'><span class='card-enter'>进入合集 →</span>" +
                             "<span style='display:flex;align-items:center;gap:8px;'><span class='drama-meta' id='dramaMeta" + dr.dramaId + "'>加载中...</span>" +
-                            "<button class='btn btn-outline btn-sm' onclick=\"event.stopPropagation();showEditDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\"><span class='material-icons' style='font-size:inherit;vertical-align:middle'>edit</span></button></span></div>";
+                            "<button class='btn btn-outline btn-sm' onclick=\"event.stopPropagation();showEditDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">编辑</button></span></div>";
                         h += "</div></div>";
                     }
                     $("#dramaList").html(h);
@@ -347,9 +347,9 @@
                         h += "<div class='project-info'><div class='project-title'>" + escHtml(p.title) + "</div>";
                         h += "<div class='project-desc'>" + (p.description ? escHtml(p.description) : "暂无描述") + "</div>";
                         h += "<div class='card-foot'><span class='card-enter'>状态: " + label + "</span>";
-                        h += "<div class='project-actions'><a href='project.html?id=" + p.projectId + "' class='btn btn-primary btn-sm'><span class='material-icons' style='font-size:inherit;vertical-align:middle'>arrow_forward</span> 进入</a>";
-                        h += "<button class='btn btn-outline btn-sm' onclick=\"editProject('" + p.projectId + "','" + escAttr(p.title) + "')\"><span class='material-icons' style='font-size:inherit;vertical-align:middle'>edit</span> 编辑</button>";
-                        h += "<button class='btn btn-danger btn-sm' onclick='deleteProject(" + p.projectId + ")'><span class='material-icons' style='font-size:inherit;vertical-align:middle'>trash</span></button></div></div></div></div>"
+                        h += "<div class='project-actions'><a href='project.html?id=" + p.projectId + "' class='btn btn-primary btn-sm'>进入</a>";
+                        h += "<button class='btn btn-outline btn-sm' onclick=\"editProject('" + p.projectId + "','" + escAttr(p.title) + "')\">编辑</button>";
+                        h += "<button class='btn btn-danger btn-sm' onclick='deleteProject(" + p.projectId + ")'>删除</button></div></div></div></div>"
                     }
                     $("#projectList").html(h);
                 });
