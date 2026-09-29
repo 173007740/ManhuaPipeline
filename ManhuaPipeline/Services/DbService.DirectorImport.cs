@@ -177,6 +177,46 @@ WHERE TABLE_NAME=@t AND COLUMN_NAME=@c", conn);
         return cmd.ExecuteNonQuery() > 0;
     }
 
+    /// <summary>四类资产表：CHR / SCN / PRP / VFX。</summary>
+    public static readonly string[] AssetTables =
+        { "CharacterAssets", "EnvironmentAssets", "PropAssets", "EffectAssets" };
+
+    /// <summary>
+    /// 清掉项目下全部资产。重跑 P2a 时调：台账重出一版，旧的连同挂在它身上的
+    /// 出图结果（ImageUrl）一起作废——留着只会让「外婆」和「外婆（照片/回忆态）」变成两个角色。
+    /// </summary>
+    public int DeleteAllAssets(int projectId)
+    {
+        if (projectId <= 0) return 0;
+        var n = 0;
+        using var conn = GetConn(); conn.Open();
+        foreach (var t in AssetTables)
+        {
+            using var cmd = new SqlCommand($"DELETE FROM {t} WHERE ProjectId=@p", conn);
+            cmd.Parameters.AddWithValue("@p", projectId);
+            n += cmd.ExecuteNonQuery();
+        }
+        return n;
+    }
+
+    /// <summary>
+    /// 清空某类资产上的出图提示词。重跑 P2c 时调：这一批整体重写，
+    /// 不让上一版残留下的词跟新的混在一张卡上。
+    /// </summary>
+    public int ClearAssetPrompts(int projectId, string table)
+    {
+        if (projectId <= 0 || string.IsNullOrEmpty(table)) return 0;
+        var sets = new List<string>();
+        if (TableHasColumn(table, "ImagePrompt")) sets.Add("ImagePrompt=NULL");
+        if (TableHasColumn(table, "NegativePrompt")) sets.Add("NegativePrompt=NULL");
+        if (sets.Count == 0) return 0;
+
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand($"UPDATE {table} SET {string.Join(",", sets)} WHERE ProjectId=@p", conn);
+        cmd.Parameters.AddWithValue("@p", projectId);
+        return cmd.ExecuteNonQuery();
+    }
+
     /// <summary>项目现有资产名。投喂提示词解析要拿它做引用名规范化（@角色引用 → [赵日天]）。</summary>
     public (List<string> Chars, List<string> Props, List<string> Envs, List<string> Effects) GetAssetNames(int projectId)
     {
