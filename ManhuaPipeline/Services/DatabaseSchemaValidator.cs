@@ -8,7 +8,8 @@ public static class DatabaseSchemaValidator
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
             ["Users"] = ["UserId", "ActiveLLMProvider", "ActiveVideoEngine"],
-            ["Projects"] = ["ProjectId", "CoverImage", "StyleId", "Tags", "VideoRatio", "VideoWatermark", "VideoAudio", "VideoResolution", "VideoMegapixels", "TargetDurationText", "LibraryCategory"],
+            // ImageStyleId：项目资产画风，跟视频画风 StyleId 分开（Database\Upgrade_项目资产画风.sql）
+            ["Projects"] = ["ProjectId", "CoverImage", "StyleId", "ImageStyleId", "Tags", "VideoRatio", "VideoWatermark", "VideoAudio", "VideoResolution", "VideoMegapixels", "TargetDurationText", "LibraryCategory"],
             ["VideoStyles"] = ["StyleId", "StyleName", "StylePrompt", "IsDefault"],
             ["LLMConfigs"] = ["ConfigId", "UserId", "Provider", "AutoEnhance", "UpdatedAt"],
             // SourceKey：自动出图的来源标记（Database\Upgrade_项目资产库类型.sql）

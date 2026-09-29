@@ -399,7 +399,8 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
         function loadProject() {
             $.get("/api/project/" + currentProjectId, function (p) {
                 $("#sidebarTitle").text(p.title);
-                window.projectStyleId = p.styleId || 0;
+                window.projectStyleId = p.styleId || 0;                 // 视频画风（出视频的【项目风格】）
+                window.projectImageStyleId = p.imageStyleId || 0;        // 资产画风（只管四类资产出图）
                 window.projectTags = p.tags || "";
                 window.projectVideoSettings = { ratio: p.videoRatio || "16:9", watermark: p.videoWatermark, audio: p.videoAudio, resolution: p.videoResolution || "720p" };
                 $("#scriptDisplay").html(p.scriptContent ? p.scriptContent.replace(/\n/g, "<br>") : '<div class="icon">📝</div><p>暂无剧本，点击编辑录入</p>');
@@ -2778,25 +2779,26 @@ function closeAssetLib() { $("#assetLibModal").hide() }
 
         // 本剧画风：项目绑定的视频风格提示词，全剧统一，四类资产出图时都会附加同一段；
         // 所以只在资产列表顶部展示一次，不写进每张卡片的提示词里。
+        // 资产画风（Projects.ImageStyleId → ImageStyles）跟视频画风分开：这条提示说的是资产出图会拼上什么
         function renderAssetStyleHint() {
             function paint() {
                 var el = $("#assetStyleHint"); if (!el.length) return;
-                var id = window.projectStyleId || 0;
+                var id = window.projectImageStyleId || 0;
                 var s = null;
-                (window._addStyles || []).forEach(function (x) { if (id && String(x.styleId) === String(id)) s = x });
+                (window._imgStyles || []).forEach(function (x) { if (id && String(x.styleId) === String(id)) s = x });
                 if (!s) {
-                    el.html("<i class='fas fa-palette' style='color:#5c7078;'></i> 本剧画风：<span style='color:#f59e0b;'>未设置</span>"
-                        + " <span style='color:#5c7078;'>— 出图时不会附加画风描述，可在「设置 → 视频风格」里给这部剧指定</span>");
+                    el.html("<i class='fas fa-palette' style='color:#5c7078;'></i> 资产画风：<span style='color:#f59e0b;'>未设置</span>"
+                        + " <span style='color:#5c7078;'>— 出图沿用视频画风，可在「流水线 → 立项 → 画风方向」里给这部剧单独指定</span>");
                     return;
                 }
-                var sp = String(s.stylePrompt || "").trim();
-                var html = "<i class='fas fa-palette' style='color:#6af7ff;'></i> 本剧画风：<strong style='color:#e2e8f0;'>" + escHtml(s.styleName || "") + "</strong>"
-                    + " <span style='color:#5c7078;'>（全剧统一，四类资产出图时都会附加这一段）</span>";
-                if (sp) html += "<div style='margin-top:4px;padding:6px 8px;border-radius:6px;background:rgba(106,247,255,0.08);border:1px solid rgba(106,247,255,0.22);color:#c4b5fd;white-space:pre-wrap;max-height:110px;overflow-y:auto;'>" + escHtml(sp) + "</div>";
+                var sd = String(s.styleDesc || "").trim();
+                var html = "<i class='fas fa-palette' style='color:#6af7ff;'></i> 资产画风：<strong style='color:#e2e8f0;'>" + escHtml(s.styleName || "") + "</strong>"
+                    + " <span style='color:#5c7078;'>（四类资产出图都会拼上这一段，视频画风不受影响）</span>";
+                if (sd) html += "<div style='margin-top:4px;padding:6px 8px;border-radius:6px;background:rgba(106,247,255,0.08);border:1px solid rgba(106,247,255,0.22);color:#c4b5fd;white-space:pre-wrap;max-height:110px;overflow-y:auto;'>" + escHtml(sd) + "</div>";
                 el.html(html);
             }
-            if (window._addStyles) { paint(); return }
-            $.get("/api/video-style", function (styles) { window._addStyles = styles || []; paint() }).fail(paint);
+            if (window._imgStyles) { paint(); return }
+            $.get("/api/image-style", function (styles) { window._imgStyles = styles || []; paint() }).fail(paint);
         }
 
         // ===== 本剧提示词模版（覆盖账号默认，只影响当前这部剧） =====
@@ -2854,12 +2856,12 @@ function closeAssetLib() { $("#assetLibModal").hide() }
             }).fail(function () { $("#ptmMsg").css("color", "#f87171").text("恢复失败") });
         });
         $(document).on("click", "#ptmFillStyle", function () {
-            var sid = window.projectStyleId || 0;
-            if (!sid) { $("#ptmStyleHint").text("这部剧还没选项目画风：请到「视频参数 → 风格」先选一个").css("color", "#fbbf24"); return }
-            $.get("/api/video-style", function (styles) {
+            var sid = window.projectImageStyleId || 0;
+            if (!sid) { $("#ptmStyleHint").text("这部剧还没选资产画风：请到「流水线 → 立项 → 画风方向」先选一个").css("color", "#fbbf24"); return }
+            $.get("/api/image-style", function (styles) {
                 var hit = null; (styles || []).forEach(function (s) { if (String(s.styleId) === String(sid)) hit = s });
-                if (!hit || !hit.stylePrompt) { $("#ptmStyleHint").text("没取到该画风的提示词").css("color", "#fbbf24"); return }
-                $("#ptmStyle").val(hit.stylePrompt);
+                if (!hit || !hit.styleDesc) { $("#ptmStyleHint").text("没取到该画风的风格描述").css("color", "#fbbf24"); return }
+                $("#ptmStyle").val(hit.styleDesc);
                 $("#ptmStyleHint").text("已带入「" + hit.styleName + "」的风格（记得点保存）").css("color", "#34d399");
             });
         });

@@ -564,6 +564,8 @@
   <script src="../js/app.js?v=2"></script>
   <script>
   var pack = null, stages = [], runId = 0, timer = null;
+  // 图片风格库（立项「画风方向」下拉的数据源）与项目上已存的资产画风
+  var IMG_STYLES = [], PROJ_IMG_STYLE = 0;
   var runStartAt = 0, tickTimer = null, seenStatus = {}, logLines = 0;
   var NL = String.fromCharCode(10);
 
@@ -609,7 +611,13 @@
         + (list || []).map(function(p){ return '<option value="' + p.projectId + '">' + esc(p.title) + '</option>'; }).join(''));
       applyPreset(list || []);
     });
-    return $.when(pStages, pProj);
+    // 风格库跟阶段列表并行拉。它晚到一步时立项表单可能已经画过一遍（那时下拉是空的），
+    // 到手后重画一次把选项补上
+    var pStyles = $.get('/api/image-style', function(list){
+      IMG_STYLES = list || [];
+      if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
+    });
+    return $.when(pStages, pProj, pStyles);
   }
 
   $('#proj').change(function(){
@@ -618,7 +626,18 @@
     loadEpisodes(pid);
     loadDeliverables();
     loadLand();
+    loadProjImageStyle(pid);
   });
+
+  // 项目上存过的资产画风：切项目时要把它读回来，立项表单的画风下拉才选中对的那一项
+  function loadProjImageStyle(pid){
+    PROJ_IMG_STYLE = 0;
+    if (!pid){ if (stages.length) renderSteps(lastRun ? lastRun.steps : []); return; }
+    $.get('/api/project/' + pid, function(p){
+      PROJ_IMG_STYLE = (p && p.imageStyleId) || 0;
+      if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
+    }).fail(function(){ if (stages.length) renderSteps(lastRun ? lastRun.steps : []); });
+  }
   $('#eps').change(function(){
     var pid = $('#proj').val();
     $('#wsTarget').text(pid ? $('#proj').find('option:selected').text() + ($(this).val() ? ' · ' + $(this).find('option:selected').text() : '') : '未绑定项目');
@@ -647,6 +666,7 @@
     loadEpisodes(pid);
     loadDeliverables();
     loadLand();
+    loadProjImageStyle(pid);
   }
 
   /* ===== 落地：出图 / 出视频 ================================================
@@ -945,7 +965,19 @@
          + '</span>';
       var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"'
             + (f.placeholder ? ' placeholder="' + esc(f.placeholder) + '"' : '');
-      if (f.type === 'select')
+      if (f.source === 'imageStyle'){
+        // 画风方向：选项从图片风格库（/api/image-style）拉，存的是 StyleId —— 出图时按它取风格描述。
+        // value / 存 localStorage 的都是 id，所以历史上手填的风格名（非数字）直接忽略，别选中一个不存在的项
+        var savedId = /^\d+$/.test(String(v || '')) ? String(v) : '';
+        var cur = savedId || (PROJ_IMG_STYLE ? String(PROJ_IMG_STYLE) : '');
+        h += '<select' + k + ' data-fsid="1"><option value="">（不选，出图退回视频画风）</option>'
+           + IMG_STYLES.map(function(s){
+               return '<option value="' + s.styleId + '"'
+                    + (String(s.styleId) === String(cur) ? ' selected' : '') + '>' + esc(s.styleName) + '</option>';
+             }).join('') + '</select>';
+        h += '<div class="fs-desc" data-fk-desc="' + esc(f.key) + '"></div>';
+      }
+      else if (f.type === 'select')
         h += '<select' + k + '>' + (f.options || []).map(function(o){
           return '<option' + (o === v ? ' selected' : '') + '>' + esc(o) + '</option>'; }).join('') + '</select>';
       else if (f.type === 'textarea') h += '<textarea' + k + '>' + esc(v) + '</textarea>';
@@ -955,13 +987,47 @@
       h += '</label>';
     });
     el.html(h);
+    updStyleDesc(el);
   }
+
+  // 挑画风时把风格描述摆出来：下拉里只有名字，真正拼进出图提示词的是这段描述，得让人看见挑的是什么
+  function styleDescOf(id){
+    var hit = IMG_STYLES.filter(function(s){ return String(s.styleId) === String(id); })[0];
+    return hit ? (hit.styleDesc || '') : '';
+  }
+  function updStyleDesc(el){
+    el.find('[data-fk-desc]').each(function(){
+      var sel = el.find('[data-fsid]').first(), t = styleDescOf(sel.val());
+      $(this).text(t ? '出图时拼上：' + t : '没选：出图沿用视频画风')
+             .css({ 'font-size':'11px', 'line-height':'1.7', 'margin-top':'4px',
+                    'color': t ? '#5f7d75' : '#8a6d3b' });
+    });
+  }
+
+  // 画风一改就存进项目：资产出图按项目上这个 id 取风格描述，跟视频画风（StyleId）互不干涉
+  $(document).on('change', '[data-fsid]', function(){
+    var $sel = $(this), pid = $('#proj').val(), sid = $sel.val();
+    updStyleDesc($sel.closest('label').parent());
+    if (!pid){ say('× 先在左边选好落点项目，画风才能存到项目上', 'lerr'); return; }
+    $.ajax({ url: '/api/project/' + pid + '/image-style', method: 'PUT',
+             contentType: 'application/json',
+             data: JSON.stringify({ styleId: sid ? +sid : null }) })
+     .done(function(){
+        PROJ_IMG_STYLE = sid ? +sid : 0;
+        say('资产画风已存到项目：' + ($sel.find('option:selected').text() || '（不设）') + '，下次出图生效');
+     })
+     .fail(function(){ say('× 画风没存上，出图还会用旧画风', 'lerr'); });
+  });
 
   function collectFrom(el){
     var parts = [];
     el.find('[data-fk]').each(function(){
-      var v = ($(this).val() || '').trim();
-      if (v) parts.push($(this).data('fl') + '：' + v);
+      var $t = $(this);
+      // 画风下拉的 value 是 StyleId，喂给模型要的是风格名，所以取选中项的文字
+      var fs = $t.is('[data-fsid]');
+      if (fs && !$t.val()) return;
+      var v = fs ? ($t.find('option:selected').text() || '').trim() : ($t.val() || '').trim();
+      if (v) parts.push($t.data('fl') + '：' + v);
     });
     return parts.join(NL);
   }

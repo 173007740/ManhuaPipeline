@@ -62,6 +62,29 @@ public static class AssetImageSupport
     }
 
     /// <summary>
+    /// 取项目「资产画风」提示词。跟视频画风（StyleId → VideoStyles）分开维护：
+    /// 资产图走 ImageStyleId → ImageStyles.StyleDesc，改它不会影响出视频那边的【项目风格】。
+    /// 项目没设资产画风时退回视频画风，老项目行为不变。
+    /// </summary>
+    public static string? GetAssetStylePrompt(DbService db, ILogger logger, int projectId)
+    {
+        try
+        {
+            var project = db.GetProjectById(projectId);
+            if (project?.ImageStyleId is int imageStyleId)
+            {
+                var imageStyle = db.GetImageStyle(imageStyleId);
+                if (!string.IsNullOrWhiteSpace(imageStyle?.StyleDesc)) return imageStyle!.StyleDesc;
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[AssetImage] 取项目资产画风失败 projectId={ProjectId}", projectId);
+        }
+        return GetProjectStylePrompt(db, logger, projectId);
+    }
+
+    /// <summary>
     /// 拼最终出图提示词：资产卡正文（或临时覆盖）→ 模版风格锁 + 负面词 + 项目画风 + 额外要求。
     /// 资产还没有提示词正文时退回「名称+描述+属性」的旧拼法。
     /// </summary>

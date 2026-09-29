@@ -612,24 +612,9 @@ public class AssetController : ControllerBase
         return null;
     }
 
-    /// <summary>取项目画风提示词（出图时拼到提示词末尾，保证资产图与成片风格一致）。</summary>
+    /// <summary>取项目画风提示词（出图时拼到提示词末尾）。资产画风跟视频画风分开：见 AssetImageSupport.GetAssetStylePrompt。</summary>
     private string? GetProjectStylePrompt(int projectId)
-    {
-        try
-        {
-            var project = _db.GetProjectById(projectId);
-            if (project?.StyleId is int styleId)
-            {
-                var style = _db.GetVideoStyle(styleId);
-                if (!string.IsNullOrWhiteSpace(style?.StylePrompt)) return style!.StylePrompt;
-            }
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[AssetImage] 取项目画风失败 projectId={ProjectId}", projectId);
-        }
-        return null;
-    }
+        => AssetImageSupport.GetAssetStylePrompt(_db, _logger, projectId);
 
     [HttpDelete("characters/{assetId}")]
     public IActionResult DeleteCharacter(int projectId, int assetId)

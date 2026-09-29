@@ -424,6 +424,18 @@ public class ProjectController : ControllerBase
         return Ok(new { message = "已更新" });
     }
 
+    /// <summary>资产画风：只管四类资产出图，跟上面那个视频画风（StyleId → VideoStyles）互不干涉。</summary>
+    [HttpPut("{id}/image-style")]
+    public IActionResult UpdateImageStyle(int id, [FromBody] UpdateProjectStyleRequest req)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        var p = _db.GetProject(id, uid);
+        if (p == null) return NotFound();
+        _db.UpdateProjectImageStyle(id, req.StyleId);
+        return Ok(new { message = "已更新" });
+    }
+
     [HttpPut("{id}/video-settings")]
     public IActionResult UpdateVideoSettings(int id, [FromBody] UpdateProjectVideoSettingsRequest req)
     {

@@ -14,7 +14,11 @@ public class Project
     public int EpisodeCount { get; set; } = 1;
     public int CurrentBatch { get; set; } = 1;
     public string? CoverImage { get; set; }
+    /// <summary>视频画风（→ VideoStyles.StyleId）：出视频时作为【项目风格】整段写进提示词。</summary>
     public int? StyleId { get; set; }
+    /// <summary>资产画风（→ ImageStyles.StyleId）：只管四类资产的出图，跟视频画风分开维护。
+    /// 留空时出图退回视频画风，老项目行为不变。</summary>
+    public int? ImageStyleId { get; set; }
     public string? Tags { get; set; }
     /// <summary>资产图同步进参考图库时写进图库的「类型」大类（动漫 / 写实 / 游戏 / 仙侠）；留空则沿用资产分类（角色/道具/环境/特效）。</summary>
     public string? LibraryCategory { get; set; }

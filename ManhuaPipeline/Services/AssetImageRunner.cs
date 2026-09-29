@@ -67,7 +67,7 @@ public class AssetImageRunner
         var useSize = ImageService.IsValidSize(task.Size) ? task.Size!.Trim() : ImageService.DefaultSizeFor(task.Category);
 
         // 模版按「本剧 → 账号默认 → 出厂默认」取（ComposeFinalPrompt 内部取），所以每部剧的风格互不影响
-        var projectStyle = AssetImageSupport.GetProjectStylePrompt(_db, _logger, task.ProjectId);
+        var projectStyle = AssetImageSupport.GetAssetStylePrompt(_db, _logger, task.ProjectId);
         var prompt = AssetImageSupport.ComposeFinalPrompt(
             _db, task.UserId, task.ProjectId, task.Category, asset, projectStyle,
             task.PromptOverride, task.NegativeOverride, task.ExtraPrompt);
@@ -146,7 +146,7 @@ public class AssetImageRunner
             ? "保持人物身份不变，按参考图调整服装与造型。"
             : task.PromptOverride!.Trim();
 
-        var projectStyle = AssetImageSupport.GetProjectStylePrompt(_db, _logger, task.ProjectId);
+        var projectStyle = AssetImageSupport.GetAssetStylePrompt(_db, _logger, task.ProjectId);
         var prompt = AssetImageSupport.ComposeFinalPrompt(
             _db, task.UserId, task.ProjectId, task.Category, asset, projectStyle,
             refNote + userBody, task.NegativeOverride, task.ExtraPrompt);

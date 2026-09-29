@@ -616,6 +616,7 @@ WHERE ProjectId=@id AND UserId=@uid AND Status<>N'deleted'", conn);
         UpdatedAt = (DateTime)r["UpdatedAt"],
         CoverImage = r["CoverImage"] == DBNull.Value ? null : (string)r["CoverImage"],
         StyleId = r["StyleId"] == DBNull.Value ? null : (int)r["StyleId"],
+        ImageStyleId = r["ImageStyleId"] == DBNull.Value ? null : (int)r["ImageStyleId"],
         VideoRatio = r["VideoRatio"] == DBNull.Value ? "16:9" : (string)r["VideoRatio"],
         VideoWatermark = r["VideoWatermark"] != DBNull.Value && (bool)r["VideoWatermark"],
         VideoAudio = r["VideoAudio"] == DBNull.Value || (bool)r["VideoAudio"],
@@ -3398,6 +3399,16 @@ WHERE p.Status = 'completed'
     {
         using var conn = GetConn(); conn.Open();
         using var cmd = new SqlCommand("UPDATE Projects SET StyleId=@s, UpdatedAt=GETDATE() WHERE ProjectId=@id", conn);
+        cmd.Parameters.AddWithValue("@s", (object?)styleId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", projectId);
+        cmd.ExecuteNonQuery();
+    }
+
+    /// <summary>改项目的资产画风（→ ImageStyles）。跟 UpdateProjectStyle（视频画风）分开，互不影响。</summary>
+    public void UpdateProjectImageStyle(int projectId, int? styleId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("UPDATE Projects SET ImageStyleId=@s, UpdatedAt=GETDATE() WHERE ProjectId=@id", conn);
         cmd.Parameters.AddWithValue("@s", (object?)styleId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", projectId);
         cmd.ExecuteNonQuery();
