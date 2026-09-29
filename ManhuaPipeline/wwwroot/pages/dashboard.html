@@ -76,6 +76,36 @@
         .btn-danger { border-color: var(--hud-red); background: transparent; color: var(--hud-red); }
         .btn-danger:hover { border-color: var(--hud-red); color: #fff; background: #3a0d14; }
         .btn-sm { height: 30px; padding: 0 10px; font-size: 11px; }
+
+        /* ---- 弹窗：照参考站 dashboard-interactions.css 的 .modal / .modal-card ----
+           它那颗弹窗就这几样：切角卡片（同面板那个右上切 13px）、25px 内距、外发光、
+           右上角 ×、label 12px 灰、输入框 1px #18505c 描边压 #020b11 底、底部按钮右对齐。
+           注意它跟我们类名是反的——它的 .modal 是遮罩、.modal-card 才是卡片；
+           我们是 .modal-overlay 遮罩、.modal 卡片，别照类名抄。
+           角标不加：右上角已经放了 ×，再压一条青红角标会打架。 */
+        .modal-overlay { background: #000c; padding: 20px; backdrop-filter: none; }
+        .modal {
+            width: min(580px, 96vw); max-width: none; padding: 25px;
+            border-radius: 0; border-color: var(--hud-line);
+            box-shadow: 0 0 80px #10dce633;
+            clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+        }
+        .modal > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
+        .modal h3 { font-size: 16px; letter-spacing: 1px; margin-bottom: 0; }
+        .modal h3 .material-icons { color: var(--hud-cyan); }
+        .modal-close { border: 0; background: none; color: #8ea7ae; font-size: 26px; line-height: 1; padding: 0 4px; cursor: pointer; }
+        .modal-close:hover { color: var(--hud-cyan); }
+        .modal label { display: block; color: #8da6ad; font-size: 12px; font-weight: 400; margin-top: 16px; }
+        .modal input, .modal textarea, .modal select {
+            width: 100%; margin-top: 7px; padding: 12px;
+            border: 1px solid #18505c; border-radius: 0; background: #020b11; color: #e4fbff; font-size: 13px;
+        }
+        .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--hud-cyan); box-shadow: none; }
+        .modal textarea { height: 90px; min-height: 90px; }
+        /* 弹窗里的封面上传区：原来那圈紫虚线跟 HUD 不对付，改成同款描边色，hover 转青 */
+        .modal .cover-upload-area { border: 1px dashed #18505c; border-radius: 0; }
+        .modal .cover-upload-area:hover { border-color: var(--hud-cyan); background: #06212a55; }
+        .modal-actions { margin-top: 24px; }
         @media (max-width: 1400px) { #dramaList, #projectList { grid-template-columns: repeat(3, 1fr); } }
         @media (max-width: 1000px) { #dramaList, #projectList { grid-template-columns: repeat(2, 1fr); } .hud-metrics { grid-template-columns: repeat(2, 1fr); } }
         @media (max-width: 650px) { #dramaList, #projectList, .hud-metrics { grid-template-columns: 1fr; } }
@@ -173,7 +203,10 @@
         </div>
         <div id="createDramaModal" class="modal-overlay" style="display:none;">
             <div class="modal">
-                <h3>新建漫剧</h3>
+                <header>
+                    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建漫剧</h3>
+                    <button class="modal-close" onclick="$('#createDramaModal').hide()" title="关闭">&times;</button>
+                </header>
                 <label>漫剧名称</label>
                 <input id="dramaTitleInput" placeholder="输入漫剧名称">
                 <label>描述（选填）</label>
@@ -189,7 +222,10 @@
         </div>
         <div id="createProjectModal" class="modal-overlay" style="display:none;">
             <div class="modal">
-                <h3>新建项目</h3>
+                <header>
+                    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</h3>
+                    <button class="modal-close" onclick="$('#createProjectModal').hide()" title="关闭">&times;</button>
+                </header>
                 <label>项目名称</label>
                 <input id="projectTitleInput" placeholder="输入项目名称">
                 <label>描述（选填）</label>
@@ -208,7 +244,10 @@
         </div>
         <div id="editDramaModal" class="modal-overlay" style="display:none;">
             <div class="modal">
-                <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:var(--primary-light)">edit</span> 编辑漫剧</h3>
+                <header>
+                    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">edit</span> 编辑漫剧</h3>
+                    <button class="modal-close" onclick="$('#editDramaModal').hide()" title="关闭">&times;</button>
+                </header>
                 <input type="hidden" id="editDramaId">
                 <label>漫剧名称</label>
                 <input id="editDramaTitleInput" placeholder="输入漫剧名称">
