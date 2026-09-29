@@ -394,13 +394,24 @@
   }
   function w(n){ return n >= 10000 ? (n/10000).toFixed(1) + '万' : n + ''; }
 
+  // 最近一次拿到的运行全量状态：阶段列表是后一步才到的，落地后要拿它补画一次
+  var lastRun = null;
+
+  // 阶段列表是异步来的，「接上次运行」却一进来就要画流程条。两边各跑各的就会出这种事：
+  // pollOnce 先回来，stages 还空着，流程条按零个阶段画了一遍；紧接着因为这次运行没在 running，
+  // 轮询就地停了 —— P0 明明已经 done，页面从此再也不刷新，勾永远打不上，看着像「状态丢了」。
+  // 所以阶段列表必须先落地，再谈接运行
   function loadAll(){
-    $.get('/api/director-skill/packs', function(list){
-      if (!list || !list.length){ $('#packName2').text('没有规则包'); return; }
+    var pStages = $.get('/api/director-skill/packs').then(function(list){
+      if (!list || !list.length){
+        $('#packName2').text('没有规则包');
+        $('#pipeNav').html('<div class="empty-hint">规则包里没有启用的阶段</div>');   // 别把「加载中」一直挂在那儿
+        return [];
+      }
       pack = list[0];
       $('#packName2').text(pack.name);
       $('#packName').text(pack.name);
-      $.get('/api/director-skill/packs/' + pack.packId + '/stages', function(st){
+      return $.get('/api/director-skill/packs/' + pack.packId + '/stages').then(function(st){
         stages = (st || []).filter(function(s){ return s.isEnabled; })
                            .sort(function(a,b){ return a.sortOrder - b.sortOrder; });
         $('#startStage').html(stages.map(function(s){
@@ -411,14 +422,17 @@
         $('#sTotalSub').text('其中 ' + gates.length + ' 个卡点');
         $('#sGate').text(gates.length);
         $('#sGateSub').text(gates.map(function(s){ return s.stageKey; }).join(' / ') || '没有');
-        renderForm(); renderPipe([]);
+        renderForm();
+        // 拿最新一次运行状态补画，别用空数组把已经跑完的步骤抹回未完成
+        renderPipe(lastRun ? lastRun.steps : []);
       });
     });
-    $.get('/api/project', function(list){
+    var pProj = $.get('/api/project', function(list){
       $('#proj').html('<option value="">（不入库，只留文本）</option>'
         + (list || []).map(function(p){ return '<option value="' + p.projectId + '">' + esc(p.title) + '</option>'; }).join(''));
       applyPreset(list || []);
     });
+    return $.when(pStages, pProj);
   }
 
   $('#proj').change(function(){
@@ -531,6 +545,8 @@
 
   // 侧栏 + 顶部横向流程条：同一份数据换个方向看，跑到哪、入库几条、卡在哪
   function renderPipe(steps){
+    // 阶段列表还没到就别画：拿零个阶段去渲染会把列表清空，而那之后可能再没人补画
+    if (!stages || !stages.length) return;
     var byKey = {};
     (steps || []).forEach(function(s){ byKey[s.stageKey] = s; });
     var done = 0;
@@ -672,6 +688,7 @@
     if (!runId) return;
     $.get('/api/director-agent/runs/' + runId, function(d){
       if (!d || !d.runId){ forgetRun('上次记下的运行已经不在了'); return; }
+      lastRun = d;                                  // 阶段列表晚到时要拿它补画一次
       logChanges(d.steps); renderPipe(d.steps); updateStats(d); updateRunBar(d);
       // 跑的过程中不许再点「开始跑」——后端也会拦，这里是让按钮自己把话说清楚
       $('#btnStart').prop('disabled', d.status === 'running').html(d.status === 'running' ? '跑着呢…' : '▶ 开始跑');
@@ -826,15 +843,17 @@
   });
 
   $(function(){
-    loadAll();
     $('#eps').html('<option value="">（先选项目）</option>');
     setIdle(true);
-    var saved = localStorage.getItem('skillStudioRun');
-    if (saved){
+    // 等阶段列表落地再接上次运行：反过来一来那一刻的流程条是空的，
+    // 而轮询会在同一时刻判定「没在跑」并停掉，画面就再也不更新了
+    loadAll().then(function(){
+      var saved = localStorage.getItem('skillStudioRun');
+      if (!saved) return;
       runId = +saved; say('接上上次运行 #' + runId);
       runStartAt = +(localStorage.getItem('skillStudioStartAt') || 0);   // 计时接上，不要从 0 重来
       startPoll();
-    }
+    });
   });
   </script>
 </body>
