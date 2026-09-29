@@ -9,157 +9,219 @@
   <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
   <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
   <style>
-    /* 视觉参照「幕界」那套：深色底 + 紫青双色 + 卡片轻微上浮。
-       变量与尺寸沿用同一套，换皮不换骨架。 */
-    :root{--bg:#090a0e;--panel:#111218;--panel2:#16171e;--line:#262831;--muted:#888b97;
-          --text:#f2f2f4;--accent:#9d74ff;--cyan:#6de6ee;--amber:#f7b85d;--ok:#6bd3a1;--bad:#f87171;}
-    body{background:var(--bg);color:var(--text);}
-    .app-shell{display:grid;grid-template-columns:252px 1fr;min-height:calc(100vh - 64px);
-               background:radial-gradient(circle at 75% -10%,rgba(98,60,180,.13),transparent 25%),var(--bg);}
-    /* ---- 侧栏：左边是流水线本身，跑到哪、卡在哪、入库几条一眼看完 ---- */
-    .sidebar{position:relative;border-right:1px solid #202127;background:#0c0d11;
-             padding:20px 15px 16px;display:flex;flex-direction:column;z-index:5;box-shadow:18px 0 50px #0004;}
-    .sidebar:before{content:"";position:absolute;left:0;top:0;width:1px;height:35%;
-                    background:linear-gradient(transparent,#a37cff,transparent);animation:sideScan 6s linear infinite;}
-    .brand{display:flex;align-items:center;gap:11px;font-size:16px;font-weight:800;padding:0 6px 18px;text-align:left;}
-    .brand-mark{display:grid;place-items:center;width:32px;height:32px;border-radius:10px;font-size:14px;
-                background:linear-gradient(135deg,#b599ff,#7350d9);box-shadow:0 8px 24px #6f4bd455;}
-    .brand-en{display:block;color:#777986;font-size:8px;letter-spacing:2px;margin-top:2px;font-weight:400;}
-    .workspace{border:1px solid var(--line);border-radius:11px;padding:10px;display:flex;align-items:center;gap:9px;
-               margin-bottom:12px;background:#121319;}
-    .workspace-avatar{width:29px;height:29px;border-radius:8px;display:grid;place-items:center;font-size:11px;font-weight:700;
-                      background:linear-gradient(145deg,#8b6cf0,#543a9e);}
-    .workspace span:nth-child(2){min-width:0;flex:1;}
-    .workspace small{display:block;font-size:9px;color:#717480;}
-    .workspace b{display:block;font-size:11px;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-    .side-selects{display:grid;gap:7px;margin-bottom:16px;}
-    .side-h{font-size:9px;letter-spacing:1.6px;color:#5f6470;font-weight:700;padding:0 6px 8px;}
-    .sidebar nav{display:grid;gap:2px;overflow:auto;max-height:calc(100vh - 430px);}
-    .st{display:flex;align-items:center;gap:10px;height:36px;border-radius:8px;padding:0 10px;cursor:pointer;
-        color:#8c8e99;font-size:11.5px;transition:.2s;position:relative;}
-    .st:hover{background:#15161c;color:#eee;}
-    .st>i{font-style:normal;width:19px;height:19px;border:1px solid #383a44;border-radius:50%;display:grid;
-          place-items:center;font-size:8px;flex:0 0 19px;}
-    .st .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .st .ex{font-size:8px;color:#5f616b;}
-    .st.wait>i{color:#5f616b;}
-    .st.running{background:linear-gradient(90deg,#2a3350,#1b1824);color:#cfe0ff;}
-    .st.running>i{border-color:#60a5fa;background:#60a5fa;color:#0b0d13;animation:pulse 1.7s ease-in-out infinite;}
-    .st.done{color:#c9cbd2;}
-    .st.done>i{background:#5b4a86;border-color:#5b4a86;color:#fff;}
-    .st.done .ex{color:var(--ok);}
-    .st.confirm{background:linear-gradient(90deg,#4a2f18,#1b1824);color:#ffd7a8;}
-    .st.confirm>i{border-color:var(--amber);background:var(--amber);color:#1a1206;}
-    .st.error{background:linear-gradient(90deg,#4a1f22,#1b1824);color:#ffc0c0;}
-    .st.error>i{border-color:var(--bad);background:var(--bad);color:#1a0d0d;}
-    /* 门禁阻断：这一步什么都没产出，跟「跑失败」不是一回事，得能一眼分开 */
-    .st.blocked{background:linear-gradient(90deg,#4a3a16,#1b1824);color:#ffe0a8;}
-    .st.blocked>i{border-color:#f7b85d;background:#3a2c10;color:#f7b85d;}
-    .st.blocked .ex{color:#f7b85d;}
-    .st.start{box-shadow:inset 0 0 0 1px #8b67e7;}
-    .st.start:after{content:"起";position:absolute;right:8px;font-size:8px;color:#b79bff;}
-    .side-bottom{margin-top:auto;}
-    .plan-card{margin-top:14px;background:linear-gradient(145deg,#191526,#111218);border:1px solid #2d2542;
-               border-radius:10px;padding:11px 12px;}
-    .plan-card span{font-size:8px;letter-spacing:1px;color:#ad8ef6;}
-    .plan-card b{display:block;font-size:10px;margin:6px 0 7px;}
-    .plan-card div{height:3px;background:#292630;border-radius:3px;}
-    .plan-card div i{display:block;height:100%;border-radius:3px;background:linear-gradient(90deg,#7556d8,#d18afe);transition:.4s;}
-    .plan-card small{display:block;color:#71737c;font-size:9px;margin-top:6px;}
-    /* ---- 主区 ---- */
-    main{min-width:0;}
-    .content{padding:28px 30px;max-width:1400px;}
-    .page-title{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:20px;gap:16px;flex-wrap:wrap;}
-    .eyebrow{font-size:9px;font-weight:700;letter-spacing:2.5px;color:#9c7aea;}
-    .page-title h1{font-size:28px;margin:6px 0 7px;letter-spacing:-1px;font-weight:700;
-                   background:linear-gradient(90deg,#fff,#b7b5c4);-webkit-background-clip:text;background-clip:text;color:transparent;}
-    .page-title p{margin:0;color:var(--muted);font-size:12px;line-height:1.7;max-width:640px;}
-    .pt-actions{display:flex;gap:8px;}
-    .primary,.ghost{border-radius:8px;height:38px;padding:0 17px;border:0;font-size:11px;font-weight:600;cursor:pointer;
-                    display:inline-flex;align-items:center;gap:6px;transition:transform .2s,filter .2s,border-color .2s;}
-    .primary{background:linear-gradient(135deg,#a47bff,#7854dd);color:#fff;box-shadow:0 8px 24px #7650d52c;}
-    .primary:hover{filter:brightness(1.12);transform:translateY(-2px);}
-    .primary:disabled{opacity:.4;cursor:not-allowed;transform:none;}
-    .ghost{background:#17181e;border:1px solid #30313a;color:#c9cbd2;}
-    .ghost:hover{border-color:#765cad;transform:translateY(-2px);}
-    /* 统计条 */
-    .stats{display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line);border-radius:12px;
-           background:linear-gradient(135deg,#111218de,#0d0e13de);backdrop-filter:blur(12px);margin-bottom:20px;overflow:hidden;}
-    .stats>div{padding:15px 20px;border-right:1px solid var(--line);}
-    .stats>div:last-child{border:0;}
-    .stats span{display:block;font-size:10px;color:#777986;}
-    .stats b{display:block;font-size:24px;font-weight:500;margin:5px 0;}
-    .stats small{display:block;font-size:9px;color:#696b75;}
-    .form-stage{display:grid;grid-template-columns:minmax(0,1fr) 320px;gap:18px;align-items:start;}
-    .form-card,.tip-card{background:#111218;border:1px solid var(--line);border-radius:13px;padding:24px 26px;}
-    .form-index{font-size:10px;color:#8c6fe0;font-family:ui-monospace,Menlo,monospace;}
-    .form-card h2{font-size:20px;margin:8px 0 6px;}
-    .form-card>p{color:#7f818c;font-size:11px;margin:0 0 18px;}
-    .fields{display:grid;gap:14px;}
-    .fields label{display:grid;gap:6px;font-size:10px;color:#a7a9b2;}
-    .fields input,.fields select,.fields textarea,.side-selects select,.wide{
-      width:100%;background:#17181e;border:1px solid #30323b;color:#eee;border-radius:8px;padding:9px 11px;outline:0;font-size:12px;}
-    .fields input:focus,.fields select:focus,.fields textarea:focus{border-color:#8b67e7;}
-    .fields textarea{min-height:78px;resize:vertical;line-height:1.7;font-size:12px;}
-    .row-inline{display:flex;align-items:center;gap:9px;margin-bottom:16px;font-size:11px;color:var(--muted);}
-    .row-inline select{width:auto;min-width:220px;background:#17181e;border:1px solid #30323b;color:#eee;border-radius:8px;padding:7px 10px;font-size:12px;}
-    .form-actions{display:flex;justify-content:space-between;align-items:center;margin-top:20px;
-                  border-top:1px solid #22242b;padding-top:14px;font-size:11px;}
-    .hint{font-size:11px;color:#6f7280;}
-    .tip-card{background:linear-gradient(145deg,#171326,#101117);}
-    .tip-card h3{font-size:13px;margin:6px 0 10px;}
-    .tip-card p,.tip-card small{font-size:10px;line-height:1.8;color:#848690;margin:0;}
-    /* 卡点：橙色警示块，产出 + 门禁 + 代价 + 确认并继续放在一起 */
-    .gatebox{border:1px solid #6b4520;background:linear-gradient(145deg,#1e1608,#121016);border-radius:11px;padding:16px;margin-bottom:14px;}
-    .gatebox .gh{font-size:12px;color:var(--amber);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:7px;}
-    .gatebox .gm{font-size:10px;color:#c8a678;line-height:1.8;margin-bottom:10px;}
-    .gatebox .gc{font-size:10px;color:#8f8a80;line-height:1.8;margin-bottom:12px;}
-    .gatebox .gc b{color:var(--amber);}
-    .gatebox .gc b.r{color:var(--bad);}
-    .warn{background:linear-gradient(135deg,#ea7c3c,#d1560f);}
-    .gateout{margin-top:12px;}
-    .gateout textarea{width:100%;min-height:180px;background:#0e0f14;border:1px solid #30323b;color:#c9cbd2;
-                      border-radius:8px;padding:10px;font-size:11px;line-height:1.7;font-family:ui-monospace,Menlo,monospace;}
-    .log{margin-top:18px;border-top:1px solid #22242b;padding-top:12px;font-size:11px;color:#8b8e99;line-height:1.9;
-         max-height:150px;overflow:auto;}
-    .empty{color:#6f7280;font-size:12px;padding:18px;text-align:center;}
-    /* 交付物：立项/剧本/清单/图册/质检这些整篇产出，以前没地方去，现在有出口 */
-    .deliv-card{background:#111218;border:1px solid var(--line);border-radius:13px;padding:18px 22px;margin-top:18px;}
-    .deliv-head{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin-bottom:12px;}
-    .deliv-head h3{font-size:13px;margin:0;}
-    .deliv-list{display:grid;gap:5px;}
-    .deliv-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #23252c;border-radius:8px;
-                background:#15161c;cursor:pointer;font-size:11.5px;transition:.15s;}
-    .deliv-item:hover{border-color:#3a3d47;background:#191a21;}
-    .deliv-item .dk{font-family:ui-monospace,Menlo,monospace;color:var(--cyan);font-size:10px;}
-    .deliv-item .dt{flex:1;}
-    .deliv-item .dv{color:#6f7280;font-size:10px;}
-    .deliv-body{margin-top:8px;background:#0e0f14;border:1px solid #23252c;border-radius:8px;padding:12px;
-                font-size:11px;line-height:1.75;color:#c9cbd2;white-space:pre-wrap;max-height:320px;overflow:auto;
-                font-family:ui-monospace,Menlo,monospace;}
-    /* 运行中横幅：跑到哪了必须写在视线正前方。
-       一次连跑十几分钟，侧栏角落的小字等于没有——人不会盯着角落等，会以为死了。 */
-    .runbar{display:flex;align-items:center;gap:14px;margin-top:16px;padding:13px 18px;border-radius:11px;
-            border:1px solid #46308a;background:linear-gradient(135deg,#1a1430,#12111c);
-            box-shadow:0 6px 24px #6f4bd422;}
-    .runbar .rbd{width:8px;height:8px;border-radius:50%;background:var(--accent);flex:none;animation:pulse 1.2s infinite;}
-    .runbar .rbm{flex:1;min-width:0;}
-    .runbar .rbm b{display:block;font-size:13px;color:#e6e2f5;}
-    .runbar .rbm span{display:block;font-size:10.5px;color:#8f8ba6;margin-top:3px;}
-    .runbar .rbp{width:170px;height:4px;border-radius:3px;background:#252030;overflow:hidden;flex:none;}
-    .runbar .rbf{height:100%;background:linear-gradient(90deg,#7c4ddb,#9d74ff);transition:width .4s;}
-    .runbar .rbt{font-family:ui-monospace,Menlo,monospace;font-size:12px;color:var(--cyan);flex:none;min-width:96px;text-align:right;}
-    .log .lk{color:#5f6470;font-family:ui-monospace,Menlo,monospace;margin-right:6px;}
-    .log .lok{color:var(--ok);} .log .lrun{color:var(--accent);} .log .lwait{color:var(--amber);} .log .lerr{color:var(--bad);}
-    @keyframes sideScan{from{top:-35%}to{top:100%}}
-    @keyframes pulse{50%{opacity:.45}}
-    @media(max-width:1050px){.app-shell{grid-template-columns:1fr}.sidebar{display:none}.form-stage{grid-template-columns:1fr}}
+    /* 布局照「幕界」那套重写：深色底 + 薄荷绿强调 + 等宽小标签。
+       选择器全部挂在 .ss-root 下，跟全站 style.css 隔开，换皮不至于把别处带崩。 */
+    .ss-root{--bg:#07090b;--panel:#0d1114;--line:#202a2c;--mint:#9dffd7;--green:#52ffa8;--violet:#9b7cff;
+             --amber:#ffb367;--bad:#ff6b6b;--t1:#dce7e2;--t2:#718079;--t3:#4f5c56;
+             min-height:calc(100vh - 64px);background:var(--bg);color:var(--t1);
+             font-family:Inter,"Microsoft YaHei",sans-serif;position:relative;
+             display:grid;grid-template-columns:258px 1fr;}
+    .ss-root button,.ss-root select,.ss-root textarea,.ss-root input{font:inherit}
+    .ss-root ::-webkit-scrollbar{width:7px;height:7px}
+    .ss-root ::-webkit-scrollbar-thumb{background:#1e2b26}
+    /* 背景：网格 + 两团光。纯装饰，不挡点击 */
+    .ss-grid{position:fixed;inset:0;pointer-events:none;z-index:0;
+             background-image:linear-gradient(rgba(111,255,202,.035) 1px,transparent 1px),
+                              linear-gradient(90deg,rgba(111,255,202,.035) 1px,transparent 1px);
+             background-size:48px 48px;mask-image:linear-gradient(to bottom,#000,transparent 86%)}
+    .ss-noise{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.25;
+              background:radial-gradient(circle at 85% 0,rgba(63,255,177,.1),transparent 30%),
+                         radial-gradient(circle at 45% 100%,rgba(120,77,255,.1),transparent 40%)}
+    /* ── 侧栏 ───────────────────────────────────────────── */
+    .ss-sidebar{position:sticky;top:0;align-self:start;height:calc(100vh - 64px);width:258px;
+                border-right:1px solid var(--line);background:rgba(8,11,12,.94);padding:22px 16px;
+                overflow:auto;z-index:5}
+    .ss-side-head{border-left:2px solid var(--mint);padding-left:11px;margin-bottom:25px}
+    .ss-side-head span{display:block;font-size:17px;font-weight:700}
+    .ss-side-head small{font:9px monospace;letter-spacing:1.4px;color:var(--t3)}
+    .ss-sidebar>label{display:block;font:10px monospace;color:var(--t3);letter-spacing:1.2px}
+    .ss-project-select{margin-top:8px;border:1px solid #2a3430;background:#0e1312;display:flex;
+                       align-items:center;gap:7px;padding:7px}
+    .ss-project-cover{width:36px;height:36px;flex:none;display:grid;place-items:center;font-weight:900;
+                      font-size:15px;background:linear-gradient(145deg,#b0ffe0,#3a725c);color:#07110d}
+    .ss-project-select select{appearance:none;flex:1;min-width:0;background:none;border:0;
+                              color:#e9fff6;outline:0;font-size:12px}
+    .ss-project-meta{display:grid;grid-template-columns:44px 1fr;gap:5px 8px;padding:10px 2px;
+                     font:9px monospace;align-items:center}
+    .ss-project-meta b{color:var(--t3);font-weight:400;text-align:right}
+    .ss-project-meta span{color:#8d9b95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ss-project-meta select{width:100%;height:26px;background:#0c100f;border:1px solid #26302c;
+                            color:#a9bdb4;font:9px monospace;outline:0}
+    .ss-side-label{display:flex;justify-content:space-between;margin:14px 0 8px;font:10px monospace;color:var(--t3)}
+    .ss-side-label em{color:#43504a;font-style:normal}
+    /* 阶段串：左边一条虚线把各阶段串起来，跑到哪一眼看见 */
+    .ss-stage-list{position:relative;display:grid;gap:2px}
+    .ss-stage-list:before{content:"";position:absolute;left:19px;top:20px;bottom:20px;border-left:1px dashed #25322d}
+    .ss-stage-list button{width:100%;min-height:48px;border:1px solid transparent;background:transparent;
+                          color:#75817c;text-align:left;display:flex;align-items:center;gap:10px;
+                          padding:5px 8px;position:relative;cursor:pointer;transition:.15s}
+    .ss-stage-list button:hover{background:rgba(126,255,207,.05);color:#c2d3cb}
+    .ss-stage-list button.active{background:linear-gradient(90deg,rgba(126,255,207,.09),transparent);
+                                 border-color:#2e5143;color:#effff8}
+    .ss-node{width:22px;height:22px;flex:none;border:1px solid #34423c;background:#0a0e0c;border-radius:50%;
+             display:grid;place-items:center;z-index:1}
+    .ss-node i{font:10px monospace;font-style:normal}
+    .ss-stage-copy{flex:1;min-width:0}
+    .ss-stage-copy b,.ss-stage-copy small{display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ss-stage-copy b{font-size:12px}
+    .ss-stage-copy small{font-size:9px;margin-top:3px;color:var(--t3)}
+    .ss-stage-list em{font:8px monospace;color:var(--amber);border:1px solid #73502d;padding:2px 4px;font-style:normal}
+    .ss-stage-list .done .ss-node{border-color:var(--mint);background:var(--mint);color:#05110c;
+                                  box-shadow:0 0 16px rgba(157,255,215,.35)}
+    .ss-stage-list .done small{color:#4f8f74}
+    .ss-stage-list .running .ss-node{border-color:var(--green);color:var(--green);box-shadow:0 0 16px rgba(82,255,168,.3)}
+    .ss-stage-list .confirm .ss-node{border-color:var(--amber);color:var(--amber)}
+    .ss-stage-list .blocked .ss-node,.ss-stage-list .error .ss-node{border-color:var(--bad);color:var(--bad)}
+    .ss-stage-list .blocked small,.ss-stage-list .error small{color:var(--bad)}
+    .ss-model{margin-top:22px;border-top:1px solid #1c2521;padding-top:17px}
+    .ss-model>div{margin-top:8px;border:1px solid #26302c;background:#0c100f;padding:9px;display:flex;align-items:center;gap:9px}
+    .ss-model i{width:28px;height:28px;flex:none;background:#192a23;color:var(--green);display:grid;place-items:center;font:10px monospace}
+    .ss-model span{font-size:11px;flex:1;min-width:0}
+    .ss-model small{display:block;font:8px monospace;color:var(--t3);margin-top:3px}
+    .ss-model select{width:100%;height:32px;margin-top:7px;background:#0c100f;border:1px solid #26302c;
+                     color:#a9bdb4;font-size:11px;outline:0}
+    /* ── 主区 ───────────────────────────────────────────── */
+    .ss-content{padding:24px 28px 40px;position:relative;z-index:2;min-width:0}
+    .ss-command-head{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+    .ss-kicker{font:10px monospace;letter-spacing:2px;color:var(--green)}
+    .ss-command-head h1{font-size:32px;margin:8px 0 4px;letter-spacing:-1px;font-weight:700}
+    .ss-command-head p{margin:0;color:var(--t2);font-size:12px;max-width:640px;line-height:1.7}
+    .ss-command-head p b{color:var(--amber)}
+    .ss-actions{display:flex;gap:10px;flex:none}
+    .ss-actions button{height:42px;padding:0 18px;border:1px solid #2b3531;background:#0d1210;color:#8d9b95;cursor:pointer;transition:.15s}
+    .ss-actions button:hover{border-color:var(--mint);color:var(--mint)}
+    .ss-actions .run{background:var(--mint);color:#06110c;border-color:var(--mint);font-weight:800;min-width:122px;
+                     box-shadow:0 0 26px rgba(157,255,215,.12)}
+    .ss-actions .run:hover{color:#06110c;filter:brightness(1.08)}
+    .ss-actions .run:disabled{opacity:.45;cursor:not-allowed}
+    /* 雷达条：横向看整条流水线，比只在侧栏里看更直观 */
+    .ss-radar-row{height:116px;margin:22px 0 0;border:1px solid var(--line);background:rgba(11,15,16,.8);
+                  display:grid;grid-template-columns:110px 1fr 225px;align-items:center;padding:0 20px;
+                  position:relative;overflow:hidden}
+    .ss-radar-row:after{content:"";position:absolute;inset:0;pointer-events:none;
+                        background:linear-gradient(90deg,transparent,rgba(102,255,199,.025),transparent);
+                        transform:skewX(-20deg);animation:scan 5s linear infinite}
+    .ss-orbit{width:67px;height:67px;border:1px solid #25483a;border-radius:50%;position:relative;display:grid;place-items:center}
+    .ss-orbit:before,.ss-orbit:after{content:"";position:absolute;border:1px solid #1a2d26;border-radius:50%;inset:9px}
+    .ss-orbit:after{inset:20px;background:var(--green);box-shadow:0 0 18px var(--green);opacity:.8}
+    .ss-orbit i{position:absolute;inset:-1px;border-top:1px solid var(--mint);border-radius:50%;animation:spin 3s linear infinite}
+    .ss-orbit b{position:absolute;bottom:-15px;font:8px monospace;color:var(--green);white-space:nowrap}
+    .ss-idle .ss-orbit:after{background:var(--t3);box-shadow:none;opacity:.5}
+    .ss-idle .ss-orbit i,.ss-idle .ss-orbit:before{border-color:#243630;animation:none}
+    .ss-flow-track{display:flex;align-items:center;position:relative}
+    .ss-flow-track:before{content:"";position:absolute;left:6%;right:6%;top:28px;height:1px;background:#26332d}
+    .ss-flow-track button{flex:1;border:0;background:none;color:#53605a;position:relative;z-index:1;cursor:pointer;padding:0 2px}
+    .ss-flow-track button:hover{color:#9bb3a8}
+    .ss-flow-track button span{font:9px monospace;display:block}
+    .ss-flow-track button i{display:block;width:10px;height:10px;background:#111815;border:2px solid #31413a;
+                            border-radius:50%;margin:7px auto 9px}
+    .ss-flow-track button b{display:block;font-size:10px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ss-flow-track button i.lit{background:var(--mint);border-color:var(--mint);box-shadow:0 0 10px var(--mint)}
+    .ss-flow-track button.active{color:#effff7}
+    .ss-flow-track button.active i{border-color:var(--green);box-shadow:0 0 12px rgba(82,255,168,.5)}
+    .ss-progress{border-left:1px solid #202b26;padding-left:20px}
+    .ss-progress span{font:8px monospace;letter-spacing:1px;color:#5e6d66}
+    .ss-progress>b{float:right;font:18px monospace;color:var(--mint)}
+    .ss-progress>div{height:3px;background:#1b2521;margin:10px 0}
+    .ss-progress>div i{display:block;height:100%;background:var(--mint);box-shadow:0 0 10px var(--mint);transition:width .4s}
+    .ss-progress small{display:block;font:9px monospace;color:var(--t3);clear:both;
+                       overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* 四格统计 */
+    .ss-stats{margin:12px 0;display:grid;grid-template-columns:repeat(4,1fr);border:1px solid var(--line)}
+    .ss-stats article{height:83px;padding:14px 18px;border-right:1px solid var(--line);position:relative;min-width:0}
+    .ss-stats article:last-child{border:0}
+    .ss-stats span{font-size:10px;color:#627069}
+    .ss-stats b{display:block;font:27px monospace;color:#dffff2;margin-top:3px}
+    .ss-stats em{position:absolute;right:15px;bottom:14px;font:7px monospace;color:#3f4d47;font-style:normal;
+                 max-width:62%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* 工作台：左表单 / 右三卡 */
+    .ss-workspace{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:12px;align-items:start}
+    .ss-panel{border:1px solid var(--line);background:rgba(12,16,17,.9)}
+    .ss-setup{padding:25px}
+    .ss-panel-title{display:flex;align-items:center;gap:13px;border-bottom:1px solid #1c2622;padding-bottom:18px;flex-wrap:wrap}
+    .ss-panel-title>span{width:43px;height:43px;flex:none;border:1px solid #335044;display:grid;place-items:center;
+                         font:13px monospace;color:var(--mint);background:#111b17}
+    .ss-panel-title>div{min-width:0;flex:1}
+    .ss-panel-title small{font:8px monospace;color:var(--t3)}
+    .ss-panel-title h2{font-size:20px;margin:4px 0 0}
+    .ss-panel-title em{margin-left:auto;font:8px monospace;color:var(--green);border:1px solid #27543f;padding:4px 7px;font-style:normal}
+    .ss-desc{font-size:11px;line-height:1.8;color:var(--t2);margin:14px 0 0}
+    .ss-start-row{display:flex;align-items:center;gap:9px;margin:18px 0 0;font-size:11px;color:var(--t2);flex-wrap:wrap}
+    .ss-start-row select{width:auto;min-width:260px;height:36px;background:#0a0e0d;border:1px solid #27322e;
+                         color:#dcebe5;padding:0 10px;outline:0;font-size:12px}
+    .ss-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px;margin:16px 0}
+    .ss-fields>label{display:grid;gap:6px;font-size:10px;color:var(--t2)}
+    .ss-fields>label.wide-row{grid-column:1/-1}
+    .ss-fields input,.ss-fields select,.ss-fields textarea{
+      width:100%;background:#090d0c;border:1px solid #26312d;color:#aab9b2;padding:9px 11px;outline:0;font-size:12px}
+    .ss-fields input,.ss-fields select{height:38px}
+    .ss-fields textarea{min-height:78px;resize:vertical;line-height:1.7}
+    .ss-fields input:focus,.ss-fields select:focus,.ss-fields textarea:focus,
+    .ss-start-row select:focus{border-color:#497c67}
+    .ss-form-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
+                     border-top:1px solid #1d2622;margin-top:20px;padding-top:18px;font:9px monospace;color:#4c5c54}
+    .ss-rightcol{display:flex;flex-direction:column;gap:12px}
+    .ss-minihead{height:45px;padding:0 15px;border-bottom:1px solid #202925;display:flex;align-items:center;justify-content:space-between}
+    .ss-minihead b{font-size:12px}
+    .ss-minihead span{font:8px monospace;color:#476054}
+    .ss-log{padding:11px 14px;max-height:210px;overflow:auto;
+            background:repeating-linear-gradient(0deg,transparent,transparent 3px,rgba(64,255,169,.012) 4px)}
+    .ss-log div{margin:0 0 7px;font:10px ui-monospace,Menlo,monospace;color:#617069;line-height:1.6}
+    .ss-log .lk{color:#384943;margin-right:6px}
+    .ss-log .lok{color:var(--green)} .ss-log .lrun{color:var(--mint)}
+    .ss-log .lwait{color:var(--amber)} .ss-log .lerr{color:var(--bad)}
+    .ss-tip{display:flex;padding:15px;gap:12px}
+    .ss-tip>span{width:25px;height:25px;flex:none;border:1px solid #6f5637;color:var(--amber);display:grid;place-items:center;font-size:12px}
+    .ss-tip b{font-size:11px}
+    .ss-tip p{margin:6px 0 0;font-size:9px;line-height:1.6;color:#59655f}
+    .empty-hint{color:#5a6660;font-size:11px;padding:18px;text-align:center}
+    /* 卡点：门禁 + 代价 + 确认并继续摆在一起。没有代价的确认就是形式主义 */
+    .gatebox{border:1px solid #6b4520;background:linear-gradient(145deg,#1e1608,#0f1211);padding:16px}
+    .gatebox.ok{border-color:#27543f;background:linear-gradient(145deg,#0d1a15,#0f1211)}
+    .gatebox .gh{font-size:12px;color:var(--amber);font-weight:700;margin-bottom:6px;display:flex;align-items:center;gap:7px}
+    .gatebox.ok .gh{color:var(--green)}
+    .gatebox .gm{font-size:10px;color:#c8a678;line-height:1.8;margin-bottom:10px}
+    .gatebox.ok .gm{color:#8fb8a5}
+    .gatebox .gm b{color:var(--amber)}
+    .gatebox .gc{font-size:10px;color:#8f8a80;line-height:1.8;margin-bottom:12px}
+    .gatebox .gc b{color:var(--amber)} .gatebox .gc b.r{color:var(--bad)}
+    .gateout{margin-top:12px}
+    .gateout textarea{width:100%;min-height:180px;background:#090d0c;border:1px solid #26312d;color:#aab9b2;
+                      padding:11px;font:11px ui-monospace,Menlo,monospace;line-height:1.7;outline:0}
+    .ss-btn-row{display:flex;gap:8px;flex-wrap:wrap}
+    .ss-btn-row button{height:36px;padding:0 15px;border:1px solid #2b3531;background:#0d1210;color:#8d9b95;
+                       font-size:11px;cursor:pointer;transition:.15s}
+    .ss-btn-row button:hover{border-color:var(--mint);color:var(--mint)}
+    .ss-btn-row .go{background:var(--mint);border-color:var(--mint);color:#06110c;font-weight:700}
+    .ss-btn-row .go:hover{color:#06110c;filter:brightness(1.08)}
+    .ss-btn-row .wa{background:#1a1408;border-color:#6b4520;color:var(--amber)}
+    .ss-btn-row .wa:hover{border-color:var(--amber);color:var(--amber)}
+    /* 交付物：立项/剧本/清单/图册/质检的产出是整篇文本，以前没地方去 */
+    .deliv-card{margin-top:12px}
+    .deliv-list{display:grid;gap:5px;padding:12px 15px 15px}
+    .deliv-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border:1px solid #232f2b;border-radius:5px;
+                background:#0b100e;cursor:pointer;font-size:11.5px;transition:.15s}
+    .deliv-item:hover{border-color:#3a5a4d;background:#101a16}
+    .deliv-item .dk{font:monospace;color:var(--mint);font-size:10px}
+    .deliv-item .dt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .deliv-item .dv{color:#5a6660;font:9px monospace}
+    .deliv-body{margin:0 15px 15px;background:#090d0c;border:1px solid #232f2b;padding:12px;
+                font:11px ui-monospace,Menlo,monospace;line-height:1.75;color:#aab9b2;white-space:pre-wrap;
+                max-height:320px;overflow:auto}
+    @keyframes spin{to{transform:rotate(360deg)}}
+    @keyframes scan{from{transform:translateX(-120%) skewX(-20deg)}to{transform:translateX(120%) skewX(-20deg)}}
+    @media(max-width:1180px){.ss-root{grid-template-columns:1fr}.ss-sidebar{display:none}
+      .ss-workspace{grid-template-columns:1fr}.ss-radar-row{grid-template-columns:80px 1fr}
+      .ss-progress{display:none}.ss-stats{grid-template-columns:1fr 1fr}}
+    @media(max-width:760px){.ss-content{padding:18px}.ss-command-head h1{font-size:26px}
+      .ss-radar-row{grid-template-columns:65px 1fr;height:105px;padding:0 10px}
+      .ss-flow-track button b{display:none}.ss-stats{grid-template-columns:1fr 1fr}.ss-setup{padding:16px}}
   </style>
 </head>
 <body>
   <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
   <div style="position:relative;z-index:1;">
-  <nav class="navbar">
+<nav class="navbar">
     <div class="nav-inner">
       <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
         <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
@@ -181,119 +243,134 @@
     </div>
   </nav>
 
-  <div class="app-shell">
-    <aside class="sidebar">
-      <div class="brand"><span class="brand-mark">导</span><span>导演流水线<span class="brand-en">DIRECTOR PIPELINE</span></span></div>
+  <div class="ss-grid"></div>
+  <div class="ss-noise"></div>
+  <div class="ss-root">
 
-      <div class="workspace">
-        <span class="workspace-avatar">落</span>
-        <span><small>产出落点</small><b id="wsTarget">未绑定项目</b></span>
-      </div>
-      <div class="side-selects">
+    <aside class="ss-sidebar">
+      <div class="ss-side-head"><span>导演流水线</span><small>DIRECTOR PIPELINE</small></div>
+
+      <label>产出落点</label>
+      <div class="ss-project-select">
+        <span class="ss-project-cover">落</span>
         <select id="proj"></select>
-        <select id="eps"></select>
+      </div>
+      <div class="ss-project-meta">
+        <b>剧集</b><select id="eps"></select>
+        <b>当前</b><span id="wsTarget">未绑定项目</span>
+        <b>规则包</b><span id="packName">—</span>
       </div>
 
-      <div class="side-h">流水线 · 点一步可从那里开始</div>
-      <nav id="pipeNav"><div class="empty">加载中</div></nav>
+      <div class="ss-side-label"><span>流水线 · 点一步从那开始</span><em id="pipeCount"></em></div>
+      <nav class="ss-stage-list" id="pipeNav"><div class="empty-hint">加载中</div></nav>
 
-      <div class="side-bottom">
-        <div class="side-h">提示词类型（P4 用）</div>
-        <select id="promptType" class="wide">
+      <div class="ss-model">
+        <label>提示词引擎（P4 用）</label>
+        <select id="promptType">
           <option>SD（Seedance·火山方舟）</option>
           <option>H3（MiniMax·本地 ComfyUI）</option>
         </select>
-        <div class="plan-card">
-          <span id="runLabel">本次运行</span>
-          <b id="runStat">尚未开始</b>
-          <div><i id="runBar" style="width:0"></i></div>
-          <small id="runSub">选好落点，填设定，点开始跑</small>
-        </div>
+        <div><i>DB</i><span>产出自动入库<small>分镜 / 资产 / 提示词</small></span></div>
+        <div><i id="runLabel">本次</i><span id="runStat">尚未开始<small id="runSub">选好落点，填设定，点开始跑</small></span></div>
+        <div style="height:3px;background:#141a18;margin-top:10px"><i id="runBar" style="display:block;height:100%;width:0;background:var(--mint);box-shadow:0 0 10px var(--mint);transition:.4s"></i></div>
       </div>
     </aside>
 
-    <main>
-      <div class="content">
-        <div class="page-title">
-          <div>
-            <span class="eyebrow">DIRECTOR PIPELINE · <span id="packName">—</span></span>
-            <h1>一键跑到下一个卡点</h1>
-            <p>填一次设定，点一下就往下跑：上一步产出自动喂给下一步，产出自动入库。
-               只在<b style="color:#f7b85d">错了代价大</b>的地方停 —— 停的时候会说清错了要赔多少。</p>
-          </div>
-          <div class="pt-actions">
-            <button class="primary" id="btnStart">▶ 开始跑</button>
-            <button class="ghost" id="btnNew">↻ 新开一次</button>
-          </div>
+    <div class="ss-content">
+      <div class="ss-command-head">
+        <div>
+          <div class="ss-kicker">DIRECTOR PIPELINE · <span id="packName2">—</span></div>
+          <h1>一键跑到下一个卡点</h1>
+          <p>填一次设定，点一下就往下跑：上一步产出自动喂给下一步，产出自动入库。
+             只在<b>错了代价大</b>的地方停 —— 停的时候会说清错了要赔多少。</p>
         </div>
-
-        <div class="stats" id="stats">
-          <div><span>阶段总数</span><b id="sTotal">—</b><small id="sTotalSub">规则包里的阶段</small></div>
-          <div><span>本轮已完成</span><b id="sDone">0</b><small id="sDoneSub">跑完的步骤</small></div>
-          <div><span>入库条数</span><b id="sImp">0</b><small id="sImpSub">分镜 / 资产 / 提示词</small></div>
-          <div><span>人工卡点</span><b id="sGate">0</b><small id="sGateSub">需要你拍板的地方</small></div>
+        <div class="ss-actions">
+          <button class="run" id="btnStart">▶ 开始跑</button>
+          <button id="btnNew">↻ 新开一次</button>
         </div>
-
-        <div class="runbar" id="runBarTop" style="display:none">
-          <span class="rbd"></span>
-          <div class="rbm">
-            <b id="rbStage">正在启动…</b>
-            <span id="rbSub">—</span>
-          </div>
-          <div class="rbp"><div class="rbf" id="rbFill" style="width:0%"></div></div>
-          <span class="rbt" id="rbTime">0:00</span>
-        </div>
-
-        <div class="form-stage">
-          <div class="form-card">
-            <span class="form-index" id="formIndex">STEP · 设定</span>
-            <h2 id="formTitle">立项设定</h2>
-            <p id="formDesc">画幅 / 交付 / 平台 / 集数 / 时长已预填默认值，想改再改；填过的会自动记住。</p>
-
-            <div class="row-inline">
-              <span>从</span>
-              <select id="startStage"></select>
-              <span class="hint" id="startHint"></span>
-            </div>
-
-            <div class="fields" id="form"></div>
-
-            <div class="fields" style="margin-top:14px">
-              <label>补充原文（可选，会和上面表单一起喂进去）
-                <textarea id="extra" style="min-height:64px"></textarea>
-              </label>
-            </div>
-
-            <div class="form-actions">
-              <span class="hint" id="stateHint"></span>
-              <span class="hint" id="costHint"></span>
-            </div>
-          </div>
-
-          <div>
-            <div id="gate"></div>
-            <div class="tip-card">
-              <h3>怎么个跑法</h3>
-              <p>点「开始跑」后，从你选的那一步一路往下串。遇到橙色标记的步骤会停下来等你，
-                 其余阶段一路跑完不打扰。</p>
-              <p style="margin-top:10px">产出自动入库：分镜进分镜表、资产进资产表、提示词进提示词表。
-                 左侧每步后面的数字就是入库条数。</p>
-            </div>
-          </div>
-        </div>
-
-        <div class="deliv-card" id="delivCard" style="display:none">
-          <div class="deliv-head">
-            <h3>交付物</h3>
-            <span class="hint">立项 / 剧本 / 资产清单 / 图册 / 质检 —— 点开看全文，重跑留新版本，旧版不丢</span>
-          </div>
-          <div class="deliv-list" id="delivList"></div>
-          <div class="deliv-body" id="delivBody" style="display:none"></div>
-        </div>
-
-        <div class="log" id="log"></div>
       </div>
-    </main>
+
+      <!-- 雷达条：横向看整条流水线。以前只在跑的时候冒出一根横幅，没跑时看不见全貌 -->
+      <div class="ss-radar-row ss-idle" id="runBarTop">
+        <div class="ss-orbit"><i></i><b id="rbStage">待命</b></div>
+        <div class="ss-flow-track" id="pipeTrack"></div>
+        <div class="ss-progress">
+          <span>PROGRESS</span><b id="rbTime">0:00</b>
+          <div><i id="rbFill" style="width:0%"></i></div>
+          <small id="rbSub">选好落点，填设定，点开始跑</small>
+        </div>
+      </div>
+
+      <div class="ss-stats">
+        <article><span>阶段总数</span><b id="sTotal">—</b><em id="sTotalSub">规则包里的阶段</em></article>
+        <article><span>本轮已完成</span><b id="sDone">0</b><em id="sDoneSub">跑完的步骤</em></article>
+        <article><span>入库条数</span><b id="sImp">0</b><em id="sImpSub">分镜 / 资产 / 提示词</em></article>
+        <article><span>人工卡点</span><b id="sGate">0</b><em id="sGateSub">需要你拍板的地方</em></article>
+      </div>
+
+      <div class="ss-workspace">
+        <section class="ss-panel ss-setup">
+          <div class="ss-panel-title">
+            <span id="formIndex">—</span>
+            <div><small>STEP INPUT</small><h2 id="formTitle">立项设定</h2></div>
+            <em id="formBadge">表单</em>
+          </div>
+          <p class="ss-desc" id="formDesc">画幅 / 交付 / 平台 / 集数 / 时长已预填默认值，想改再改；填过的会自动记住。</p>
+
+          <div class="ss-start-row">
+            <span>从</span><select id="startStage"></select>
+            <small style="color:#4c5c54;font:9px monospace" id="startHint"></small>
+          </div>
+
+          <div class="ss-fields" id="form"></div>
+
+          <div class="ss-fields" style="margin-top:4px">
+            <label class="wide-row">补充原文（可选，会和上面表单一起喂进去）
+              <textarea id="extra" style="min-height:64px"></textarea>
+            </label>
+          </div>
+
+          <div class="ss-form-actions">
+            <span id="stateHint"></span>
+            <span id="costHint"></span>
+          </div>
+        </section>
+
+        <aside class="ss-rightcol">
+          <div id="gate"></div>
+
+          <section class="ss-panel">
+            <div class="ss-minihead"><b>运行终端</b><span id="logCount">0 行</span></div>
+            <div class="ss-log" id="log"></div>
+          </section>
+
+          <section class="ss-panel">
+            <div class="ss-minihead"><b>怎么个跑法</b><span>GUIDE</span></div>
+            <div class="ss-tip">
+              <span>▶</span>
+              <div>
+                <b>串下去，只在卡点停</b>
+                <p>点「开始跑」后从你选的那一步一路往下串，上一步产出自动喂给下一步。
+                   橙色标记的步骤会停下来等你，其余一路跑完不打扰。左侧每一步后面就是入库条数。</p>
+              </div>
+            </div>
+            <div class="ss-tip" style="border-top:1px solid #1c2622">
+              <span>!</span>
+              <div>
+                <b>没入库就等于没跑</b>
+                <p>没选项目时引擎只留文本不入库。左边「产出落点」选好项目，产出才会写进业务表。</p>
+              </div>
+            </div>
+          </section>
+        </aside>
+      </div>
+
+      <section class="ss-panel deliv-card" id="delivCard" style="display:none">
+        <div class="ss-minihead"><b>交付物</b><span>重跑留新版本，旧版不丢</span></div>
+        <div class="deliv-list" id="delivList"></div>
+        <div class="deliv-body" id="delivBody" style="display:none"></div>
+      </section>
+    </div>
   </div>
   </div>
 
@@ -301,7 +378,8 @@
   <script src="../js/app.js?v=2"></script>
   <script>
   var pack = null, stages = [], runId = 0, timer = null;
-  var runStartAt = 0, tickTimer = null, seenStatus = {};
+  var runStartAt = 0, tickTimer = null, seenStatus = {}, logLines = 0;
+  var NL = String.fromCharCode(10);
 
   function esc(s){ return $('<div>').text(s == null ? '' : s).html(); }
   function mmss(sec){ return Math.floor(sec/60) + ':' + ('0' + (sec%60)).slice(-2); }
@@ -309,13 +387,15 @@
     var n = new Date();
     var ts = ('0'+n.getHours()).slice(-2) + ':' + ('0'+n.getMinutes()).slice(-2) + ':' + ('0'+n.getSeconds()).slice(-2);
     $('#log').prepend('<div><span class="lk">' + ts + '</span><span class="' + (cls || '') + '">' + esc(t) + '</span></div>');
+    logLines++; $('#logCount').text(logLines + ' 行');
   }
   function w(n){ return n >= 10000 ? (n/10000).toFixed(1) + '万' : n + ''; }
 
   function loadAll(){
     $.get('/api/director-skill/packs', function(list){
-      if (!list || !list.length){ $('#packName').text('没有规则包'); return; }
+      if (!list || !list.length){ $('#packName2').text('没有规则包'); return; }
       pack = list[0];
+      $('#packName2').text(pack.name);
       $('#packName').text(pack.name);
       $.get('/api/director-skill/packs/' + pack.packId + '/stages', function(st){
         stages = (st || []).filter(function(s){ return s.isEnabled; })
@@ -327,7 +407,7 @@
         $('#sTotal').text(stages.length);
         $('#sTotalSub').text('其中 ' + gates.length + ' 个卡点');
         $('#sGate').text(gates.length);
-        $('#sGateSub').text(gates.map(function(s){ return s.stageKey; }).join(' / '));
+        $('#sGateSub').text(gates.map(function(s){ return s.stageKey; }).join(' / ') || '没有');
         renderForm(); renderPipe([]);
       });
     });
@@ -406,16 +486,18 @@
     var st = stages.filter(function(s){ return s.stageKey === key; })[0];
     var fields = [];
     try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; } catch (e) { fields = []; }
-    $('#formIndex').text('STEP · ' + esc(key));
+    $('#formIndex').text(key || '—');
     $('#formTitle').text((st && st.name) || '设定');
-    if (!fields.length){ $('#form').html('<div class="hint">本阶段没有要收集的字段</div>'); return; }
+    $('#formBadge').text((st && st.humanConfirm) ? '人工卡点' : '自动通过');
+    if (!fields.length){ $('#form').html('<div class="empty-hint">本阶段没有要收集的字段</div>'); return; }
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem('skillStudioForm_' + key) || '{}'); } catch (e) { saved = {}; }
     var h = '';
     fields.forEach(function(f){
       var v = saved[f.key] != null ? saved[f.key] : (f.default || '');
-      h += '<label>' + esc(f.label || f.key) + (f.required ? ' <span style="color:#f87171">*</span>' : '')
-         + (f.tip ? ' <span class="hint">' + esc(f.tip) + '</span>' : '');
+      var wide = (f.type === 'textarea') ? 'wide-row' : '';
+      h += '<label class="' + wide + '">' + esc(f.label || f.key) + (f.required ? ' <span style="color:#ff6b6b">*</span>' : '')
+         + (f.tip ? ' <span style="color:#4f655b">' + esc(f.tip) + '</span>' : '');
       var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"';
       if (f.type === 'select')
         h += '<select' + k + '>' + (f.options || []).map(function(o){
@@ -437,32 +519,45 @@
     });
     var ex = ($('#extra').val() || '').trim();
     if (ex) parts.push(ex);
-    return parts.join('\n');
+    return parts.join(NL);
   }
 
-  // 侧栏进度：每一步跑到哪、入库几条、卡在哪
+  // 侧栏 + 顶部横向流程条：同一份数据换个方向看，跑到哪、入库几条、卡在哪
   function renderPipe(steps){
     var byKey = {};
     (steps || []).forEach(function(s){ byKey[s.stageKey] = s; });
-    var h = stages.map(function(s){
-      var st = byKey[s.stageKey], cls = 'wait', ico = '·', ex = '';
+    var done = 0;
+    var nav = stages.map(function(s){
+      var st = byKey[s.stageKey], cls = '', ico = '·', ex = '';
       if (st){
         if (st.status === 'running'){ cls = 'running'; ico = '◐'; ex = '跑中'; }
         else if (st.status === 'await_confirm'){ cls = 'confirm'; ico = '!'; ex = '待确认'; }
         else if (st.status === 'error'){ cls = 'error'; ico = '×'; ex = '失败'; }
         else if (st.status === 'blocked'){ cls = 'blocked'; ico = '⛔'; ex = '门禁没过'; }
         else if (st.status === 'done'){
-          cls = 'done'; ico = '✓';
-          ex = st.imported > 0 ? '入库 ' + st.imported : (st.importError ? '未入库' : '');
+          cls = 'done'; ico = '✓'; done++;
+          ex = st.imported > 0 ? '入库 ' + st.imported : (st.importError ? '未入库' : '已完成');
         }
       }
-      return '<div class="st ' + cls + '" data-key="' + esc(s.stageKey) + '"><i>' + ico + '</i>'
-           + '<span class="nm">' + esc(s.stageKey) + ' ' + esc(s.name) + '</span>'
-           + '<span class="ex">' + esc(ex) + '</span></div>';
+      return '<button class="' + cls + '" data-key="' + esc(s.stageKey) + '">'
+           + '<span class="ss-node"><i>' + ico + '</i></span>'
+           + '<span class="ss-stage-copy"><b>' + esc(s.stageKey) + ' ' + esc(s.name) + '</b>'
+           + '<small>' + esc(ex) + '</small></span>'
+           + (ex ? '<em>' + ico + '</em>' : '') + '</button>';
     }).join('');
-    $('#pipeNav').html(h);
+    $('#pipeNav').html(nav);
+    $('#pipeCount').text(done + ' / ' + stages.length);
+
+    var track = stages.map(function(s){
+      var st = byKey[s.stageKey];
+      var lit = st && (st.status === 'done' || st.status === 'await_confirm') ? 'lit' : '';
+      return '<button data-key="' + esc(s.stageKey) + '"><span>' + esc(s.stageKey) + '</span>'
+           + '<i class="' + lit + '"></i><b>' + esc(s.name) + '</b></button>';
+    }).join('');
+    $('#pipeTrack').html(track);
+
     markStart();
-    $('#pipeNav .st').click(function(){
+    $('#pipeNav button, #pipeTrack button').click(function(){
       $('#startStage').val($(this).data('key'));
       renderForm(); $('#gate').empty(); markStart();
     });
@@ -470,8 +565,8 @@
 
   function markStart(){
     var k = $('#startStage').val();
-    $('#pipeNav .st').removeClass('start').each(function(){
-      if ($(this).data('key') === k) $(this).addClass('start');
+    $('#pipeNav button, #pipeTrack button').removeClass('active').each(function(){
+      if ($(this).data('key') === k) $(this).addClass('active');
     });
   }
 
@@ -505,7 +600,14 @@
     pollOnce();
   }
 
-  function stopTick(){ clearInterval(tickTimer); tickTimer = null; $('#runBarTop').hide(); }
+  // 雷达条常显：没跑的时候回到待命态，不假装还在转
+  function stopTick(){ clearInterval(tickTimer); tickTimer = null; setIdle(true); }
+  function setIdle(on){
+    $('#runBarTop').toggleClass('ss-idle', !!on);
+    if (!on) return;
+    $('#rbStage').text('待命');
+    $('#rbSub').text('选好落点，填设定，点开始跑');
+  }
 
   // 计时 + 剩余估算。十几分钟的等待，不知道还要多久是最难熬的部分
   function updateTick(){
@@ -536,11 +638,11 @@
   function updateRunBar(d){
     var list = d.steps || [];
     var running = list.filter(function(s){ return s.status === 'running'; })[0];
-    if (d.status !== 'running' || !running){ if (d.status !== 'running') $('#runBarTop').hide(); return; }
+    if (d.status !== 'running' || !running){ if (d.status !== 'running') setIdle(true); return; }
     var idx = stages.map(function(s){ return s.stageKey; }).indexOf(running.stageKey) + 1;
     var imp = +($('#sImp').text() || 0);
-    $('#runBarTop').show();
-    $('#rbStage').text('正在跑 ' + running.stageKey + ' · ' + (running.name || ''));
+    setIdle(false);
+    $('#rbStage').text(running.stageKey + ' · ' + (running.name || ''));
     $('#rbSub').text('第 ' + (idx > 0 ? idx : '?') + ' / ' + stages.length + ' 步'
       + ' · 已完成 ' + ($('#sDone').text() || 0) + ' 步'
       + (imp ? '，入库 ' + imp + ' 条' : ''));
@@ -554,7 +656,7 @@
       if (d.status === 'running') return;          // 还在跑，继续轮询
       clearInterval(timer); stopTick();
       loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
-      if (d.status === 'done') { say('全部跑完'); $('#gate').html('<div class="gatebox" style="border-color:#2c5540;background:linear-gradient(145deg,#101c16,#101117)"><div class="gh" style="color:#6bd3a1">流水线跑完了</div><div class="gm" style="color:#9fb8a8">产出已入库，左侧可以看到每步的入库条数。</div></div>'); }
+      if (d.status === 'done') { say('全部跑完'); $('#gate').html('<div class="gatebox ok"><div class="gh">流水线跑完了</div><div class="gm">产出已入库，左侧可以看到每步的入库条数。</div></div>'); }
       else if (d.status === 'error') say('出错，看左侧红的那一步');
       else if (d.status === 'blocked') showBlocked(d);
       else if (d.status === 'await_confirm') showGate(d);
@@ -568,12 +670,12 @@
     if (!b) return;
     $('#gate').html('<div class="gatebox">'
       + '<div class="gh">⛔ 门禁没过 · ' + esc(b.stageKey) + ' ' + esc(b.name || '') + '</div>'
-      + '<div class="gm">这一阶段<b style="color:#f7b85d">没有产出任何东西</b> —— LLM 判定前置条件不满足，'
+      + '<div class="gm">这一阶段<b>没有产出任何东西</b> —— LLM 判定前置条件不满足，'
       + '下面是它要你补充或确认的。补完之后从这一步重跑。</div>'
-      + '<div class="gateout" id="blkOut">加载中…</div>'
-      + '<div style="display:flex;gap:8px;margin-top:10px">'
-      +   '<button class="primary warn" id="btnRetry">补充后重跑这一步</button>'
-      +   '<button class="primary ok" id="btnForce" title="LLM 会误判：明明填了值的项它照样说未锁定。你核对过确实不缺，就放行">信息都齐，直接往下跑</button>'
+      + '<div class="gateout" id="blkOut" style="color:#617069;font:10px monospace">加载中…</div>'
+      + '<div class="ss-btn-row" style="margin-top:10px">'
+      +   '<button class="wa" id="btnRetry">补充后重跑这一步</button>'
+      +   '<button class="go" id="btnForce" title="LLM 会误判：明明填了值的项它照样说未锁定。你核对过确实不缺，就放行">信息都齐，直接往下跑</button>'
       + '</div></div>');
     $.get('/api/director-agent/steps/' + b.stepId + '/output', function(o){
       $('#blkOut').text(((o && o.output) || '（没有内容）').replace(/^\s*BLOCKED\s*:?\s*/i, ''));
@@ -601,8 +703,8 @@
     var box = '<div class="gatebox"><div class="gh">⏸ 停在人工确认 · ' + esc(pending.stageKey) + ' ' + esc(pending.name || '') + '</div>';
     if (pending.gates) box += '<div class="gm">门禁：' + esc(pending.gates) + '</div>';
     box += '<div class="gc" id="gateCost">代价计算中…</div>'
-        + '<div style="display:flex;gap:8px"><button class="primary warn" id="btnGoOn">确认并继续</button> '
-        + '<button class="ghost" id="btnView">看产出</button></div>'
+        + '<div class="ss-btn-row"><button class="go" id="btnGoOn">确认并继续</button> '
+        + '<button id="btnView">看产出</button></div>'
         + '<div class="gateout" id="gateOut"></div></div>';
     $('#gate').html(box);
 
@@ -660,10 +762,11 @@
   });
 
   $('#btnNew').click(function(){
-    clearInterval(timer); stopTick(); runId = 0; runStartAt = 0;
+    clearInterval(timer); stopTick(); runId = 0; runStartAt = 0; logLines = 0;
     localStorage.removeItem('skillStudioRun'); localStorage.removeItem('skillStudioStartAt');
-    $('#gate').empty(); $('#log').empty(); $('#stateHint').text('');
+    $('#gate').empty(); $('#log').empty(); $('#logCount').text('0 行'); $('#stateHint').text('');
     $('#runStat').text('尚未开始'); $('#runBar').css('width', '0'); $('#runSub').text('已重置，可以新开一次运行');
+    $('#rbFill').css('width', '0%'); $('#rbTime').text('0:00');
     $('#sDone').text('0'); $('#sImp').text('0');
     renderPipe([]);
   });
@@ -671,6 +774,7 @@
   $(function(){
     loadAll();
     $('#eps').html('<option value="">（先选项目）</option>');
+    setIdle(true);
     var saved = localStorage.getItem('skillStudioRun');
     if (saved){
       runId = +saved; say('接上上次运行 #' + runId);
