@@ -5,35 +5,38 @@
    ========================================== */
 
 :root {
-  /* 来自参考站的核心色板 */
-  --bg: #090a0e;
-  --panel: #111218;
-  --panel2: #16171e;
-  --line: #262831;
-  --muted: #888b97;
-  --text: #f2f2f4;
-  --accent: #9d74ff;
-  --cyan: #6de6ee;
+  /* 参考站 HUD 色板：深墨蓝底 + 青 #05e8f0 + 红 #ff3852。
+     原先是紫罗兰（--accent #9d74ff），现在整站改成它那套青——
+     变量名一个没动，只换值，全站二十九个页面跟着一起变，不用逐页改。 */
+  --bg: #02080e;
+  --panel: #041017;
+  --panel2: #061923;
+  --line: #14505d;
+  --muted: #789096;
+  --text: #e1edef;
+  --accent: #05e8f0;
+  --cyan: #05e8f0;
+  --red: #ff3852;
   --amber: #f7b85d;
 
   /* 兼容旧 style.css 的变量名 */
-  --primary: #9d74ff;
-  --primary-light: #b695ff;
-  --primary-dark: #7b54e0;
-  --accent-gradient: linear-gradient(135deg, #9d74ff, #6de6ee);
-  --glow-cyan: rgba(109, 230, 238, 0.32);
-  --glow-purple: rgba(157, 116, 255, 0.32);
+  --primary: #05e8f0;
+  --primary-light: #6af7ff;
+  --primary-dark: #0a9aa3;
+  --accent-gradient: linear-gradient(135deg, #05e8f0, #0bb8c4);
+  --glow-cyan: rgba(5, 232, 240, 0.32);
+  --glow-purple: rgba(106, 247, 255, 0.32);
   --success: #22c55e;
   --warning: #f7b85d;
-  --danger: #ef4444;
-  --text-muted: #888b97;
-  --text-dim: #555a66;
-  --border: #262831;
-  --border-light: #2f313d;
-  --bg-surface: #111218;
-  --bg-card: #16171e;
-  --bg-card-hover: #1a1c24;
-  --bg-glass: rgba(17, 18, 24, 0.92);
+  --danger: #ff3852;
+  --text-muted: #789096;
+  --text-dim: #4a5c63;
+  --border: #14505d;
+  --border-light: #1c6675;
+  --bg-surface: #041017;
+  --bg-card: #061923;
+  --bg-card-hover: #08242e;
+  --bg-glass: rgba(2, 8, 14, 0.92);
   --shadow-sm: 0 2px 8px rgba(0,0,0,0.25);
   --shadow-md: 0 6px 24px rgba(0,0,0,0.35);
   --shadow-lg: 0 12px 48px rgba(0,0,0,0.45);
@@ -53,7 +56,64 @@ body {
   min-height: 100vh;
   line-height: 1.55;
   -webkit-font-smoothing: antialiased;
+  overflow-x: hidden;
 }
+
+/* ---- 背景特效（照参考站 hud-static.css 那两层）----
+   ::before = 54px 网格 + 居中一排二进制大字（很淡，只是氛围）；
+   ::after  = 右侧那个巨大的同心圆光环，48 秒转一圈。
+   两层都是 fixed + pointer-events:none，不吃点击；内容层用 z-index 1 压在上面。
+   晕动症偏好（prefers-reduced-motion）下停掉动画。 */
+body::before {
+  content: "01001100 01001111 01000001 01000100  /  POWER\A 00110101 01001110 01000111 01001001 01001110 01000101\A 01000100 01001001 01010010 01000101 01000011 01010100 01001111 01010010";
+  position: fixed;
+  inset: 56px 0 0; /* 顶上让开导航栏那 56px */
+  z-index: 0;
+  pointer-events: none;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  white-space: pre;
+  text-align: center;
+  color: rgba(5, 232, 240, 0.05);
+  font: 700 clamp(10px, 1.25vw, 18px)/2.1 Consolas, monospace;
+  letter-spacing: 0.38em;
+  text-shadow: 0 0 12px rgba(5, 232, 240, 0.10);
+  background:
+    linear-gradient(rgba(5, 232, 240, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(5, 232, 240, 0.03) 1px, transparent 1px);
+  background-size: 54px 54px;
+  animation: hud-drift 18s linear infinite;
+}
+body::after {
+  content: "";
+  position: fixed;
+  z-index: 0;
+  pointer-events: none;
+  width: min(74vw, 980px);
+  aspect-ratio: 1;
+  right: -20vw;
+  top: 8vh;
+  border-radius: 50%;
+  opacity: 0.42;
+  background: repeating-conic-gradient(from 0deg, #05e8f0 0 1deg, transparent 1deg 7deg);
+  -webkit-mask: repeating-radial-gradient(circle,
+    transparent 0 9%, #000 9.2% 9.45%, transparent 9.7% 16%, #000 16.2% 16.45%,
+    transparent 16.7% 27%, #000 27.2% 27.5%, transparent 27.8% 38%, #000 38.2% 38.55%,
+    transparent 38.8% 47%, #000 47.2% 47.7%, transparent 48%);
+  mask: repeating-radial-gradient(circle,
+    transparent 0 9%, #000 9.2% 9.45%, transparent 9.7% 16%, #000 16.2% 16.45%,
+    transparent 16.7% 27%, #000 27.2% 27.5%, transparent 27.8% 38%, #000 38.2% 38.55%,
+    transparent 38.8% 47%, #000 47.2% 47.7%, transparent 48%);
+  animation: hud-orbit 48s linear infinite;
+  filter: drop-shadow(0 0 9px rgba(5, 232, 240, 0.33));
+}
+@keyframes hud-orbit { to { transform: rotate(360deg); } }
+@keyframes hud-drift { from { background-position: 0 0; } to { background-position: 54px 54px; } }
+@media (prefers-reduced-motion: reduce) { body::before, body::after { animation: none; } }
+/* 内容层抬到背景之上：::before/::after 是 fixed z-index 0 的定位元素，
+   不抬的话会盖在没有定位的正文上面（不吃点击，但网格会压字） */
+.container, main, .page, .wrap { position: relative; z-index: 1; }
 
 /* 滚动条 */
 ::-webkit-scrollbar { width: 5px; height: 5px; }
@@ -68,8 +128,8 @@ body {
   z-index: 100;
   height: 56px;
   padding: 0;
-  background: rgba(9, 10, 14, 0.92);
-  border-bottom: 1px solid var(--line);
+  background: rgba(2, 9, 15, 0.95);
+  border-bottom: 1px solid rgba(5, 232, 240, 0.36);
   backdrop-filter: blur(20px) saturate(1.2);
   -webkit-backdrop-filter: blur(20px) saturate(1.2);
 }
@@ -204,7 +264,7 @@ body {
 .card:hover, .project-card:hover, .drama-card:hover {
   border-color: var(--accent);
   background: var(--panel2);
-  box-shadow: 0 0 30px rgba(157, 116, 255, 0.08), var(--shadow-md);
+  box-shadow: 0 0 30px rgba(5, 232, 240, 0.08), var(--shadow-md);
 }
 .project-cover, .drama-cover {
   width: 100%;
@@ -213,7 +273,7 @@ body {
   align-items: center;
   justify-content: center;
   font-size: 48px;
-  background: linear-gradient(135deg, rgba(157,116,255,0.08), rgba(109,230,238,0.06));
+  background: linear-gradient(135deg, rgba(5,232,240,0.08), rgba(106,247,255,0.06));
   background-size: cover;
   background-position: center;
 }
@@ -486,7 +546,7 @@ tr:hover { background: rgba(109, 230, 238, 0.04); }
   letter-spacing: 0.3px;
 }
 .badge-cyan { background: rgba(109,230,238,0.12); color: var(--cyan); border: 1px solid rgba(109,230,238,0.2); }
-.badge-purple { background: rgba(157,116,255,0.12); color: var(--accent); border: 1px solid rgba(157,116,255,0.2); }
+.badge-purple { background: rgba(5,232,240,0.12); color: var(--accent); border: 1px solid rgba(5,232,240,0.2); }
 .badge-amber { background: rgba(247,184,93,0.12); color: var(--amber); border: 1px solid rgba(247,184,93,0.2); }
 
 /* ---- 系统状态栏 ---- */

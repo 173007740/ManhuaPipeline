@@ -19,7 +19,7 @@
         }
 
             .task-filters select, .task-filters input {
-                background: #1e293b;
+                background: #061923;
                 color: #e2e8f0;
                 border: 1px solid #475569;
                 border-radius: 6px;
@@ -28,7 +28,7 @@
             }
 
             .task-filters button {
-                background: #7c3aed;
+                background: #0b8f99;
                 color: #fff;
                 border: none;
                 border-radius: 6px;
@@ -41,14 +41,14 @@
             width: 100%;
             table-layout: fixed;
             border-collapse: collapse;
-            background: #1e293b;
+            background: #061923;
             border-radius: 8px;
             overflow: hidden;
         }
 
             .task-table th {
-                background: #0f172a;
-                color: #94a3b8;
+                background: #041017;
+                color: #789096;
                 padding: 10px 12px;
                 text-align: left;
                 font-size: 12px;
@@ -66,7 +66,7 @@
             }
 
             .task-table tr:hover td {
-                background: rgba(124,58,237,0.08);
+                background: rgba(5,232,240,0.08);
             }
 
         .status-badge {
@@ -99,11 +99,11 @@
 
         .status-pending {
             background: rgba(148,163,184,0.2);
-            color: #94a3b8;
+            color: #789096;
         }
 
         .detail-card {
-            background: #0f172a;
+            background: #041017;
             border-radius: 8px;
             padding: 16px;
             margin-top: 12px;
@@ -121,7 +121,7 @@
         }
 
         .detail-item label {
-            color: #64748b;
+            color: #5c7078;
             font-size: 11px;
             display: block;
             margin-bottom: 2px;
@@ -147,7 +147,7 @@
         }
 
         .summary-item {
-            background: #1e293b;
+            background: #061923;
             border-radius: 8px;
             padding: 12px 20px;
             text-align: center;
@@ -157,13 +157,13 @@
             .summary-item .num {
                 font-size: 22px;
                 font-weight: 700;
-                color: #a78bfa;
+                color: #6af7ff;
                 display: block;
             }
 
             .summary-item .label {
                 font-size: 11px;
-                color: #64748b;
+                color: #5c7078;
             }
 
         .page-title {
@@ -172,7 +172,7 @@
         }
 
         .back-link {
-            color: #a78bfa;
+            color: #6af7ff;
             text-decoration: none;
             font-size: 13px;
             margin-bottom: 16px;
@@ -217,7 +217,7 @@
         <div class="summary-bar" id="summaryBar"></div>
 
         <!-- 模型说明 -->
-        <div class="summary-bar" style="margin-bottom:12px;padding:14px 18px;font-size:13px;line-height:1.9;color:#94a3b8;">
+        <div class="summary-bar" style="margin-bottom:12px;padding:14px 18px;font-size:13px;line-height:1.9;color:#789096;">
             <div style="font-weight:700;margin-bottom:4px;color:#e2e8f0;">模型说明：</div>
             <div><strong>1、视频模型：Doubao Seedance 2.0 mini</strong></div>
             <div>Seedance 2.0-2.5 模型资源包，1400万 tokens = 196元 ，(1万 tokens=0.14元)</div>
@@ -238,7 +238,7 @@
         </div>
 
         <!-- 任务列表 -->
-        <div id="taskContent"><p style="color:#94a3b8;padding:20px;">加载中...</p></div>
+        <div id="taskContent"><p style="color:#789096;padding:20px;">加载中...</p></div>
     </div>
 
     <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
@@ -295,13 +295,13 @@
                     "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.14).toFixed(2) + "</span><span class='label'>已消耗金额·资源包<br>(1万 tokens=0.14元)</span></div>" +
                     "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.092).toFixed(2) + "</span><span class='label'>已消耗金额·4折按量<br>(1万 tokens=0.092元)</span></div>" +
                     "<div class='summary-item'><span class='num' style='color:" + (warn ? "#ef4444" : "#22c55e") + ";'>" + fmtWan(d.remainingTokens) + " 万</span><span class='label'>剩余</span></div>" +
-                    (p ? "<div class='summary-item'><span class='num' style='color:#a78bfa;'>" + fmtWan(p.usedTokens) + " 万</span><span class='label'>当前项目已用</span></div>" : "") +
+                    (p ? "<div class='summary-item'><span class='num' style='color:#6af7ff;'>" + fmtWan(p.usedTokens) + " 万</span><span class='label'>当前项目已用</span></div>" : "") +
                     (p ? "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (p.usedTokens / 10000 * 0.14).toFixed(2) + "</span><span class='label'>本项目消耗金额·资源包<br>(1万 tokens=0.14元)</span></div>" : "") +
                     (p ? "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (p.usedTokens / 10000 * 0.092).toFixed(2) + "</span><span class='label'>本项目消耗金额·4折按量<br>(1万 tokens=0.092元)</span></div>" : "") +
-                    (d.canEditQuota ? "<button onclick='showQuotaEdit()' style='margin-left:auto;background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;'>修改总量</button>" : "");
+                    (d.canEditQuota ? "<button onclick='showQuotaEdit()' style='margin-left:auto;background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:6px 14px;font-size:12px;cursor:pointer;'>修改总量</button>" : "");
                 $("#tokenUsageBar").html(html);
             }).fail(function () {
-                $("#tokenUsageBar").html("<p style='color:#94a3b8;font-size:12px;'>Token 用量加载失败</p>");
+                $("#tokenUsageBar").html("<p style='color:#789096;font-size:12px;'>Token 用量加载失败</p>");
             });
         }
         function showQuotaEdit() {
@@ -309,13 +309,13 @@
                 if (!d.canEditQuota) { alert("只有管理员可以修改全局 Token 配额"); return; }
                 var cur = d.quotaTokens ? (d.quotaTokens / 10000).toFixed(2) : "1400";
                 var h = "<div id='quotaModal' style='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'>";
-                h += "<div style='background:#1e293b;border-radius:12px;padding:24px;width:340px;max-width:90%;'>";
+                h += "<div style='background:#061923;border-radius:12px;padding:24px;width:340px;max-width:90%;'>";
                 h += "<h3 style='color:#e2e8f0;margin:0 0 16px;font-size:16px;'>修改资源包总量</h3>";
-                h += "<label style='color:#94a3b8;font-size:13px;display:block;margin-bottom:6px;'>总量（万 tokens）</label>";
-                h += "<input id='quotaInput' type='number' step='1' value='" + cur + "' style='width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:8px 10px;font-size:14px;margin-bottom:16px;'>";
+                h += "<label style='color:#789096;font-size:13px;display:block;margin-bottom:6px;'>总量（万 tokens）</label>";
+                h += "<input id='quotaInput' type='number' step='1' value='" + cur + "' style='width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:8px 10px;font-size:14px;margin-bottom:16px;'>";
                 h += "<div style='display:flex;gap:8px;justify-content:flex-end;'>";
                 h += "<button onclick=\"$('#quotaModal').remove()\" style='background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>取消</button>";
-                h += "<button onclick='saveQuota()' style='background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>保存</button>";
+                h += "<button onclick='saveQuota()' style='background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>保存</button>";
                 h += "</div></div></div>";
                 $("body").append(h);
             });
@@ -352,7 +352,7 @@
             var rows = items.map(function (it) {
                 return "<div style='padding:6px 0;border-bottom:1px solid #334155;font-size:12px;color:#cbd5e1;word-break:break-all;'>"
                     + "<div style='color:#f472b6;'>待搬 " + esc(it.fileName) + "（" + fmtSize(it.size) + "）</div>"
-                    + "<div style='color:#94a3b8;'>保留 " + esc(it.keptFileName) + "　内容完全相同</div>"
+                    + "<div style='color:#789096;'>保留 " + esc(it.keptFileName) + "　内容完全相同</div>"
                     + "</div>";
             }).join("");
             if (!rows) rows = "<p style='color:#22c55e;font-size:13px;'>没有发现重复文件，无需整理。</p>";
@@ -362,16 +362,16 @@
                 : "";
 
             var h = "<div id='dedupeModal' style='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'>";
-            h += "<div style='background:#1e293b;border-radius:12px;padding:24px;width:620px;max-width:92%;max-height:82vh;display:flex;flex-direction:column;'>";
+            h += "<div style='background:#061923;border-radius:12px;padding:24px;width:620px;max-width:92%;max-height:82vh;display:flex;flex-direction:column;'>";
             h += "<h3 style='color:#e2e8f0;margin:0 0 10px;font-size:16px;'>整理重复文件（只搬不删）</h3>";
-            h += "<div style='color:#94a3b8;font-size:12px;line-height:1.8;'>扫描 " + r.scannedFiles + " 个文件，发现 " + items.length + " 个重复副本，合计 " + fmtSize(r.duplicateBytes) + "。<br>"
+            h += "<div style='color:#789096;font-size:12px;line-height:1.8;'>扫描 " + r.scannedFiles + " 个文件，发现 " + items.length + " 个重复副本，合计 " + fmtSize(r.duplicateBytes) + "。<br>"
                 + "只有<b style='color:#e2e8f0;'>字节完全相同</b>的副本会被搬走；不同版本（重跑、增强前后）内容不同，一律保留。</div>";
             h += "<div style='overflow:auto;flex:1;margin:12px 0;'>" + rows + "</div>";
             h += skipped;
-            h += "<div style='color:#64748b;font-size:11px;margin-bottom:10px;word-break:break-all;'>搬移目标：" + esc(r.quarantineRoot) + "</div>";
+            h += "<div style='color:#5c7078;font-size:11px;margin-bottom:10px;word-break:break-all;'>搬移目标：" + esc(r.quarantineRoot) + "</div>";
             h += "<div style='display:flex;gap:8px;justify-content:flex-end;'>";
             h += "<button onclick=\"$('#dedupeModal').remove()\" style='background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>取消</button>";
-            if (items.length) h += "<button onclick='execDedupe()' style='background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>确认搬走 " + items.length + " 个</button>";
+            if (items.length) h += "<button onclick='execDedupe()' style='background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>确认搬走 " + items.length + " 个</button>";
             h += "</div></div></div>";
             $("body").append(h);
         }
@@ -390,7 +390,7 @@
             if (!projectId) return;
             $.get("/api/project/" + projectId + "/video/tasks", function (tasks) {
                 if (!tasks || tasks.length === 0) {
-                    $("#taskContent").html("<p style='color:#94a3b8;padding:20px;'>暂无视频生成任务记录</p>");
+                    $("#taskContent").html("<p style='color:#789096;padding:20px;'>暂无视频生成任务记录</p>");
                     $("#summaryBar").empty();
                     return;
                 }
@@ -423,7 +423,7 @@
                 $("#summaryBar").html(
                     "<div class='summary-item'><span class='num'>" + total + "</span><span class='label'>总任务</span></div>" +
                     "<div class='summary-item'><span class='num' style='color:#22c55e;'>" + done + "</span><span class='label'>已完成</span></div>" +
-                    "<div class='summary-item'><span class='num' style='color:#a78bfa;'>" + fmtDuration(doneSeconds) + "</span><span class='label'>已完成总时长</span></div>" +
+                    "<div class='summary-item'><span class='num' style='color:#6af7ff;'>" + fmtDuration(doneSeconds) + "</span><span class='label'>已完成总时长</span></div>" +
                     "<div class='summary-item'><span class='num' style='color:#facc15;'>" + processing + "</span><span class='label'>处理中</span></div>" +
                     "<div class='summary-item'><span class='num' style='color:#f59e0b;'>" + enhanceDone + "</span><span class='label'>增强完成</span></div>" +
                     "<div class='summary-item'><span class='num' style='color:#ec4899;'>" + enhanceCostText + "</span><span class='label'>增强消费(估,1080p口径)</span></div>" +
@@ -440,7 +440,7 @@
                 });
 
                 if (filtered.length === 0) {
-                    $("#taskContent").html("<p style='color:#94a3b8;padding:20px;'>没有匹配的任务</p>");
+                    $("#taskContent").html("<p style='color:#789096;padding:20px;'>没有匹配的任务</p>");
                     return;
                 }
 
@@ -466,16 +466,16 @@
                     } else if (t.status === "failed") {
                         resultHtml = "<span style='color:#ef4444;font-size:11px;'>" + esc(t.errorMessage) + "</span>";
                     } else if (t.engine === "mediakit") {
-                        resultHtml = "<span style='color:#a78bfa;font-size:11px;'>⏳ 增强处理中...</span>";
+                        resultHtml = "<span style='color:#6af7ff;font-size:11px;'>⏳ 增强处理中...</span>";
                     }
-                    h += "<tr><td style='font-family:monospace;font-size:11px;max-width:120px;word-break:break-all;'>" + esc(t.taskId) + "<br><span style='font-size:10px;color:#64748b;'>" + (t.engine === "mediakit" ? "画质增强" : (t.engine || "volcano")) + "</span></td>" +
+                    h += "<tr><td style='font-family:monospace;font-size:11px;max-width:120px;word-break:break-all;'>" + esc(t.taskId) + "<br><span style='font-size:10px;color:#5c7078;'>" + (t.engine === "mediakit" ? "画质增强" : (t.engine || "volcano")) + "</span></td>" +
                         "<td><span class='status-badge status-" + cl + "'>" + statusLabel(t.status) + "</span></td><td style='font-size:11px;'>" + apiLabel(t.apiStatus) + "</td>" +
                         "<td>" + t.promptId + "</td>" +
                         "<td style='font-size:11px;'>" + paramsHtml + "</td>" +
                         "<td style='font-size:11px;'>" + resultHtml + "</td>" +
                         "<td style='font-size:11px;'>" + timeStr(t.createdAt) + "</td>" +
                         "<td style='font-size:11px;'>" + timeStr(t.completedAt) + "</td>" +
-                        "<td>" + (t.videoUrl ? "<a href='" + t.videoUrl + "' target='_blank' class='btn btn-small' style='font-size:11px;background:#7c3aed;color:#fff;border-radius:4px;padding:3px 8px;text-decoration:none;display:inline-block;'>🎬 查看视频</a>" : "") + " <button class='btn btn-small' onclick='refreshTask(this,\"" + t.taskId + "\")' style='font-size:11px;background:#2563eb;color:#fff;border-radius:4px;padding:3px 8px;border:none;cursor:pointer;'>🔄 获取最新状态</button>" + enhanceBtn + "</td></tr>";
+                        "<td>" + (t.videoUrl ? "<a href='" + t.videoUrl + "' target='_blank' class='btn btn-small' style='font-size:11px;background:#0b8f99;color:#fff;border-radius:4px;padding:3px 8px;text-decoration:none;display:inline-block;'>🎬 查看视频</a>" : "") + " <button class='btn btn-small' onclick='refreshTask(this,\"" + t.taskId + "\")' style='font-size:11px;background:#2563eb;color:#fff;border-radius:4px;padding:3px 8px;border:none;cursor:pointer;'>🔄 获取最新状态</button>" + enhanceBtn + "</td></tr>";
                 }
                 h += "</tbody></table>";
                 $("#taskContent").html(h);

@@ -25,8 +25,8 @@
             color: var(--text-muted); font-size: 14px; cursor: pointer; border: none;
             background: transparent; width: 100%; text-align: left;
         }
-        .report-side .item:hover { background: rgba(124,58,237,.10); color: var(--text); }
-        .report-side .item.active { background: rgba(124,58,237,.18); color: var(--primary-light); font-weight: 600; }
+        .report-side .item:hover { background: rgba(5,232,240,.10); color: var(--text); }
+        .report-side .item.active { background: rgba(5,232,240,.18); color: var(--primary-light); font-weight: 600; }
         .report-main { flex: 1; min-width: 0; }
 
         .stat-grid { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 18px; }
@@ -48,9 +48,9 @@
         .tag-done { background: rgba(16,185,129,.18); color: #10b981; }
         .tag-failed { background: rgba(239,68,68,.18); color: #ef4444; }
         .tag-run { background: rgba(56,189,248,.18); color: #38bdf8; }
-        .tag-idle { background: rgba(148,163,184,.18); color: #94a3b8; }
+        .tag-idle { background: rgba(148,163,184,.18); color: #789096; }
         .bar { height: 8px; background: rgba(255,255,255,.06); border-radius: 4px; overflow: hidden; min-width: 120px; }
-        .bar > div { height: 100%; background: linear-gradient(90deg,#7c3aed,#a78bfa); border-radius: 4px; }
+        .bar > div { height: 100%; background: linear-gradient(90deg,#0b8f99,#6af7ff); border-radius: 4px; }
         .note {
             padding: 10px 12px; border-radius: 8px; font-size: 12px; margin-bottom: 14px;
             background: rgba(148,163,184,.12); border: 1px solid var(--border); color: var(--text-muted);
@@ -216,13 +216,13 @@
                     + "<td style='max-width:280px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'>"
                     + "<a href='project.html?id=" + p.projectId + "' style='color:var(--primary-light);text-decoration:none;'>" + esc(p.projectName || "未命名项目") + "</a></td>"
                     + "<td>" + p.projectId + "</td>"
-                    + "<td>" + wan(p.usedTokens) + " 万 <span style='color:#64748b;font-size:11px;'>(" + num(p.usedTokens) + ")</span></td>"
+                    + "<td>" + wan(p.usedTokens) + " 万 <span style='color:#5c7078;font-size:11px;'>(" + num(p.usedTokens) + ")</span></td>"
                     + "<td style='color:#f472b6;font-weight:600;'>" + money(p.usedTokens, 0.14) + "</td>"
                     + "<td style='color:#f472b6;font-weight:600;'>" + money(p.usedTokens, 0.092) + "</td>"
                     + "<td>" + dur(p.totalSeconds) + "</td>"
                     + "<td>" + pp.toFixed(2) + "%</td>"
                     + "<td><div class='bar'><div style='width:" + Math.min(100, pp) + "%'></div></div></td>"
-                    + "<td><a href='project.html?id=" + p.projectId + "' style='color:#a78bfa;font-size:12px;text-decoration:none;'>进入项目 →</a></td>"
+                    + "<td><a href='project.html?id=" + p.projectId + "' style='color:#6af7ff;font-size:12px;text-decoration:none;'>进入项目 →</a></td>"
                     + "</tr>";
             });
             return h + "</tbody></table></div>";

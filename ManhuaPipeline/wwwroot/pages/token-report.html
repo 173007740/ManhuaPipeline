@@ -27,7 +27,7 @@ th{background:rgba(255,255,255,0.04);color:var(--text-muted);font-weight:600;whi
 td{color:var(--text)}
 tbody tr:hover td{background:rgba(255,255,255,0.02)}
 .bar{height:8px;background:rgba(255,255,255,0.06);border-radius:4px;overflow:hidden;min-width:140px}
-.bar>div{height:100%;background:linear-gradient(90deg,#7c3aed,#a78bfa);border-radius:4px}
+.bar>div{height:100%;background:linear-gradient(90deg,#0b8f99,#6af7ff);border-radius:4px}
 </style>
 </head>
 <body>
@@ -60,7 +60,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
       <a href="dashboard.html" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回工作台</a>
     </div>
     <div class="summary-bar" id="summaryBar"></div>
-    <div id="reportContent"><p style="color:#94a3b8;padding:20px;">加载中...</p></div>
+    <div id="reportContent"><p style="color:#789096;padding:20px;">加载中...</p></div>
   </div>
   </div>
   <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
@@ -82,7 +82,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
           "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.14).toFixed(2) + "</span><span class='label'>已消耗金额·资源包<br>(1万 tokens=0.14元)</span></div>" +
           "<div class='summary-item'><span class='num' style='color:#f472b6;'>¥" + (d.usedTokens / 10000 * 0.092).toFixed(2) + "</span><span class='label'>已消耗金额·4折按量<br>(1万 tokens=0.092元)</span></div>" +
           "<div class='summary-item'><span class='num' style='color:" + (warn ? "#ef4444" : "#22c55e") + ";'>" + fmtWan(d.remainingTokens) + " 万</span><span class='label'>剩余</span></div>" +
-          (d.canEditQuota ? "<button onclick='showQuotaEdit()' style='margin-left:auto;background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>修改总量</button>" : "")
+          (d.canEditQuota ? "<button onclick='showQuotaEdit()' style='margin-left:auto;background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>修改总量</button>" : "")
         );
       });
     }
@@ -90,14 +90,14 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
     function loadProjects() {
       $.get("/api/config/token-usage/projects", function(list) {
         if (!list || list.length === 0) {
-          $("#reportContent").html("<p style='color:#94a3b8;padding:30px;text-align:center;'>暂无项目消耗记录</p>");
+          $("#reportContent").html("<p style='color:#789096;padding:30px;text-align:center;'>暂无项目消耗记录</p>");
           return;
         }
         $.get("/api/config/token-usage", function(g) {
           var quota = g && g.quotaTokens ? g.quotaTokens : 0;
           var totalSec = 0;
           for (var ti = 0; ti < list.length; ti++) { totalSec += (list[ti].totalSeconds || 0); }
-          var h = "<div style='margin-bottom:12px;color:#94a3b8;font-size:13px;'>全部项目视频总时长：<span style='color:#34d399;font-weight:600;'>" + fmtDur(totalSec) + "</span></div>";
+          var h = "<div style='margin-bottom:12px;color:#789096;font-size:13px;'>全部项目视频总时长：<span style='color:#34d399;font-weight:600;'>" + fmtDur(totalSec) + "</span></div>";
           h += "<div class='table-wrap'><table><thead><tr><th>项目名称</th><th>项目ID</th><th>已消耗</th><th>消耗金额·资源包</th><th>消耗金额·4折</th><th>视频时长</th><th>占总资源包</th><th>消耗趋势</th><th></th></tr></thead><tbody>";
           for (var i = 0; i < list.length; i++) {
             var p = list[i];
@@ -106,13 +106,13 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
             var pctText = pct.toFixed(2) + "%";
             h += "<tr><td style='max-width:260px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;'><a href='project.html?id=" + p.projectId + "' style='color:var(--primary-light);text-decoration:none;'>" + escHtml(p.projectName || "未命名项目") + "</a></td>";
             h += "<td>" + p.projectId + "</td>";
-            h += "<td>" + fmtWan(p.usedTokens) + " 万 <span style='color:#64748b;font-size:11px;'>(" + fmtRaw(p.usedTokens) + ")</span></td>";
+            h += "<td>" + fmtWan(p.usedTokens) + " 万 <span style='color:#5c7078;font-size:11px;'>(" + fmtRaw(p.usedTokens) + ")</span></td>";
             h += "<td style='color:#f472b6;font-weight:600;'>¥" + (p.usedTokens / 10000 * 0.14).toFixed(2) + "</td>";
             h += "<td style='color:#f472b6;font-weight:600;'>¥" + (p.usedTokens / 10000 * 0.092).toFixed(2) + "</td>";
             h += "<td>" + fmtDur(p.totalSeconds) + "</td>";
             h += "<td>" + pctText + "</td>";
             h += "<td><div class='bar'><div style='width:" + barW + "%'></div></div></td>";
-            h += "<td><a href='project.html?id=" + p.projectId + "' style='color:#a78bfa;font-size:12px;text-decoration:none;'>进入项目 →</a></td>";
+            h += "<td><a href='project.html?id=" + p.projectId + "' style='color:#6af7ff;font-size:12px;text-decoration:none;'>进入项目 →</a></td>";
             h += "</tr>";
           }
           h += "</tbody></table></div>";
@@ -128,13 +128,13 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
         if (!d.canEditQuota) { alert("只有管理员可以修改全局 Token 配额"); return; }
         var cur = d.quotaTokens ? (d.quotaTokens / 10000).toFixed(2) : "1400";
         var h = "<div id='quotaModal' style='position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;display:flex;align-items:center;justify-content:center;'>";
-        h += "<div style='background:#1e293b;border-radius:12px;padding:24px;width:340px;max-width:90%;'>";
+        h += "<div style='background:#061923;border-radius:12px;padding:24px;width:340px;max-width:90%;'>";
         h += "<h3 style='color:#e2e8f0;margin:0 0 16px;font-size:16px;'>修改资源包总量</h3>";
-        h += "<label style='color:#94a3b8;font-size:13px;display:block;margin-bottom:6px;'>总量（万 tokens）</label>";
-        h += "<input id='quotaInput' type='number' step='1' value='" + cur + "' style='width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:8px 10px;font-size:14px;margin-bottom:16px;'>";
+        h += "<label style='color:#789096;font-size:13px;display:block;margin-bottom:6px;'>总量（万 tokens）</label>";
+        h += "<input id='quotaInput' type='number' step='1' value='" + cur + "' style='width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:8px 10px;font-size:14px;margin-bottom:16px;'>";
         h += "<div style='display:flex;gap:8px;justify-content:flex-end;'>";
         h += "<button onclick=\"$('#quotaModal').remove()\" style='background:#475569;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>取消</button>";
-        h += "<button onclick='saveQuota()' style='background:#7c3aed;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>保存</button>";
+        h += "<button onclick='saveQuota()' style='background:#0b8f99;color:#fff;border:none;border-radius:6px;padding:8px 16px;font-size:13px;cursor:pointer;'>保存</button>";
         h += "</div></div></div>";
         $("body").append(h);
       });
@@ -174,7 +174,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
     window.addEventListener("resize", resize);
     var particles = [];
     var COUNT = 70;
-    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
     for (var i = 0; i < COUNT; i++) {
       particles.push({
         x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
@@ -205,7 +205,7 @@ tbody tr:hover td{background:rgba(255,255,255,0.02)}
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+            ctx.strokeStyle = "rgba(5,232,240," + alpha + ")";
             ctx.lineWidth = 0.6;
             ctx.stroke();
           }

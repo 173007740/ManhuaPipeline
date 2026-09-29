@@ -12,51 +12,51 @@
   <style>
     .container{max-width:100%;padding:24px;}
     .page-title{font-size:24px;font-weight:700;margin-bottom:6px;color:var(--primary-light);}
-    .page-tip{font-size:12px;color:#94a3b8;margin-bottom:18px;line-height:1.75;}
+    .page-tip{font-size:12px;color:#789096;margin-bottom:18px;line-height:1.75;}
     .sp-bar{display:flex;gap:14px;flex-wrap:wrap;align-items:center;background:rgba(30,41,59,.6);
-            border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#94a3b8;}
+            border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px 14px;margin-bottom:14px;font-size:12px;color:#789096;}
     .sp-bar b{color:#c4b5fd;font-size:13px;}
-    .sp-chip{background:rgba(124,58,237,.16);border:1px solid rgba(124,58,237,.35);color:#c4b5fd;
+    .sp-chip{background:rgba(5,232,240,.16);border:1px solid rgba(5,232,240,.35);color:#c4b5fd;
              border-radius:6px;padding:2px 8px;font-weight:600;}
     .sp-layout{display:flex;gap:14px;align-items:flex-start;}
     .sp-list{width:330px;flex:0 0 330px;max-height:calc(100vh - 260px);overflow:auto;
              background:rgba(30,41,59,.6);border:1px solid rgba(255,255,255,.08);border-radius:10px;padding:10px;}
     .sp-group{margin-bottom:10px;}
-    .sp-group-h{font-size:11px;font-weight:700;color:#64748b;letter-spacing:.5px;padding:4px 6px;
+    .sp-group-h{font-size:11px;font-weight:700;color:#5c7078;letter-spacing:.5px;padding:4px 6px;
                 text-transform:uppercase;display:flex;justify-content:space-between;}
     .sp-item{padding:7px 9px;border-radius:7px;cursor:pointer;font-size:12.5px;color:#cbd5e1;
              display:flex;align-items:center;gap:6px;line-height:1.4;}
-    .sp-item:hover{background:rgba(124,58,237,.12);}
-    .sp-item.active{background:rgba(124,58,237,.26);color:#fff;}
+    .sp-item:hover{background:rgba(5,232,240,.12);}
+    .sp-item.active{background:rgba(5,232,240,.26);color:#fff;}
     .sp-item .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-    .sp-item .kb{font-size:10px;color:#64748b;white-space:nowrap;}
+    .sp-item .kb{font-size:10px;color:#5c7078;white-space:nowrap;}
     .sp-star{color:#fbbf24;font-size:11px;}
     .sp-main{flex:1;min-width:0;background:rgba(30,41,59,.6);border:1px solid rgba(255,255,255,.08);
              border-radius:10px;padding:14px 16px;}
     .sp-row{display:flex;gap:10px;align-items:center;margin-bottom:10px;flex-wrap:wrap;}
-    .sp-row label{font-size:12px;color:#94a3b8;min-width:56px;}
+    .sp-row label{font-size:12px;color:#789096;min-width:56px;}
     input,select,textarea{background:rgba(15,23,42,.75);border:1px solid rgba(255,255,255,.12);
              color:#e2e8f0;border-radius:7px;padding:7px 9px;font-size:13px;font-family:inherit;}
-    input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(124,58,237,.6);}
+    input:focus,select:focus,textarea:focus{outline:none;border-color:rgba(5,232,240,.6);}
     .sp-title{flex:1;min-width:220px;}
     textarea{width:100%;min-height:calc(100vh - 400px);resize:vertical;line-height:1.7;
              font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:12.5px;}
     .sp-actions{display:flex;gap:10px;align-items:center;margin-top:10px;}
     .btn{cursor:pointer;border:none;border-radius:7px;padding:8px 16px;font-size:13px;font-weight:600;
-         background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;}
+         background:linear-gradient(135deg,#0b8f99,#a855f7);color:#fff;}
     .btn:disabled{opacity:.45;cursor:not-allowed;}
     .btn.ghost{background:rgba(255,255,255,.08);color:#cbd5e1;}
-    .sp-hint{font-size:12px;color:#64748b;}
+    .sp-hint{font-size:12px;color:#5c7078;}
     .sp-hint.dirty{color:#fbbf24;}
     .sp-hint.ok{color:#4ade80;}
-    .sp-empty{color:#94a3b8;font-size:13px;padding:20px;text-align:center;}
+    .sp-empty{color:#789096;font-size:13px;padding:20px;text-align:center;}
     .sp-tabs{display:flex;gap:6px;margin-bottom:12px;}
     .sp-tab{cursor:pointer;border:1px solid rgba(255,255,255,.12);background:rgba(30,41,59,.6);
-            color:#94a3b8;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;font-family:inherit;}
-    .sp-tab.active{background:linear-gradient(135deg,#7c3aed,#a855f7);color:#fff;border-color:transparent;}
+            color:#789096;border-radius:8px;padding:7px 16px;font-size:13px;font-weight:600;font-family:inherit;}
+    .sp-tab.active{background:linear-gradient(135deg,#0b8f99,#a855f7);color:#fff;border-color:transparent;}
     .sp-item .gate{color:#fb923c;font-size:11px;}
     .sp-field{margin-bottom:10px;}
-    .sp-field label{display:block;font-size:12px;color:#94a3b8;margin-bottom:4px;}
+    .sp-field label{display:block;font-size:12px;color:#789096;margin-bottom:4px;}
     .sp-field textarea{min-height:90px;}
     .sp-field textarea.tall{min-height:180px;}
     .sp-check{display:flex;align-items:center;gap:6px;font-size:13px;color:#cbd5e1;cursor:pointer;}
@@ -103,7 +103,7 @@
       <button class="sp-tab active" data-mode="docs">规则文档</button>
       <button class="sp-tab" data-mode="stages">阶段编排</button>
       <button class="sp-tab" data-mode="run">试跑</button>
-      <span style="font-size:12px;color:#64748b;margin-left:6px" id="spTabTip">每份规则说什么</span>
+      <span style="font-size:12px;color:#5c7078;margin-left:6px" id="spTabTip">每份规则说什么</span>
     </div>
 
     <div class="sp-layout">
@@ -214,7 +214,7 @@
         try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; } catch (e) { fields = []; }
         if (!fields.length){ $('#rForm').html(''); return; }
 
-        var h = '<div style="font-size:12px;color:#94a3b8;margin-bottom:6px">本阶段要收集 ' + fields.length + ' 项</div>';
+        var h = '<div style="font-size:12px;color:#789096;margin-bottom:6px">本阶段要收集 ' + fields.length + ' 项</div>';
         fields.forEach(function(f){
             h += '<div class="sp-field"><label>' + esc(f.label || f.key)
                + (f.required ? ' <span style="color:#f87171">*</span>' : '')
@@ -281,7 +281,7 @@
     function costHtml(c){
         if (!c) return '';
         var w = function(n){ return n >= 10000 ? (n/10000).toFixed(1) + '万' : n + ''; };
-        return '<div style="font-size:12px;color:#94a3b8;margin-top:6px">'
+        return '<div style="font-size:12px;color:#789096;margin-top:6px">'
              + '这一步错了的代价：重跑约 <b style="color:#f59e0b">' + w(c.rerunTokens) + '</b> token'
              + (c.downstreamCount
                 ? '，下游 <b style="color:#f87171">' + c.downstreamCount + '</b> 个阶段得跟着重跑，约 <b style="color:#f87171">' + w(c.downstreamTokens) + '</b> token'
@@ -302,7 +302,7 @@
               + p.promptChars + ' 字符，约 <b style="color:#f59e0b">' + p.estTokens + '</b> token'
               + (p.humanConfirm ? '（跑完停在人工确认）' : '') + '</div>'
               + costHtml(p.cost)
-              + '<div style="max-height:180px;overflow:auto;font-size:12px;color:#94a3b8;margin-top:6px">' + docs + '</div>'
+              + '<div style="max-height:180px;overflow:auto;font-size:12px;color:#789096;margin-top:6px">' + docs + '</div>'
               + '</div>');
         }).fail(function(xhr){
             $('#rPreview').html('<span class="sp-hint">预览失败：' + esc((xhr.responseJSON && xhr.responseJSON.message) || '') + '</span>');
@@ -337,7 +337,7 @@
                 })
             }).done(function(r){
                 var h = '<div style="border:1px solid rgba(255,255,255,.1);border-radius:10px;padding:12px">';
-                h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">状态 ' + esc(r.status)
+                h += '<div style="font-size:12px;color:#789096;margin-bottom:8px">状态 ' + esc(r.status)
                    + ' · prompt ' + r.promptChars + ' 字符 · 约 ' + r.estTokens + ' token</div>';
                 if (r.status === 'await_confirm'){
                     h += '<div style="border:1px solid rgba(251,146,60,.35);border-radius:8px;padding:10px;margin:8px 0;background:rgba(251,146,60,.08)">'
@@ -347,7 +347,7 @@
                        + '<button class="btn" style="margin-top:10px" id="btnConfirm" data-step="' + r.stepId + '">确认放行</button>'
                        + '</div>';
                 } else if (r.gates) {
-                    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">门禁：' + esc(r.gates) + '</div>';
+                    h += '<div style="font-size:12px;color:#789096;margin-bottom:8px">门禁：' + esc(r.gates) + '</div>';
                 }
                 var stg = stages.filter(function(s){ return s.stageKey === r.stageKey; })[0];
                 if (r.importError)
@@ -355,9 +355,9 @@
                 else if (r.imported > 0)
                     h += '<div style="font-size:12px;color:#4ade80;margin-bottom:8px">✓ 已入库 ' + r.imported + ' 条</div>';
                 else if (stg && stg.outputTarget)
-                    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">入库 0 条（目标 ' + esc(stg.outputTarget) + '，可能都已存在或没解析出条目）</div>';
+                    h += '<div style="font-size:12px;color:#789096;margin-bottom:8px">入库 0 条（目标 ' + esc(stg.outputTarget) + '，可能都已存在或没解析出条目）</div>';
                 else
-                    h += '<div style="font-size:12px;color:#94a3b8;margin-bottom:8px">本阶段产出不入库（产出是文本，不是业务数据）</div>';
+                    h += '<div style="font-size:12px;color:#789096;margin-bottom:8px">本阶段产出不入库（产出是文本，不是业务数据）</div>';
                 h += '<textarea class="tall" style="min-height:300px;margin-top:8px" readonly>' + esc(r.output || '') + '</textarea></div>';
                 $('#rOutput').html(h);
                 $('#btnConfirm').click(function(){ confirmStep($(this).data('step')); });
@@ -488,7 +488,7 @@
               + '<div class="sp-actions">'
               +   '<button class="btn" id="btnSave">保存</button>'
               +   '<button class="btn ghost" id="btnReload">放弃改动</button>'
-              +   '<span style="font-size:12px;color:#64748b">改动即时生效：保存后下一次调用 LLM 用的就是新规则</span>'
+              +   '<span style="font-size:12px;color:#5c7078">改动即时生效：保存后下一次调用 LLM 用的就是新规则</span>'
               + '</div>'
             );
             $('#dScope').change(function(){

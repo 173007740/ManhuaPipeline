@@ -20,7 +20,7 @@
     .syscfg-side{flex:0 0 210px;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-lg);padding:10px;overflow:auto;}
     .syscfg-side .item{display:flex;align-items:center;gap:8px;width:100%;padding:11px 12px;border:none;background:none;border-radius:8px;color:var(--text-muted);font-size:14px;cursor:pointer;text-align:left;}
     .syscfg-side .item:hover{background:rgba(255,255,255,.05);color:var(--text);}
-    .syscfg-side .item.active{background:rgba(124,58,237,.18);color:var(--primary-light);font-weight:600;}
+    .syscfg-side .item.active{background:rgba(5,232,240,.18);color:var(--primary-light);font-weight:600;}
     .syscfg-side .sub{color:var(--text-muted);font-size:11px;padding:2px 12px 8px;line-height:1.5;}
     .syscfg-main{flex:1;min-width:0;min-height:0;display:flex;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
     #sysFrame{width:100%;height:100%;border:none;display:block;background:transparent;}
@@ -54,7 +54,7 @@
 
   <div class="container">
     <div class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置
-      <span id="curVersion" style="display:none;margin-left:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;color:#c4b5fd;background:rgba(124,58,237,.18);border:1px solid rgba(124,58,237,.35);border-radius:6px;padding:3px 8px;vertical-align:middle;"></span>
+      <span id="curVersion" style="display:none;margin-left:10px;font-family:ui-monospace,Menlo,monospace;font-size:12px;font-weight:700;color:#c4b5fd;background:rgba(5,232,240,.18);border:1px solid rgba(5,232,240,.35);border-radius:6px;padding:3px 8px;vertical-align:middle;"></span>
     </div>
 
     <div class="syscfg-wrap">
@@ -127,7 +127,7 @@
     function resize(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; }
     resize(); window.addEventListener("resize", resize);
     var p = [], COUNT = 70;
-    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
     for (var i = 0; i < COUNT; i++) p.push({
       x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+1.2,
       dx:(Math.random()-0.5)*0.4, dy:(Math.random()-0.5)*0.4-0.15,
@@ -147,7 +147,7 @@
           if (d < DIST) {
             var a = (1 - d/DIST) * 0.2;
             ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
-            ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+            ctx.strokeStyle = "rgba(5,232,240," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
           }
         }
       }

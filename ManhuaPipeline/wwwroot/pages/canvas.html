@@ -41,7 +41,7 @@
         /* 工具栏下拉框：这个类原本只在 asset-library 页里定义过，画布页引用了类名却没带样式，
            所以一直是浏览器默认外观（又矮又窄）。这里补上，高度按 .btn 的 40px 对齐 */
         .action-bar-select {
-            background-color: #1e293b;
+            background-color: #061923;
             /* appearance:none 会把原生下拉箭头干掉，用内联 SVG 补一个回来，否则看不出是下拉框 */
             background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E");
             background-repeat: no-repeat;
@@ -68,7 +68,7 @@
         /* 输入框跟上面的下拉框保持同一套尺寸（40px 高、8px 圆角、同色边框），
            排在一行才不会一个高一个矮 */
         .action-bar-input {
-            background-color: #1e293b;
+            background-color: #061923;
             color: #e2e8f0;
             border: 1px solid #475569;
             border-radius: 8px;
@@ -82,7 +82,7 @@
         }
 
             .action-bar-input::placeholder {
-                color: #64748b;
+                color: #5c7078;
                 font-weight: 400;
             }
 
@@ -112,7 +112,7 @@
             border-radius: 6px;
             overflow: hidden;
             cursor: pointer;
-            background: #0f172a;
+            background: #041017;
         }
 
             .ref-chip:hover {
@@ -151,7 +151,7 @@
             border: 1px solid var(--border);
             border-radius: var(--radius-sm);
             background: #0b1220;
-            background-image: radial-gradient(circle, #1e293b 1px, transparent 1px);
+            background-image: radial-gradient(circle, #061923 1px, transparent 1px);
             background-size: 24px 24px;
             cursor: grab;
         }
@@ -294,7 +294,7 @@
             height: 190px;
             object-fit: cover;
             border-radius: 4px;
-            background: #1e293b;
+            background: #061923;
             display: block;
         }
 
@@ -350,11 +350,11 @@
                 gap: 8px;
                 margin-top: 4px;
                 font-size: 11px;
-                color: #94a3b8;
+                color: #789096;
             }
 
             .cnode-cands .candbtn {
-                background: #1e293b;
+                background: #061923;
                 border: 1px solid #334155;
                 color: #cbd5e1;
                 border-radius: 4px;
@@ -393,7 +393,7 @@
             }
 
             .hist-item:hover {
-                border-color: #64748b;
+                border-color: #5c7078;
             }
 
             .hist-item.cur {
@@ -427,11 +427,11 @@
             width: 100%;
             height: 190px;
             border-radius: 4px;
-            background: #1e293b;
+            background: #061923;
             display: flex;
             align-items: center;
             justify-content: center;
-            color: #64748b;
+            color: #5c7078;
             font-size: 11px;
         }
 
@@ -440,7 +440,7 @@
             height: 58px;
             margin-top: 6px;
             resize: none;
-            background: #0f172a;
+            background: #041017;
             color: #e2e8f0;
             border: 1px solid #334155;
             border-radius: 4px;
@@ -465,7 +465,7 @@
             .port.in {
                 left: -7px;
                 top: 46px;
-                background: #a78bfa;
+                background: #6af7ff;
             }
 
             .port.out {
@@ -480,7 +480,7 @@
         /* 节点编号：报问题时直接说「#123」，不用截图猜是哪个 */
         .cnode-head .nid {
             flex: 0 0 auto;
-            color: #64748b;
+            color: #5c7078;
             font-size: 10px;
             font-family: ui-monospace, Consolas, monospace;
             background: rgba(148, 163, 184, .12);
@@ -493,7 +493,7 @@
         .cnode-pickref {
             flex: 0 0 auto;
             border: 1px solid #475569;
-            background: #1e293b;
+            background: #061923;
             color: #cbd5e1;
             border-radius: 4px;
             font-size: 11px;
@@ -525,14 +525,14 @@
 
             .side-panel label {
                 display: block;
-                color: #94a3b8;
+                color: #789096;
                 margin: 8px 0 4px;
             }
 
             .side-panel textarea, .side-panel select {
                 width: 100%;
                 box-sizing: border-box;
-                background: #0f172a;
+                background: #041017;
                 color: #e2e8f0;
                 border: 1px solid #334155;
                 border-radius: 4px;
@@ -555,7 +555,7 @@
         }
 
         .hint {
-            color: #64748b;
+            color: #5c7078;
             font-size: 11px;
             margin-left: auto;
         }
@@ -601,7 +601,7 @@
                 <button class="btn" onclick="deleteBoard()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button>
                 <button class="btn" onclick="fitView()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">fit_screen</span> 适应画布</button>
                 <button class="btn" id="fsBtn" onclick="toggleFullscreen()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">fullscreen</span> 全屏</button>
-                <span id="zoomLabel" style="color:#94a3b8;font-size:12px;">100%</span>
+                <span id="zoomLabel" style="color:#789096;font-size:12px;">100%</span>
                 <span class="hint">滚轮缩放 · 空白处拖动平移 · 拖端口连线 · 点「+ 参考图」选图连线 · 点连线删除</span>
             </div>
 
@@ -625,11 +625,11 @@
                         <strong id="spTitle" style="color:#e2e8f0;">节点</strong>
                         <button class="btn" style="padding:2px 6px;font-size:11px;" onclick="closePanel()">关闭</button>
                     </div>
-                    <div id="spType" style="color:#64748b;font-size:11px;margin-top:2px;"></div>
+                    <div id="spType" style="color:#5c7078;font-size:11px;margin-top:2px;"></div>
                     <label>节点标题（就是这张图的名字）</label>
                     <input id="spNodeTitle" class="action-bar-input" maxlength="100" style="width:100%;box-sizing:border-box;"
                         placeholder="给这张图起个名字，双击节点标题栏也能改">
-                    <div style="color:#64748b;font-size:11px;margin-top:4px;">
+                    <div style="color:#5c7078;font-size:11px;margin-top:4px;">
                         下载文件名、存入资源库的名字、当参考图时提示词里的叫法，都用这个标题
                         <span id="spTitleCount" style="float:right;"></span>
                     </div>
@@ -638,40 +638,40 @@
                     <textarea id="spPrompt"></textarea>
                     <label>画幅</label>
                     <select id="spSize" class="action-bar-select" style="width:100%;"></select>
-                    <div id="spSizeInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                    <div id="spSizeInfo" style="color:#5c7078;font-size:11px;margin-top:4px;"></div>
 
                     <div id="spGenWrap">
-                        <div style="color:#94a3b8;font-size:11px;margin:12px 0 2px;border-top:1px solid #334155;padding-top:10px;">
+                        <div style="color:#789096;font-size:11px;margin:12px 0 2px;border-top:1px solid #334155;padding-top:10px;">
                             出图参数（只作用于这个节点）
                         </div>
                         <label>出图模型</label>
                         <select id="spModel" class="action-bar-select" style="width:100%;"></select>
-                        <div id="spModelInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <div id="spModelInfo" style="color:#5c7078;font-size:11px;margin-top:4px;"></div>
                         <label>画质</label>
                         <select id="spQuality" class="action-bar-select" style="width:100%;"></select>
                         <label>一次出几张</label>
                         <input id="spCount" type="number" min="1" max="10" step="1" class="action-bar-input" style="width:100%;box-sizing:border-box;">
-                        <div id="spCountInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <div id="spCountInfo" style="color:#5c7078;font-size:11px;margin-top:4px;"></div>
                         <label>背景</label>
                         <select id="spBackground" class="action-bar-select" style="width:100%;"></select>
                         <label>输出格式</label>
                         <select id="spFormat" class="action-bar-select" style="width:100%;"></select>
-                        <div id="spFmtNote" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <div id="spFmtNote" style="color:#5c7078;font-size:11px;margin-top:4px;"></div>
                         <label>图片风格</label>
                         <select id="spStyle" class="action-bar-select" style="width:100%;"></select>
                         <input id="spStyleText" class="action-bar-input" style="width:100%;box-sizing:border-box;display:none;margin-top:6px;" placeholder="自定义风格，如：水墨国风，留白多，线条简练">
-                        <div id="spStyleInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <div id="spStyleInfo" style="color:#5c7078;font-size:11px;margin-top:4px;"></div>
                     </div>
 
                     <div id="spHistoryWrap" style="display:none;">
-                        <div style="color:#94a3b8;font-size:11px;margin:12px 0 2px;border-top:1px solid #334155;padding-top:10px;">
+                        <div style="color:#789096;font-size:11px;margin:12px 0 2px;border-top:1px solid #334155;padding-top:10px;">
                             出图历史（点一张把它设为当前图）
                         </div>
                         <div id="spHistory" class="hist-grid"></div>
-                        <div id="spHistoryInfo" style="color:#64748b;font-size:11px;margin-top:4px;"></div>
+                        <div id="spHistoryInfo" style="color:#5c7078;font-size:11px;margin-top:4px;"></div>
                     </div>
 
-                    <div id="spRefs" style="color:#94a3b8;font-size:11px;margin-top:8px;"></div>
+                    <div id="spRefs" style="color:#789096;font-size:11px;margin-top:8px;"></div>
                     <div style="display:flex;gap:6px;margin-top:12px;">
                         <button class="btn btn-primary" style="flex:1;" onclick="runSelected()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">play_arrow</span> 生成</button>
                         <button class="btn" style="flex:1;" onclick="deleteSelected()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">delete</span> 删除</button>
@@ -686,29 +686,29 @@
         </div>
 
         <div id="assetModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:50;overflow:auto;">
-            <div style="margin:60px auto;width:80%;max-width:1600px;max-height:78vh;overflow:auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;">
+            <div style="margin:60px auto;width:80%;max-width:1600px;max-height:78vh;overflow:auto;background:#061923;border:1px solid #334155;border-radius:8px;padding:16px;">
                 <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
                     <strong style="color:#e2e8f0;">选择素材（点一张加进画布，当图生图的参考图源）</strong>
                     <button class="btn" onclick="closeAssetPicker()">关闭</button>
                 </div>
                 <div style="display:flex;gap:8px;align-items:flex-end;flex-wrap:wrap;">
                     <div style="width:140px;">
-                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">来源</label>
+                        <label style="display:block;color:#789096;font-size:12px;margin-bottom:4px;">来源</label>
                         <select id="assetSourceSel" class="action-bar-select" style="width:100%;box-sizing:border-box;" onchange="onAssetSourceChange()">
                             <option value="library">我的资产库</option>
                             <option value="project">项目资产</option>
                         </select>
                     </div>
                     <div id="assetTagWrap" style="flex:1;min-width:180px;">
-                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">标签</label>
+                        <label style="display:block;color:#789096;font-size:12px;margin-bottom:4px;">标签</label>
                         <select id="assetTagSel" class="action-bar-select" style="width:100%;box-sizing:border-box;" onchange="renderLibraryFiltered()"></select>
                     </div>
                     <div id="assetSearchWrap" style="width:150px;">
-                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">名称</label>
+                        <label style="display:block;color:#789096;font-size:12px;margin-bottom:4px;">名称</label>
                         <input id="assetSearchInput" class="action-bar-input" placeholder="搜名称…" oninput="renderLibraryFiltered()">
                     </div>
                     <div id="assetProjectWrap" style="flex:1;min-width:180px;display:none;">
-                        <label style="display:block;color:#94a3b8;font-size:12px;margin-bottom:4px;">项目</label>
+                        <label style="display:block;color:#789096;font-size:12px;margin-bottom:4px;">项目</label>
                         <select id="assetProjectSel" class="action-bar-select" style="width:100%;box-sizing:border-box;" onchange="loadAssetGrid()"></select>
                     </div>
                 </div>
@@ -895,7 +895,7 @@
             function refreshStyleInfo() {
                 var v = $('#spStyle').val();
                 if (v === 'custom') {
-                    $('#spStyleInfo').text('自定义：出图时把上面这段拼到提示词末尾。').css('color', '#64748b');
+                    $('#spStyleInfo').text('自定义：出图时把上面这段拼到提示词末尾。').css('color', '#5c7078');
                     return;
                 }
                 if (typeof v === 'string' && v.indexOf('style:') === 0) {
@@ -910,11 +910,11 @@
                     }
                     var d = st.styleDesc || '';
                     var t = d.length > 60 ? d.slice(0, 60) + '…' : d;
-                    $('#spStyleInfo').text('出图时拼进提示词：' + t).attr('title', d).css('color', '#64748b');
+                    $('#spStyleInfo').text('出图时拼进提示词：' + t).attr('title', d).css('color', '#5c7078');
                     return;
                 }
                 $('#spStyleInfo').text('不套用：完全按提示词出图。想要风格就去「系统配置 → 图片风格」加一条。')
-                    .attr('title', '').css('color', '#64748b');
+                    .attr('title', '').css('color', '#5c7078');
             }
 
             // 风格来自独立的「图片风格」表，跟项目无关，所以换画布只需要重刷提示文案
@@ -1274,11 +1274,11 @@
                     : '';
 
                 if (!list.length) {
-                    $box.html('<div style="color:#94a3b8;font-size:11px;">参考图：未连接（将按文生图出图）</div>' + pickBtn);
+                    $box.html('<div style="color:#789096;font-size:11px;">参考图：未连接（将按文生图出图）</div>' + pickBtn);
                     return;
                 }
 
-                var html = '<div style="color:#94a3b8;font-size:11px;margin-bottom:6px;">'
+                var html = '<div style="color:#789096;font-size:11px;margin-bottom:6px;">'
                     + '参考图 · 共 ' + list.length + ' 张，按连线先后一起送进接口</div>'
                     + '<div style="display:flex;flex-direction:column;gap:6px;">';
 
@@ -1292,17 +1292,17 @@
                     var sub = ok ? '已出图，参与本次出图'
                         : (up ? (STATUS_TEXT[String(up.status || '').toLowerCase()] || up.status || '未出图') : '节点不存在') + '，出图时会跳过';
 
-                    html += '<div style="display:flex;align-items:center;gap:8px;background:#0f172a;'
+                    html += '<div style="display:flex;align-items:center;gap:8px;background:#041017;'
                         + 'border:1px solid #334155;border-radius:6px;padding:6px;' + (ok ? '' : 'opacity:.6;') + '">'
                         + '<span style="width:18px;height:18px;flex:0 0 18px;border-radius:50%;background:#334155;'
                         + 'color:#cbd5e1;font-size:11px;line-height:18px;text-align:center;">' + (ok ? seq : '—') + '</span>'
                         + (img
                             ? '<img src="' + esc(img) + '" style="width:44px;height:44px;object-fit:cover;border-radius:4px;flex:0 0 44px;">'
-                            : '<div style="width:44px;height:44px;border-radius:4px;background:#1e293b;flex:0 0 44px;"></div>')
+                            : '<div style="width:44px;height:44px;border-radius:4px;background:#061923;flex:0 0 44px;"></div>')
                         + '<div style="flex:1;min-width:0;">'
                         + '<div style="color:#e2e8f0;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">' + esc(name)
-                          + (up ? ' <span style="color:#64748b;font-size:10px;">#' + up.id + '</span>' : '') + '</div>'
-                        + '<div style="color:#94a3b8;font-size:11px;">' + esc(sub) + '</div>'
+                          + (up ? ' <span style="color:#5c7078;font-size:10px;">#' + up.id + '</span>' : '') + '</div>'
+                        + '<div style="color:#789096;font-size:11px;">' + esc(sub) + '</div>'
                         + '</div>'
                         + '<button class="btn" style="padding:2px 6px;font-size:11px;flex:0 0 auto;" data-del-edge="' + e.id + '" '
                         + 'title="断开这条连线（这张图不再作为参考）">×</button>'
@@ -1426,7 +1426,7 @@
             }
 
             function savePromptAjax(id, v, alertOnFail) {
-                setPeStatus('保存中…', '#94a3b8');
+                setPeStatus('保存中…', '#789096');
                 $.ajax({
                     url: '/api/canvas/nodes/' + id + '/content', method: 'PATCH',
                     contentType: 'application/json', data: JSON.stringify({ prompt: v })
@@ -1441,7 +1441,7 @@
             }
 
             function setPeStatus(text, color) {
-                $('#peStatus').text(text || '改完自动保存，点别处或按 Esc 收起').css('color', color || '#94a3b8');
+                $('#peStatus').text(text || '改完自动保存，点别处或按 Esc 收起').css('color', color || '#789096');
             }
 
             $(document).on('focus', '.cnode textarea.nprompt', function () { openPromptEditor(this); });
@@ -1525,7 +1525,7 @@
                 var $m = $('#refPickModal');
                 if (!$m.length) {
                     $m = $('<div id="refPickModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.65);z-index:60;overflow:auto;">' +
-                        '<div style="margin:60px auto;width:70%;max-width:1100px;max-height:78vh;overflow:auto;background:#1e293b;border:1px solid #334155;border-radius:8px;padding:16px;">' +
+                        '<div style="margin:60px auto;width:70%;max-width:1100px;max-height:78vh;overflow:auto;background:#061923;border:1px solid #334155;border-radius:8px;padding:16px;">' +
                         '<div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">' +
                         '<strong style="color:#e2e8f0;">选择参考图（点一张就连到该节点，不用拖端口）</strong>' +
                         '<button class="btn" id="refPickClose">关闭</button></div>' +
@@ -1552,7 +1552,7 @@
                     return (s.outputs || []).length > 0;
                 });
                 if (!cands.length) {
-                    $g.html('<div style="color:#94a3b8;grid-column:1/-1;">画布上还没有可当参考源的节点（先建个素材节点，或从「素材库」加一张进来）</div>');
+                    $g.html('<div style="color:#789096;grid-column:1/-1;">画布上还没有可当参考源的节点（先建个素材节点，或从「素材库」加一张进来）</div>');
                     return;
                 }
 
@@ -1566,13 +1566,13 @@
                     var ok = !!n.imageUrl && String(n.status || '').toLowerCase() === 'done';
                     var isLinked = !!linked[n.id];
                     var title = n.title || (specOf(n.nodeType) || {}).label || n.nodeType;
-                    var thumb = n.imageUrl ? '<img src="' + esc(thumbUrl(n.imageUrl, 200)) + '" style="width:100%;height:88px;object-fit:cover;border-radius:4px;background:#1e293b;">'
-                        : '<div style="width:100%;height:88px;border-radius:4px;background:#1e293b;display:flex;align-items:center;justify-content:center;color:#64748b;font-size:11px;">还没有图片</div>';
+                    var thumb = n.imageUrl ? '<img src="' + esc(thumbUrl(n.imageUrl, 200)) + '" style="width:100%;height:88px;object-fit:cover;border-radius:4px;background:#061923;">'
+                        : '<div style="width:100%;height:88px;border-radius:4px;background:#061923;display:flex;align-items:center;justify-content:center;color:#5c7078;font-size:11px;">还没有图片</div>';
                     var $c = $('<div data-id="' + n.id + '" style="cursor:pointer;border:1px solid ' + (isLinked ? '#10b981' : 'var(--border)')
                         + ';border-radius:6px;padding:4px;' + (ok ? '' : 'opacity:.6;') + '">'
                         + thumb
                         + '<div style="font-size:11px;color:#cbd5e1;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(title) + '</div>'
-                        + '<div style="font-size:10px;color:#64748b;">#' + n.id + ' · ' + (isLinked ? '已连接（再点一次关闭）' : (ok ? '已出图' : '未出图，出图时会跳过')) + '</div>'
+                        + '<div style="font-size:10px;color:#5c7078;">#' + n.id + ' · ' + (isLinked ? '已连接（再点一次关闭）' : (ok ? '已出图' : '未出图，出图时会跳过')) + '</div>'
                         + '</div>');
                     $c.find('img').on('error', function () {
                         var el = this;
@@ -1716,10 +1716,10 @@
                 var $m = $('#titleEditModal');
                 if (!$m.length) {
                     $m = $('<div id="titleEditModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:130;align-items:center;justify-content:center;">' +
-                        '<div style="width:420px;max-width:92%;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.5);">' +
+                        '<div style="width:420px;max-width:92%;background:#061923;border:1px solid #334155;border-radius:12px;padding:20px;box-shadow:0 20px 60px rgba(0,0,0,.5);">' +
                         '<div style="color:#e2e8f0;font-size:14px;font-weight:600;margin-bottom:12px;">节点标题</div>' +
                         '<input id="teInput" maxlength="100" class="action-bar-input" style="width:100%;box-sizing:border-box;" placeholder="给这张图起个名字">' +
-                        '<div style="color:#64748b;font-size:11px;margin-top:6px;">下载文件名、存资源库的名字、当参考图时的叫法，都用这个标题' +
+                        '<div style="color:#5c7078;font-size:11px;margin-top:6px;">下载文件名、存资源库的名字、当参考图时的叫法，都用这个标题' +
                         '<span id="teCount" style="float:right;"></span></div>' +
                         '<div style="display:flex;gap:8px;justify-content:flex-end;margin-top:18px;">' +
                         '<button class="btn" id="teCancel">取消</button>' +
@@ -1811,7 +1811,7 @@
                 $('#assetProjectWrap').toggle(src === 'project');
                 if (src === 'project') {
                     if ($('#assetProjectSel').val()) loadAssetGrid();
-                    else $('#assetGrid').html('<div style="color:#94a3b8;">还没有项目，先去工作台建一个</div>');
+                    else $('#assetGrid').html('<div style="color:#789096;">还没有项目，先去工作台建一个</div>');
                 } else {
                     loadLibrary();
                 }
@@ -1820,7 +1820,7 @@
             // 资产库：标签是自由填的（逗号分隔），所以先拉全量，再按实际出现过的标签汇总成下拉
             function loadLibrary() {
                 if (libAssets.length) { renderLibraryFiltered(); return; }
-                $('#assetGrid').html('<div style="color:#94a3b8;">加载中…</div>');
+                $('#assetGrid').html('<div style="color:#789096;">加载中…</div>');
                 $.get('/api/reference/list', function (list) {
                     libAssets = (list || []).filter(function (a) {
                         // 只要图片：素材节点是拿来当参考图的
@@ -1875,7 +1875,7 @@
                 if (!pid) return;
                 var cats = [['characters', '角色'], ['props', '道具'], ['environments', '场景'], ['effects', '特效']];
                 var items = [], done = 0, err = '';
-                $('#assetGrid').html('<div style="color:#94a3b8;">加载中…</div>');
+                $('#assetGrid').html('<div style="color:#789096;">加载中…</div>');
                 $.each(cats, function (_, c) {
                     // 路由是 /api/project/{项目id}/asset/{分类}，项目 id 在 asset 前面
                     $.get('/api/project/' + pid + '/asset/' + c[0], function (list) {
@@ -1898,14 +1898,14 @@
                     var empty = $('#assetSourceSel').val() === 'library'
                         ? '没有符合条件的资产（换个标签，或清掉名称搜索）'
                         : '这个项目还没有出过图的素材，先去资产库出图';
-                    $g.html('<div style="color:#94a3b8;">' + empty + '</div>');
+                    $g.html('<div style="color:#789096;">' + empty + '</div>');
                     return;
                 }
                 $.each(items, function (_, it) {
                     var $c = $('<div style="cursor:pointer;border:1px solid var(--border);border-radius:6px;padding:4px;">' +
-                        '<img src="' + esc(thumbUrl(it.url, 200)) + '" style="width:100%;height:88px;object-fit:cover;border-radius:4px;background:#1e293b;">' +
+                        '<img src="' + esc(thumbUrl(it.url, 200)) + '" style="width:100%;height:88px;object-fit:cover;border-radius:4px;background:#061923;">' +
                         '<div style="font-size:11px;color:#cbd5e1;margin-top:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">' + esc(it.name) + '</div>' +
-                        '<div style="font-size:10px;color:#64748b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc((it.cat || '') + (it.tags ? ' · ' + it.tags : '')) + '">' + esc(it.cat || '') + (it.tags ? ' · ' + esc(it.tags) : '') + '</div></div>');
+                        '<div style="font-size:10px;color:#5c7078;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="' + esc((it.cat || '') + (it.tags ? ' · ' + it.tags : '')) + '">' + esc(it.cat || '') + (it.tags ? ' · ' + esc(it.tags) : '') + '</div></div>');
                     // 缩略图挂了先退回原图，再挂就压暗，别留个空白框让人以为没加载
                     $c.find('img').on('error', function () {
                         var el = this;
@@ -2209,26 +2209,26 @@
         </div>
         <div id="peRefChips" class="ref-chips"></div>
         <textarea id="peText" placeholder="描述你想生成的画面…" style="width:100%;height:180px;resize:vertical;box-sizing:border-box;background:#0b1220;color:#e2e8f0;border:1px solid #334155;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;font-family:inherit;outline:none;"></textarea>
-        <div id="peStatus" style="margin-top:6px;color:#94a3b8;font-size:12px;">改完自动保存，点别处或按 Esc 收起</div>
+        <div id="peStatus" style="margin-top:6px;color:#789096;font-size:12px;">改完自动保存，点别处或按 Esc 收起</div>
     </div>
     <!-- 存入资源库：画布出好的图，选好类型/子类型/标签后直接进「我的资产库」，
          之后在「素材」弹窗的「我的资产库」里就能当参考图用 -->
     <div id="saveLibModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.7);z-index:120;overflow:auto;">
-        <div style="margin:60px auto;width:400px;max-width:90%;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:20px;">
+        <div style="margin:60px auto;width:400px;max-width:90%;background:#061923;border:1px solid #334155;border-radius:12px;padding:20px;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;">
                 <strong style="color:#e2e8f0;font-size:15px;">存入资源库</strong>
                 <button class="btn" style="padding:2px 6px;font-size:11px;" onclick="closeSaveLibModal()">关闭</button>
             </div>
             <div style="text-align:center;margin-bottom:12px;">
-                <img id="slPreview" style="max-width:100%;max-height:180px;border-radius:6px;background:#0f172a;">
+                <img id="slPreview" style="max-width:100%;max-height:180px;border-radius:6px;background:#041017;">
             </div>
             <div style="margin-bottom:12px;">
-                <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">名称</label>
+                <label style="color:#789096;font-size:12px;display:block;margin-bottom:4px;">名称</label>
                 <input id="slName" class="action-bar-input" style="width:100%;box-sizing:border-box;">
             </div>
             <div style="display:flex;gap:8px;margin-bottom:12px;">
                 <div style="flex:1;">
-                    <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">类型</label>
+                    <label style="color:#789096;font-size:12px;display:block;margin-bottom:4px;">类型</label>
                     <select id="slCategory" class="action-bar-select" style="width:100%;box-sizing:border-box;">
                         <option value="动漫">动漫</option>
                         <option value="写实">写实</option>
@@ -2237,7 +2237,7 @@
                     </select>
                 </div>
                 <div style="flex:1;">
-                    <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">子类型</label>
+                    <label style="color:#789096;font-size:12px;display:block;margin-bottom:4px;">子类型</label>
                     <select id="slSubCategory" class="action-bar-select" style="width:100%;box-sizing:border-box;">
                         <option value="角色">角色</option>
                         <option value="道具">道具</option>
@@ -2248,7 +2248,7 @@
                 </div>
             </div>
             <div style="margin-bottom:14px;">
-                <label style="color:#94a3b8;font-size:12px;display:block;margin-bottom:4px;">标签（项目名称）</label>
+                <label style="color:#789096;font-size:12px;display:block;margin-bottom:4px;">标签（项目名称）</label>
                 <select id="slTags" class="action-bar-select" style="width:100%;box-sizing:border-box;"></select>
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">

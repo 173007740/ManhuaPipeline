@@ -16,16 +16,16 @@
         .atom-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
         .atom-title .name { font-size: 15px; font-weight: 700; color: #e2e8f0; }
         .cat-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
-        .cat-jingbie { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .cat-jingbie { background: rgba(0,170,180,0.15); color: #60a5fa; }
         .cat-yunjing { background: rgba(16,185,129,0.15); color: #34d399; }
         .cat-zhuanchang { background: rgba(249,115,22,0.15); color: #fb923c; }
         .cat-guangying { background: rgba(168,85,247,0.15); color: #c084fc; }
         .cat-jiezou { background: rgba(236,72,153,0.15); color: #f472b6; }
         .prompt-head { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-        .prompt-head label { font-size: 12px; color: #64748b; font-weight: 600; }
-        .prompt-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 10px; margin-top: 4px; font-size: 12px; color: #94a3b8; line-height: 1.6; white-space: pre-wrap; }
+        .prompt-head label { font-size: 12px; color: #5c7078; font-weight: 600; }
+        .prompt-box { background: #041017; border: 1px solid #061923; border-radius: 6px; padding: 8px 10px; margin-top: 4px; font-size: 12px; color: #789096; line-height: 1.6; white-space: pre-wrap; }
         .btn-xs { font-size: 11px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer; color: #fff; background: #475569; }
-        .btn-xs.primary { background: #7c3aed; }
+        .btn-xs.primary { background: #0b8f99; }
         .btn-xs.green { background: #10b981; }
         .btn-xs.red { background: #ef4444; }
         .tag-mini { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: rgba(236,72,153,0.15); color: #f472b6; }
@@ -60,11 +60,11 @@
 
     <div class="container">
         <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-            <div class="page-title" style="margin-bottom:0;font-size:24px;font-weight:700;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库<span class="atom-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+            <div class="page-title" style="margin-bottom:0;font-size:24px;font-weight:700;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库<span class="atom-count" style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
             <div class="action-bar" style="margin-bottom:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-                <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索原子名/描述/标签..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:200px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAtoms()"></div>
+                <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索原子名/描述/标签..." style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:200px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAtoms()"></div>
                 <div style="display:flex;align-items:center;margin-right:8px;">
-                    <select id="filterCat" onchange="loadAtoms()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                    <select id="filterCat" onchange="loadAtoms()" style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
                         <option value="">全部分类</option>
                         <option value="景别">景别</option>
                         <option value="运镜">运镜</option>
@@ -74,7 +74,7 @@
                     </select>
                 </div>
                 <div style="display:flex;align-items:center;margin-right:8px;">
-                    <select id="filterType" onchange="loadAtoms()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                    <select id="filterType" onchange="loadAtoms()" style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
                         <option value="">全部适用类型</option>
                         <option value="通用">通用</option>
                         <option value="打斗">打斗</option>
@@ -88,20 +88,20 @@
             </div>
         </div>
         <div id="atomList" class="atom-list"></div>
-        <div id="atomEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无运镜原子，点击「新增原子」创建</div>
+        <div id="atomEmpty" style="display:none;text-align:center;padding:60px 20px;color:#789096;font-size:15px;">暂无运镜原子，点击「新增原子」创建</div>
     </div>
 
     <div id="editModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;">
-        <div style="background:#1e293b;border-radius:12px;padding:24px;width:640px;max-width:94%;max-height:92vh;overflow:auto;">
+        <div style="background:#061923;border-radius:12px;padding:24px;width:640px;max-width:94%;max-height:92vh;overflow:auto;">
             <h3 id="modalTitle" style="color:#f1f5f9;margin:0 0 16px;font-size:16px;">新增原子</h3>
             <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:200px;">
-                    <label style="font-size:12px;color:#94a3b8;">原子名</label>
-                    <input id="aName" placeholder="如：缓推" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+                    <label style="font-size:12px;color:#789096;">原子名</label>
+                    <input id="aName" placeholder="如：缓推" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
                 </div>
                 <div style="width:140px;">
-                    <label style="font-size:12px;color:#94a3b8;">分类</label>
-                    <select id="aCat" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;margin-top:4px;">
+                    <label style="font-size:12px;color:#789096;">分类</label>
+                    <select id="aCat" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;margin-top:4px;">
                         <option value="景别">景别</option>
                         <option value="运镜">运镜</option>
                         <option value="转场">转场</option>
@@ -111,12 +111,12 @@
                 </div>
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px;color:#94a3b8;">描述（只写技法与情绪用途，不写时代/场景/具体物件）</label>
-                <textarea id="aDesc" rows="4" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+                <label style="font-size:12px;color:#789096;">描述（只写技法与情绪用途，不写时代/场景/具体物件）</label>
+                <textarea id="aDesc" rows="4" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
             </div>
             <div style="margin-bottom:16px;">
-                <label style="font-size:12px;color:#94a3b8;">适用类型标签（逗号分隔）</label>
-                <input id="aTags" placeholder="如：通用,打斗,文戏,悬疑,追逐,高潮" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+                <label style="font-size:12px;color:#789096;">适用类型标签（逗号分隔）</label>
+                <input id="aTags" placeholder="如：通用,打斗,文戏,悬疑,追逐,高潮" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button class="btn" onclick="$('#editModal').hide()">取消</button>

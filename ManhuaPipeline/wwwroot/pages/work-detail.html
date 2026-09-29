@@ -14,14 +14,14 @@
     .video-area{background:#000;border-radius:12px;overflow:hidden;border:1px solid #334155;margin-bottom:20px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center;}
     .video-area video{width:100%;height:100%;display:block;}
     .detail-meta{display:flex;flex-wrap:wrap;gap:10px;margin-bottom:16px;}
-    .meta-item{display:inline-flex;align-items:center;gap:6px;background:rgba(124,58,237,0.12);border:1px solid rgba(124,58,237,0.3);color:#c4b5fd;border-radius:20px;padding:6px 14px;font-size:13px;}
+    .meta-item{display:inline-flex;align-items:center;gap:6px;background:rgba(5,232,240,0.12);border:1px solid rgba(5,232,240,0.3);color:#c4b5fd;border-radius:20px;padding:6px 14px;font-size:13px;}
     .meta-item .material-icons{font-size:15px;}
     .detail-desc{background:var(--bg-card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;}
     .detail-desc h3{color:#e2e8f0;font-size:15px;margin:0 0 10px 0;font-weight:600;}
-    .detail-desc p{color:#94a3b8;font-size:14px;line-height:1.8;margin:0;white-space:pre-wrap;word-break:break-word;}
-    .back-link{display:inline-flex;align-items:center;gap:6px;color:#a78bfa;text-decoration:none;font-size:14px;margin-bottom:18px;}
+    .detail-desc p{color:#789096;font-size:14px;line-height:1.8;margin:0;white-space:pre-wrap;word-break:break-word;}
+    .back-link{display:inline-flex;align-items:center;gap:6px;color:#6af7ff;text-decoration:none;font-size:14px;margin-bottom:18px;}
     .back-link:hover{color:#c4b5fd;}
-    .empty-tip{color:#94a3b8;font-size:14px;padding:20px 0;}
+    .empty-tip{color:#789096;font-size:14px;padding:20px 0;}
     .container{max-width:100%;padding:32px 24px;}
   </style>
 </head>
@@ -55,7 +55,7 @@
     <div class="detail-wrap">
       <a class="back-link" href="works.html"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回作品展示</a>
       <div id="detailBody">
-        <p style="color:#94a3b8;text-align:center;padding:60px 0;">加载中...</p>
+        <p style="color:#789096;text-align:center;padding:60px 0;">加载中...</p>
       </div>
     </div>
   </div>
@@ -83,10 +83,10 @@
           if(/.(mp4|webm|mov|m4v)$/i.test(w.workUrl)){
             videoHtml = '<video src="' + w.workUrl + '" controls autoplay preload="metadata" controlsList="nodownload" disablepictureinpicture oncontextmenu="return false;" style="width:100%;height:100%;border-radius:12px;background:#000;"></video>';
           } else {
-            videoHtml = '<a href="' + escHtml(w.workUrl) + '" target="_blank" style="color:#a78bfa;font-size:14px;">点击打开作品链接</a>';
+            videoHtml = '<a href="' + escHtml(w.workUrl) + '" target="_blank" style="color:#6af7ff;font-size:14px;">点击打开作品链接</a>';
           }
         } else {
-          videoHtml = '<span style="color:#64748b;font-size:14px;">暂无视频</span>';
+          videoHtml = '<span style="color:#5c7078;font-size:14px;">暂无视频</span>';
         }
 
         var h = '';
@@ -126,7 +126,7 @@
     window.addEventListener("resize", resize);
     var particles = [];
     var COUNT = 70;
-    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
     for (var i = 0; i < COUNT; i++) {
       particles.push({
         x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
@@ -157,7 +157,7 @@
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+            ctx.strokeStyle = "rgba(5,232,240," + alpha + ")";
             ctx.lineWidth = 0.6;
             ctx.stroke();
           }

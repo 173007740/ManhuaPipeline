@@ -3,12 +3,12 @@
    ========================================== */
 
 :root {
-  --primary: #7c3aed;
-  --primary-light: #a78bfa;
+  --primary: #05e8f0;
+  --primary-light: #6af7ff;
   --primary-dark: #6d28d9;
   --accent-blue: #3b82f6;
-  --accent-gradient: linear-gradient(135deg, #7c3aed, #3b82f6);
-  --accent-gradient-2: linear-gradient(135deg, #7c3aed, #ec4899);
+  --accent-gradient: linear-gradient(135deg, #05e8f0, #3b82f6);
+  --accent-gradient-2: linear-gradient(135deg, #05e8f0, #ec4899);
   --glow-purple: rgba(124, 58, 237, 0.35);
   --glow-blue: rgba(59, 130, 246, 0.3);
   --success: #10b981;
@@ -43,8 +43,8 @@ body {
   color: var(--text);
   min-height: 100vh;
   background-image:
-    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(124,58,237,0.08) 0%, transparent 60%),
-    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(59,130,246,0.05) 0%, transparent 50%);
+    radial-gradient(ellipse 80% 50% at 50% 0%, rgba(5,232,240,0.08) 0%, transparent 60%),
+    radial-gradient(ellipse 60% 40% at 80% 100%, rgba(106,247,255,0.05) 0%, transparent 50%);
   background-attachment: fixed;
   line-height: 1.6;
 }
@@ -133,7 +133,7 @@ body {
 .btn-ghost {
   background:transparent; border:1px solid var(--border-light); color:var(--text-muted);
 }
-.btn-ghost:hover { border-color:var(--primary); color:var(--primary-light); background:rgba(124,58,237,0.08); }
+.btn-ghost:hover { border-color:var(--primary); color:var(--primary-light); background:rgba(5,232,240,0.08); }
 .btn-small { padding:6px 14px; font-size:13px; }
 .btn:disabled { opacity:0.5; cursor:not-allowed; transform:none !important; }
 
@@ -155,7 +155,7 @@ body {
 }
 .project-cover {
   height:140px; display:flex; align-items:center; justify-content:center;
-  background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(59,130,246,0.1));
+  background:linear-gradient(135deg,rgba(5,232,240,0.15),rgba(106,247,255,0.1));
 }
 .project-info { padding:16px 18px; }
 .project-info h3 { font-size:16px; font-weight:600; margin-bottom:6px; color:var(--text); }
@@ -211,7 +211,7 @@ body {
 }
 .menu-item:hover { background:rgba(255,255,255,0.06); color:rgba(255,255,255,0.85); }
 .menu-item.active {
-  background:rgba(124,58,237,0.15); color:#fff;
+  background:rgba(5,232,240,0.15); color:#fff;
   font-weight:500;
 }
 .menu-item .num {
@@ -219,7 +219,7 @@ body {
   font-size:13px; background:rgba(255,255,255,0.04); color:rgba(255,255,255,0.5); flex-shrink:0;
   transition:all 0.3s;
 }
-.menu-item.active .num { background:rgba(124,58,237,0.3); color:#a78bfa; }
+.menu-item.active .num { background:rgba(5,232,240,0.3); color:#6af7ff; }
 .menu-item:hover .num { background:rgba(255,255,255,0.08); color:rgba(255,255,255,0.7); }
 .menu-item.done .num { background:rgba(16,185,129,0.2); color:#34d399; }
 .menu-item.done:hover .num { background:rgba(16,185,129,0.3); color:#6ee7b7; }
@@ -251,7 +251,7 @@ body {
 /* ===== ��ǩ ===== */
 .tag {
   display:inline-block; font-size:11px; padding:2px 10px; border-radius:20px;
-  background:rgba(124,58,237,0.15); color:var(--primary-light); font-weight:600; margin-right:6px;
+  background:rgba(5,232,240,0.15); color:var(--primary-light); font-weight:600; margin-right:6px;
 }
 
 /* ===== ��ʾ��չʾ ===== */
@@ -286,9 +286,9 @@ body {
 
 /* ===== ���������� ===== */
 #episodeCountWrap {
-  background:rgba(124,58,237,0.08); backdrop-filter:blur(8px);
+  background:rgba(5,232,240,0.08); backdrop-filter:blur(8px);
   border-radius:var(--radius-md); padding:14px 18px;
-  border:1px solid rgba(124,58,237,0.2); margin-bottom:12px;
+  border:1px solid rgba(5,232,240,0.2); margin-bottom:12px;
 }
 #episodeCountWrap label { color:var(--primary-light) !important; }
 
@@ -320,7 +320,7 @@ select { color-scheme: light; }
   background: var(--accent-gradient) !important;
 }
 .stage-result table tbody tr:hover {
-  background: rgba(124,58,237,0.04) !important;
+  background: rgba(5,232,240,0.04) !important;
 }
 
 /* ===== ��Ӧʽ ===== */

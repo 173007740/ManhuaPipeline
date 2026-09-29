@@ -27,7 +27,7 @@
                 content: '';
                 position: absolute;
                 inset: 0;
-                background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(124,58,237,0.15) 0%, transparent 70%);
+                background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(5,232,240,0.15) 0%, transparent 70%);
             }
 
         .landing-hero-content {
@@ -40,8 +40,8 @@
             display: inline-block;
             padding: 6px 18px;
             border-radius: 50px;
-            background: rgba(124,58,237,0.15);
-            border: 1px solid rgba(124,58,237,0.25);
+            background: rgba(5,232,240,0.15);
+            border: 1px solid rgba(5,232,240,0.25);
             color: var(--primary-light);
             font-size: 13px;
             font-weight: 600;
@@ -53,7 +53,7 @@
             font-size: clamp(36px,6vw,68px);
             font-weight: 800;
             line-height: 1.12;
-            background: linear-gradient(135deg, #f1f1f5 30%, #a78bfa 70%, #3b82f6);
+            background: linear-gradient(135deg, #f1f1f5 30%, #6af7ff 70%, #3b82f6);
             -webkit-background-clip: text;
             -webkit-text-fill-color: transparent;
             background-clip: text;
@@ -151,7 +151,7 @@
 
             .feature-card:hover {
                 background: var(--bg-card-hover);
-                border-color: rgba(124,58,237,0.3);
+                border-color: rgba(5,232,240,0.3);
                 transform: translateY(-4px);
                 box-shadow: var(--shadow-md);
             }
@@ -246,12 +246,12 @@
         </div>
         <div class="features-grid">
             <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(124,58,237,0.15);color:#a78bfa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">lightbulb</span></div>
+                <div class="feature-icon" style="background:rgba(5,232,240,0.15);color:#6af7ff;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">lightbulb</span></div>
                 <h3>灵感工作台</h3>
                 <p>从想法建立创作项目，与 AI 一起梳理创意</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">smart_toy</span></div>
+                <div class="feature-icon" style="background:rgba(0,170,180,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">smart_toy</span></div>
                 <h3>AI 创意梳理</h3>
                 <p>与 AI 对话式探索，将碎片灵感转化为完整剧本</p>
             </div>
@@ -271,13 +271,13 @@
                 <p>管理剧本与分镜制作，分集分单元精细编排</p>
             </div>
             <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(139,92,246,0.15);color:#a78bfa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check_circle</span></div>
+                <div class="feature-icon" style="background:rgba(139,92,246,0.15);color:#6af7ff;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check_circle</span></div>
                 <h3>内容管理</h3>
                 <p>提交并管理原创内容，追踪每个项目的进度</p>
             </div>
             <a href="pages/asset-library.html" style="text-decoration:none;display:block;">
                 <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(59,130,246,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span></div>
+                    <div class="feature-icon" style="background:rgba(0,170,180,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span></div>
                     <h3>我的资产</h3>
                     <p>查找已保存的创作资产，快速复用历史资源</p>
                 </div>
@@ -341,7 +341,7 @@
 
             var particles = [];
             var COUNT = 70;
-            var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+            var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
 
             for (var i = 0; i < COUNT; i++) {
                 particles.push({
@@ -383,7 +383,7 @@
                             ctx.beginPath();
                             ctx.moveTo(p.x, p.y);
                             ctx.lineTo(q.x, q.y);
-                            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+                            ctx.strokeStyle = "rgba(5,232,240," + alpha + ")";
                             ctx.lineWidth = 0.6;
                             ctx.stroke();
                         }

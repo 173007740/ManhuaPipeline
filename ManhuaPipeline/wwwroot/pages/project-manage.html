@@ -39,7 +39,7 @@
 .pm-hero { display: grid; grid-template-columns: 150px minmax(0, 1fr) auto; gap: 22px; align-items: center;
            padding: 20px 22px; margin-bottom: 8px; }
 .pm-sigil { width: 150px; height: 150px; display: grid; place-content: center; font-size: 56px;
-            border: 1px solid var(--line); background: linear-gradient(145deg, rgba(157,116,255,0.14), rgba(109,230,238,0.06)); }
+            border: 1px solid var(--line); background: linear-gradient(145deg, rgba(5,232,240,0.14), rgba(109,230,238,0.06)); }
 .pm-sigil img { width: 100%; height: 100%; object-fit: cover; display: block; }
 .pm-hero h2 { font-size: 20px; margin: 8px 0 6px; }
 .pm-hero p { margin: 0; font-size: 12px; line-height: 1.7; color: var(--muted); }
@@ -55,7 +55,7 @@
 .pm-card:hover { transform: translateY(-5px); border-color: var(--accent); }
 .pm-cover { position: relative; width: 100%; aspect-ratio: 16 / 9; margin: 0; overflow: hidden;
             display: grid; place-content: center; font-size: 40px;
-            background: linear-gradient(145deg, rgba(157,116,255,0.10), rgba(109,230,238,0.05));
+            background: linear-gradient(145deg, rgba(5,232,240,0.10), rgba(109,230,238,0.05));
             border-bottom: 1px solid var(--line); }
 .pm-cover img { width: 100%; height: 100%; display: block; object-fit: cover; }
 .pm-cover figcaption { position: absolute; left: 10px; bottom: 8px; z-index: 2;
@@ -64,7 +64,7 @@
 .pm-body { padding: 11px 11px 5px; min-height: 100px; }
 .pm-meta { margin-top: 6px; font-size: 9px; color: var(--muted); font-family: Consolas, Monaco, monospace; }
 .pm-state { display: inline-block; padding: 3px 7px; font-size: 10px; letter-spacing: 1px;
-            border: 1px solid rgba(167,139,250,0.45); background: rgba(167,139,250,0.08); color: var(--primary-light); }
+            border: 1px solid rgba(106,247,255,0.45); background: rgba(106,247,255,0.08); color: var(--primary-light); }
 .pm-card h3 { font-size: 14px; margin: 8px 0 5px; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
 .pm-card p { font-size: 10px; line-height: 1.55; color: var(--muted); margin: 0;
              display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; }
@@ -76,8 +76,8 @@ progress::-webkit-progress-value { background: var(--accent); }
 progress::-moz-progress-bar { background: var(--accent); }
 .pm-enter { display: flex; align-items: center; justify-content: center; width: calc(100% - 22px); min-height: 32px;
             margin: 0 11px; font-size: 11px; letter-spacing: 1px; text-decoration: none;
-            border: 1px solid var(--accent); color: var(--accent); background: rgba(124,58,237,0.10); }
-.pm-enter:hover { background: rgba(124,58,237,0.20); }
+            border: 1px solid var(--accent); color: var(--accent); background: rgba(5,232,240,0.10); }
+.pm-enter:hover { background: rgba(5,232,240,0.20); }
 .pm-row { display: flex; gap: 6px; padding: 10px 11px 0; }
 .pm-row .btn { flex: 1; padding: 5px 6px; font-size: 11px; justify-content: center; }
 .pm-detail { margin: 10px 0 0; }
@@ -179,9 +179,9 @@ progress::-moz-progress-bar { background: var(--accent); }
     <label>项目名称</label>
     <input type="text" id="createProjectTitle" placeholder="输入项目名称">
     <label>描述（选填）</label>
-    <textarea id="createProjectDesc" rows="3" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;font-family:inherit;"></textarea>
+    <textarea id="createProjectDesc" rows="3" style="width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;font-family:inherit;"></textarea>
     <label>项目类型</label>
-    <select id="createProjectType" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;">
+    <select id="createProjectType" style="width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;">
       <option value="drama">短剧（默认）</option>
       <option value="ad">广告</option>
       <option value="mv">MV（歌曲）</option>
@@ -195,7 +195,7 @@ progress::-moz-progress-bar { background: var(--accent); }
     <div id="createCoverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;"></div>
     <div id="dramaSelectorWrap" style="margin-bottom:12px;">
       <label>所属漫剧</label>
-      <select id="createProjectDramaSelect" style="width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
+      <select id="createProjectDramaSelect" style="width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;">
         <option value="">请选择漫剧</option>
       </select>
     </div>
@@ -213,11 +213,11 @@ progress::-moz-progress-bar { background: var(--accent); }
     <label>项目名称</label>
     <input type="text" id="editProjectTitle" placeholder="输入项目名称">
     <label>描述（选填）</label>
-    <textarea id="editProjectDesc" rows="3" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;font-family:inherit;"></textarea>
+    <textarea id="editProjectDesc" rows="3" style="width:750px;max-width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;font-family:inherit;"></textarea>
     <label>标签（逗号分隔，自动绑定参考图时按标签过滤资产库）</label>
-    <input type="text" id="editProjectTags" placeholder="如：纸上山河,古风" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
+    <input type="text" id="editProjectTags" placeholder="如：纸上山河,古风" style="width:750px;max-width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
     <label>资产库类型（项目资产图自动同步进参考图库时，写进图库的「类型」；选“未设置”则沿用资产分类：角色/道具/环境/特效）</label>
-    <select id="editProjectLibCategory" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
+    <select id="editProjectLibCategory" style="width:750px;max-width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
       <option value="">未设置（沿用资产分类）</option>
       <option value="动漫">动漫</option>
       <option value="写实">写实</option>
@@ -225,18 +225,18 @@ progress::-moz-progress-bar { background: var(--accent); }
       <option value="仙侠">仙侠</option>
     </select>
     <label>项目类型（只决定结构规则：时间轴来源、是否线性叙事、产品如何出现、镜头时长取档；画风与去水等质量规则三种类型通用）</label>
-    <select id="editProjectType" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
+    <select id="editProjectType" style="width:750px;max-width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:12px;box-sizing:border-box;">
       <option value="drama">短剧（默认）</option>
       <option value="ad">广告</option>
       <option value="mv">MV（歌曲）</option>
     </select>
     <div id="editLyricsWrap" style="display:none;">
       <label>歌词轨（LRC，带时间戳）</label>
-      <textarea id="editProjectLyrics" rows="7" placeholder="[00:00.00]第一句歌词&#10;[00:05.20]第二句歌词&#10;[00:09.80]第三句歌词" style="width:750px;max-width:100%;padding:10px 12px;background:#0f172a;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:6px;font-family:Consolas,Monaco,monospace;line-height:1.6;box-sizing:border-box;"></textarea>
+      <textarea id="editProjectLyrics" rows="7" placeholder="[00:00.00]第一句歌词&#10;[00:05.20]第二句歌词&#10;[00:09.80]第三句歌词" style="width:750px;max-width:100%;padding:10px 12px;background:#041017;border:1px solid var(--border);border-radius:6px;color:var(--text);font-size:14px;margin-bottom:6px;font-family:Consolas,Monaco,monospace;line-height:1.6;box-sizing:border-box;"></textarea>
       <div style="font-size:12px;color:var(--text-muted);margin-bottom:12px;line-height:1.7;">
         镜头时长与切点会按这里的实际秒数取档，生成结果基本对齐真歌、后期只微调。<br>
         不填也可以：模型按乐句自然长度估算，但总时长大概率和真歌对不齐，后期需手动对轨。<br>
-        每行必须带 <code style="color:#a78bfa;">[mm:ss.xx]</code> 时间戳，否则该行会被丢弃。
+        每行必须带 <code style="color:#6af7ff;">[mm:ss.xx]</code> 时间戳，否则该行会被丢弃。
       </div>
     </div>
     <label>项目封面</label>
@@ -300,11 +300,11 @@ function loadDurationStats(dramaId,cb){
     $("#hPrompt").text(prompts);
     $("#hDone").text(fmtDur(done));
     var rows=list.map(function(x){
-      return '<span style="display:inline-block;background:#1e293b;border-radius:6px;padding:6px 10px;font-size:12px;margin:0 6px 6px 0;color:#94a3b8;">'+
+      return '<span style="display:inline-block;background:#061923;border-radius:6px;padding:6px 10px;font-size:12px;margin:0 6px 6px 0;color:#789096;">'+
         escHtml(x.title)+' · '+fmtDur(x.totalDurationSec||0)+' ('+(x.promptCount||0)+'条)</span>';
     }).join("");
     /* 没有明细就整块收掉，别在 hero 和列表之间空出一行 */
-    if(list.length)$("#durationStatDetail").html('<div style="font-size:12px;color:#64748b;margin-bottom:6px;">按项目明细（提示词口径 · 总时长 '+fmtDur(total)+'）</div>'+rows).show();
+    if(list.length)$("#durationStatDetail").html('<div style="font-size:12px;color:#5c7078;margin-bottom:6px;">按项目明细（提示词口径 · 总时长 '+fmtDur(total)+'）</div>'+rows).show();
     else $("#durationStatDetail").empty().hide();
     if(cb)cb();
   }).fail(function(){if(cb)cb()});
@@ -418,7 +418,7 @@ function escAttr(t){return String(t).replace(/"/g,"&quot;").replace(/'/g,"&#39;"
     function resize(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; }
     resize(); window.addEventListener("resize", resize);
     var p = [], COUNT = 70;
-    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
     for (var i = 0; i < COUNT; i++) p.push({
       x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+1.2,
       dx:(Math.random()-0.5)*0.4, dy:(Math.random()-0.5)*0.4-0.15,
@@ -438,7 +438,7 @@ function escAttr(t){return String(t).replace(/"/g,"&quot;").replace(/'/g,"&#39;"
           if (d < DIST) {
             var a = (1 - d/DIST) * 0.2;
             ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
-            ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+            ctx.strokeStyle = "rgba(5,232,240," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
           }
         }
       }

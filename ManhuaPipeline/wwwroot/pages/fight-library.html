@@ -18,39 +18,39 @@
         .tier-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
         .tier-1 { background: rgba(249,115,22,0.15); color: #fb923c; }
         .tier-2 { background: rgba(239,68,68,0.15); color: #f87171; }
-        .tier-3 { background: rgba(59,130,246,0.15); color: #60a5fa; }
+        .tier-3 { background: rgba(0,170,180,0.15); color: #60a5fa; }
         .tier-4 { background: rgba(168,85,247,0.15); color: #c084fc; }
         .tier-5 { background: rgba(245,158,11,0.15); color: #fbbf24; }
         .dur-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(16,185,129,0.15); color: #34d399; font-weight: 600; }
-        .meta-line { font-size: 12px; color: #94a3b8; margin-bottom: 8px; line-height: 1.7; }
+        .meta-line { font-size: 12px; color: #789096; margin-bottom: 8px; line-height: 1.7; }
         .meta-line b { color: #cbd5e1; font-weight: 600; }
         .prompt-head { display: flex; align-items: center; justify-content: space-between; margin-top: 8px; }
-        .prompt-head label { font-size: 12px; color: #64748b; font-weight: 600; }
-        .prompt-box { background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; padding: 8px 10px; margin-top: 4px; font-size: 12px; color: #94a3b8; line-height: 1.6; white-space: pre-wrap; }
+        .prompt-head label { font-size: 12px; color: #5c7078; font-weight: 600; }
+        .prompt-box { background: #041017; border: 1px solid #061923; border-radius: 6px; padding: 8px 10px; margin-top: 4px; font-size: 12px; color: #789096; line-height: 1.6; white-space: pre-wrap; }
         .btn-xs { font-size: 11px; padding: 3px 8px; border-radius: 4px; border: none; cursor: pointer; color: #fff; background: #475569; }
-        .btn-xs.primary { background: #7c3aed; }
+        .btn-xs.primary { background: #0b8f99; }
         .btn-xs.green { background: #10b981; }
         .btn-xs.red { background: #ef4444; }
         .tag-mini { font-size: 10px; padding: 2px 6px; border-radius: 3px; background: rgba(236,72,153,0.15); color: #f472b6; }
         .fight-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
         .lib-tabs { display: flex; gap: 6px; margin-bottom: 18px; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-        .tab-btn { font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: #94a3b8; cursor: pointer; }
+        .tab-btn { font-size: 13px; font-weight: 600; padding: 8px 18px; border-radius: 6px; border: 1px solid var(--border); background: var(--bg-card); color: #789096; cursor: pointer; }
         .tab-btn.active { background: var(--accent-gradient); color: #fff; border-color: transparent; }
         .arc-list { margin-top: 8px; display: flex; flex-direction: column; gap: 12px; }
         .arc-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius-sm); padding: 14px 16px; }
         .arc-card:hover { border-color: var(--primary); background: var(--bg-card-hover); }
         .arc-title { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 6px; }
         .arc-title .name { font-size: 15px; font-weight: 700; color: #e2e8f0; }
-        .arc-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(59,130,246,0.15); color: #60a5fa; font-weight: 600; }
+        .arc-badge { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(0,170,180,0.15); color: #60a5fa; font-weight: 600; }
         .arc-version { font-size: 11px; padding: 2px 8px; border-radius: 10px; background: rgba(245,158,11,0.15); color: #fbbf24; font-weight: 600; }
         .arc-status { font-size: 11px; padding: 2px 8px; border-radius: 10px; font-weight: 600; }
         .arc-status.active { background: rgba(16,185,129,0.15); color: #34d399; }
         .arc-status.inactive { background: rgba(239,68,68,0.15); color: #f87171; }
         .arc-phases { margin-top: 8px; }
-        .arc-phases summary { cursor: pointer; font-size: 12px; color: #7c3aed; font-weight: 600; }
-        .phase-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; background: #0f172a; border: 1px solid #1e293b; border-radius: 6px; overflow: hidden; }
+        .arc-phases summary { cursor: pointer; font-size: 12px; color: #0b8f99; font-weight: 600; }
+        .phase-table { width: 100%; border-collapse: collapse; margin-top: 8px; font-size: 12px; background: #041017; border: 1px solid #061923; border-radius: 6px; overflow: hidden; }
         .phase-table th { background: #2d3748; color: #e2e8f0; padding: 7px 8px; text-align: left; white-space: nowrap; }
-        .phase-table td { padding: 7px 8px; color: #94a3b8; border-top: 1px solid #1e293b; vertical-align: top; }
+        .phase-table td { padding: 7px 8px; color: #789096; border-top: 1px solid #061923; vertical-align: top; }
         .arc-actions { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
     </style>
 </head>
@@ -83,15 +83,15 @@
     <div class="container">
         <div class="lib-tabs">
             <button class="tab-btn active" onclick="switchTab('fights', this)">打斗模板</button>
-            <button class="tab-btn" onclick="switchTab('arcs', this)">战斗骨架<span class="arc-count" style="margin-left:4px;color:#94a3b8;font-size:11px;"></span></button>
+            <button class="tab-btn" onclick="switchTab('arcs', this)">战斗骨架<span class="arc-count" style="margin-left:4px;color:#789096;font-size:11px;"></span></button>
         </div>
         <div id="tabFights">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;flex-wrap:wrap;gap:12px;">
-                <div class="page-title" style="margin-bottom:0;font-size:24px;font-weight:700;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库<span class="fight-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+                <div class="page-title" style="margin-bottom:0;font-size:24px;font-weight:700;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库<span class="fight-count" style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
                 <div class="action-bar" style="margin-bottom:0;display:flex;align-items:center;flex-wrap:wrap;gap:8px;">
-                    <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索模板名/标签..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:180px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadFights()"></div>
+                    <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索模板名/标签..." style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:180px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadFights()"></div>
                     <div style="display:flex;align-items:center;margin-right:8px;">
-                        <select id="filterTier" onchange="loadFights()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                        <select id="filterTier" onchange="loadFights()" style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
                             <option value="">全部层级</option>
                             <option value="1">T1 拳拳到肉</option>
                             <option value="2">T2 刀兵对砍</option>
@@ -101,7 +101,7 @@
                         </select>
                     </div>
                     <div style="display:flex;align-items:center;margin-right:8px;">
-                        <select id="filterDur" onchange="loadFights()" style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
+                        <select id="filterDur" onchange="loadFights()" style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px;font-size:13px;">
                             <option value="">全部时长</option>
                             <option value="5">5秒</option>
                             <option value="11">11秒</option>
@@ -112,29 +112,29 @@
                 </div>
             </div>
             <div id="fightList" class="fight-list"></div>
-            <div id="fightEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无打斗模板，点击「新增模板」创建</div>
+            <div id="fightEmpty" style="display:none;text-align:center;padding:60px 20px;color:#789096;font-size:15px;">暂无打斗模板，点击「新增模板」创建</div>
         </div>
         <div id="tabArcs" style="display:none;">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;flex-wrap:wrap;gap:12px;">
-                <div class="page-title" style="margin-bottom:0;font-size:20px;font-weight:700;">战斗段落骨架<span class="arc-total" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
-                <div style="font-size:12px;color:#64748b;">骨架由导演层读取，分集细化和分镜按阶段顺序生成</div>
+                <div class="page-title" style="margin-bottom:0;font-size:20px;font-weight:700;">战斗段落骨架<span class="arc-total" style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+                <div style="font-size:12px;color:#5c7078;">骨架由导演层读取，分集细化和分镜按阶段顺序生成</div>
             </div>
             <div id="arcList" class="arc-list"></div>
-            <div id="arcEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无战斗骨架</div>
+            <div id="arcEmpty" style="display:none;text-align:center;padding:60px 20px;color:#789096;font-size:15px;">暂无战斗骨架</div>
         </div>
     </div>
 
     <div id="editModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;align-items:center;justify-content:center;">
-        <div style="background:#1e293b;border-radius:12px;padding:24px;width:760px;max-width:94%;max-height:92vh;overflow:auto;">
+        <div style="background:#061923;border-radius:12px;padding:24px;width:760px;max-width:94%;max-height:92vh;overflow:auto;">
             <h3 id="modalTitle" style="color:#f1f5f9;margin:0 0 16px;font-size:16px;">新增模板</h3>
             <div style="display:flex;gap:10px;margin-bottom:12px;flex-wrap:wrap;">
                 <div style="flex:1;min-width:200px;">
-                    <label style="font-size:12px;color:#94a3b8;">模板名</label>
-                    <input id="fName" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+                    <label style="font-size:12px;color:#789096;">模板名</label>
+                    <input id="fName" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
                 </div>
                 <div style="width:130px;">
-                    <label style="font-size:12px;color:#94a3b8;">层级</label>
-                    <select id="fTier" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;margin-top:4px;">
+                    <label style="font-size:12px;color:#789096;">层级</label>
+                    <select id="fTier" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;margin-top:4px;">
                         <option value="1">T1 拳拳到肉</option>
                         <option value="2">T2 刀兵对砍</option>
                         <option value="3" selected>T3 技能拉满</option>
@@ -143,8 +143,8 @@
                     </select>
                 </div>
                 <div style="width:110px;">
-                    <label style="font-size:12px;color:#94a3b8;">时长</label>
-                    <select id="fDur" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;margin-top:4px;">
+                    <label style="font-size:12px;color:#789096;">时长</label>
+                    <select id="fDur" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;margin-top:4px;">
                         <option value="5">5秒</option>
                         <option value="11" selected>11秒</option>
                         <option value="15">15秒</option>
@@ -152,28 +152,28 @@
                 </div>
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px;color:#94a3b8;">适用场景</label>
-                <input id="fScene" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+                <label style="font-size:12px;color:#789096;">适用场景</label>
+                <input id="fScene" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px;color:#94a3b8;">节拍</label>
-                <input id="fBeat" placeholder="如：快攻三连 → 格挡反打 → 僵持（顿帧）→ 震开" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+                <label style="font-size:12px;color:#789096;">节拍</label>
+                <input id="fBeat" placeholder="如：快攻三连 → 格挡反打 → 僵持（顿帧）→ 震开" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px;color:#94a3b8;">动作行</label>
-                <textarea id="fAction" rows="3" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+                <label style="font-size:12px;color:#789096;">动作行</label>
+                <textarea id="fAction" rows="3" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px;color:#94a3b8;">运镜行</label>
-                <textarea id="fCamera" rows="3" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+                <label style="font-size:12px;color:#789096;">运镜行</label>
+                <textarea id="fCamera" rows="3" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
             </div>
             <div style="margin-bottom:12px;">
-                <label style="font-size:12px;color:#94a3b8;">约束行</label>
-                <textarea id="fConstraint" rows="3" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
+                <label style="font-size:12px;color:#789096;">约束行</label>
+                <textarea id="fConstraint" rows="3" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;resize:vertical;"></textarea>
             </div>
             <div style="margin-bottom:16px;">
-                <label style="font-size:12px;color:#94a3b8;">标签（逗号分隔）</label>
-                <input id="fTags" placeholder="如：对砍,正反打,格挡" style="width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
+                <label style="font-size:12px;color:#789096;">标签（逗号分隔）</label>
+                <input id="fTags" placeholder="如：对砍,正反打,格挡" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px 10px;font-size:13px;margin-top:4px;">
             </div>
             <div style="display:flex;gap:8px;justify-content:flex-end;">
                 <button class="btn" onclick="$('#editModal').hide()">取消</button>

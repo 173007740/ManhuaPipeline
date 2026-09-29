@@ -36,7 +36,7 @@
                 height: 160px;
                 object-fit: cover;
                 display: block;
-                background: #1e293b;
+                background: #061923;
             }
 
             .asset-card .info {
@@ -71,13 +71,13 @@
         }
 
         .tag-real {
-            background: rgba(59,130,246,0.15);
+            background: rgba(0,170,180,0.15);
             color: #60a5fa;
         }
 
         .tag-game {
             background: rgba(139,92,246,0.15);
-            color: #a78bfa;
+            color: #6af7ff;
         }
 
         .tag-xianxia {
@@ -143,7 +143,7 @@
             width: 24px;
             height: 24px;
             border-radius: 50%;
-            background: rgba(59,130,246,0.85);
+            background: rgba(0,170,180,0.85);
             color: #fff;
             border: none;
             padding: 0;
@@ -177,7 +177,7 @@
         }
 
         .action-bar-select {
-            background: #1e293b;
+            background: #061923;
             color: #e2e8f0;
             border: 1px solid #475569;
             border-radius: 8px;
@@ -252,9 +252,9 @@
 
         <div class="container">
             <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-                <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 我的资产<span class="asset-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+                <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 我的资产<span class="asset-count" style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
                 <div class="action-bar" style="margin-bottom:0;">
-                    <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索文件名称..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:160px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAssets()"></div><div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchTagInput" placeholder="搜索标签..." style="background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:160px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAssets()"></div><button class="btn btn-primary" onclick="showUpload()" style="margin-right:6px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 上传资产</button><button class="btn btn-primary" onclick="showBatchUpload()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add_photo_alternate</span> 批量上传</button>
+                    <div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchInput" placeholder="搜索文件名称..." style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:160px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAssets()"></div><div style="display:flex;align-items:center;margin-right:8px;"><input type="text" id="searchTagInput" placeholder="搜索标签..." style="background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:10px 10px;font-size:13px;width:160px;box-sizing:border-box;" onkeydown="if(event.key==='Enter')loadAssets()"></div><button class="btn btn-primary" onclick="showUpload()" style="margin-right:6px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 上传资产</button><button class="btn btn-primary" onclick="showBatchUpload()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add_photo_alternate</span> 批量上传</button>
                     <div style="display:flex;align-items:center;">
                         <select id="filterCategory" onchange="loadAssets()" class="action-bar-select">
                             <option value="">全部类型</option>
@@ -279,18 +279,18 @@
             </div>
 
             <div id="assetGrid" class="asset-grid">
-                <p style="color:#94a3b8;text-align:center;grid-column:1/-1;">加载中...</p>
+                <p style="color:#789096;text-align:center;grid-column:1/-1;">加载中...</p>
             </div>
-            <div id="assetEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无资产，请先上传<br><a href="#" onclick="showUpload()" style="color:var(--primary-light);font-size:13px;margin-top:12px;display:inline-block;">上传第一个资产</a></div>
+            <div id="assetEmpty" style="display:none;text-align:center;padding:60px 20px;color:#789096;font-size:15px;">暂无资产，请先上传<br><a href="#" onclick="showUpload()" style="color:var(--primary-light);font-size:13px;margin-top:12px;display:inline-block;">上传第一个资产</a></div>
         </div>
 
         <!-- Upload Modal -->
         <div id="uploadModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
-            <div style="background:#1e293b;border-radius:12px;padding:24px;width:420px;max-width:90%;">
+            <div style="background:#061923;border-radius:12px;padding:24px;width:420px;max-width:90%;">
                 <h3 style="color:#e2e8f0;margin:0 0 16px 0;">上传资产</h3>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">类型</label>
-                    <select id="uploadCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">类型</label>
+                    <select id="uploadCategory" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
                         <option value="动漫">动漫</option>
                         <option value="写实">写实</option>
                         <option value="游戏">游戏</option>
@@ -298,8 +298,8 @@
                     </select>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
-                    <select id="uploadSubCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
+                    <select id="uploadSubCategory" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
                         <option value="角色">角色</option>
                         <option value="道具">道具</option>
                         <option value="环境">环境</option>
@@ -308,11 +308,11 @@
                     </select>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
-                    <input type="text" id="uploadTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
+                    <input type="text" id="uploadTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">图片</label>
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">图片</label>
                     <input type="file" id="uploadFile" accept="image/*" style="color:#e2e8f0;font-size:13px;">
                 </div>
                 <div style="margin-bottom:12px;display:none;" id="previewWrap">
@@ -327,11 +327,11 @@
 
         <!-- Batch Upload Modal -->
         <div id="batchUploadModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
-            <div style="background:#1e293b;border-radius:12px;padding:24px;width:520px;max-width:90%;">
+            <div style="background:#061923;border-radius:12px;padding:24px;width:520px;max-width:90%;">
                 <h3 style="color:#e2e8f0;margin:0 0 16px 0;">批量上传资产</h3>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">类型</label>
-                    <select id="batchCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">类型</label>
+                    <select id="batchCategory" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
                         <option value="动漫">动漫</option>
                         <option value="写实">写实</option>
                         <option value="游戏">游戏</option>
@@ -339,8 +339,8 @@
                     </select>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
-                    <select id="batchSubCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
+                    <select id="batchSubCategory" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
                         <option value="角色">角色</option>
                         <option value="道具">道具</option>
                         <option value="环境">环境</option>
@@ -349,21 +349,21 @@
                     </select>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
-                    <input type="text" id="batchTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
+                    <input type="text" id="batchTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">选择图片（可多选）</label>
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">选择图片（可多选）</label>
                     <input type="file" id="batchFiles" accept="image/*" multiple style="color:#e2e8f0;font-size:13px;">
                 </div>
                 <div id="batchPreview" style="margin-bottom:12px;display:none;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">已选择 <span id="batchCount">0</span> 张图片</label>
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">已选择 <span id="batchCount">0</span> 张图片</label>
                 </div>
                 <div id="batchProgress" style="margin-bottom:12px;display:none;">
-                    <div style="background:#0f172a;border-radius:4px;height:8px;overflow:hidden;">
-                        <div id="batchProgressBar" style="background:#7c3aed;height:100%;width:0%;transition:width 0.3s;"></div>
+                    <div style="background:#041017;border-radius:4px;height:8px;overflow:hidden;">
+                        <div id="batchProgressBar" style="background:#0b8f99;height:100%;width:0%;transition:width 0.3s;"></div>
                     </div>
-                    <span id="batchProgressText" style="color:#94a3b8;font-size:12px;margin-top:4px;display:block;">0 / 0</span>
+                    <span id="batchProgressText" style="color:#789096;font-size:12px;margin-top:4px;display:block;">0 / 0</span>
                 </div>
                 <div id="batchResult" style="margin-bottom:12px;display:none;font-size:13px;"></div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
@@ -375,34 +375,34 @@
 
         <!-- Edit Modal -->
         <div id="editModal" class="modal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;">
-            <div style="background:#1e293b;border-radius:12px;padding:24px;width:440px;max-width:90%;">
+            <div style="background:#061923;border-radius:12px;padding:24px;width:440px;max-width:90%;">
                 <h3 style="color:#e2e8f0;margin:0 0 16px 0;">编辑资产</h3>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">图片</label>
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">图片</label>
                     <div style="display:flex;align-items:center;gap:10px;">
-                        <img id="editPreviewImg" src="" alt="当前图片" style="width:76px;height:76px;object-fit:cover;border-radius:6px;background:#0f172a;border:1px solid #334155;flex-shrink:0;">
+                        <img id="editPreviewImg" src="" alt="当前图片" style="width:76px;height:76px;object-fit:cover;border-radius:6px;background:#041017;border:1px solid #334155;flex-shrink:0;">
                         <div style="flex:1;">
                             <input type="file" id="editFile" accept="image/*" style="color:#e2e8f0;font-size:13px;max-width:100%;">
-                            <div style="font-size:12px;color:#64748b;margin-top:6px;">如需替换图片，请选择新文件（jpg/png/webp/gif），保存后原图将被替换。</div>
+                            <div style="font-size:12px;color:#5c7078;margin-top:6px;">如需替换图片，请选择新文件（jpg/png/webp/gif），保存后原图将被替换。</div>
                         </div>
                     </div>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">文件名称</label>
-                    <input type="text" id="editFileName" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">文件名称</label>
+                    <input type="text" id="editFileName" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">图片访问路径（相对网站根目录，可直接在浏览器打开或被接口引用）</label>
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">图片访问路径（相对网站根目录，可直接在浏览器打开或被接口引用）</label>
                     <div style="display:flex;gap:6px;">
-                        <input type="text" id="editFilePath" readonly onclick="this.select()" style="flex:1;min-width:0;background:#0f172a;color:#a5b4fc;border:1px solid #475569;border-radius:4px;padding:8px;font-size:12px;box-sizing:border-box;">
+                        <input type="text" id="editFilePath" readonly onclick="this.select()" style="flex:1;min-width:0;background:#041017;color:#a5b4fc;border:1px solid #475569;border-radius:4px;padding:8px;font-size:12px;box-sizing:border-box;">
                         <button type="button" class="btn btn-outline" onclick="copyEditPath(this)" style="font-size:12px;white-space:nowrap;">复制</button>
                         <a id="editFileOpen" href="#" target="_blank" rel="noopener" class="btn btn-outline" style="font-size:12px;white-space:nowrap;text-decoration:none;">打开</a>
                     </div>
-                    <div id="editFileRelPath" style="font-size:11px;color:#64748b;margin-top:6px;word-break:break-all;"></div>
+                    <div id="editFileRelPath" style="font-size:11px;color:#5c7078;margin-top:6px;word-break:break-all;"></div>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">类型</label>
-                    <select id="editCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">类型</label>
+                    <select id="editCategory" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
                         <option value="动漫">动漫</option>
                         <option value="写实">写实</option>
                         <option value="游戏">游戏</option>
@@ -410,8 +410,8 @@
                     </select>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
-                    <select id="editSubCategory" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">子类型</label>
+                    <select id="editSubCategory" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;">
                         <option value="角色">角色</option>
                         <option value="道具">道具</option>
                         <option value="环境">环境</option>
@@ -420,8 +420,8 @@
                     </select>
                 </div>
                 <div style="margin-bottom:12px;">
-                    <label style="color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
-                    <input type="text" id="editTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
+                    <label style="color:#789096;font-size:13px;display:block;margin-bottom:4px;">标签（逗号分隔）</label>
+                    <input type="text" id="editTags" placeholder="如：主角,武器,雪原" style="width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:8px;font-size:13px;box-sizing:border-box;">
                 </div>
                 <div style="display:flex;gap:8px;justify-content:flex-end;">
                     <button class="btn btn-outline" onclick="$('#editModal').hide()" style="font-size:13px;">取消</button>
@@ -482,7 +482,7 @@
                         h += '<div class="info"><div class="name" ondblclick="renameAsset(' + a.assetId + ',this)" title="双击编辑 · 访问路径\n' + escAttr(a.localPath || a.diskPath || '') + '">' + escHtml(a.fileName) + '</div>';
                         h += '<div class="tags"><span class="' + catTag + '">' + escHtml(a.category) + '</span><span class="' + subTag + '">' + escHtml(a.subCategory) + '</span></div>';
                         if (a.tags) { var tagArr = String(a.tags).split(',').map(function (t) { return t.trim() }).filter(Boolean); if (tagArr.length > 0) { h += '<div style="display:flex;flex-wrap:wrap;gap:4px;margin-top:6px;">'; for (var ti = 0; ti < tagArr.length; ti++) { h += '<span style="font-size:10px;padding:2px 6px;border-radius:3px;background:rgba(236,72,153,0.15);color:#f472b6;">#' + escHtml(tagArr[ti]) + '</span>'; } h += '</div>'; } }
-                        if (a.fileSize) { h += '<div style="font-size:11px;color:#64748b;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">photo_size_select_small</span> ' + formatSize(a.fileSize) + '</div>'; }
+                        if (a.fileSize) { h += '<div style="font-size:11px;color:#5c7078;margin-top:6px;display:flex;align-items:center;gap:4px;"><span class="material-icons" style="font-size:13px;">photo_size_select_small</span> ' + formatSize(a.fileSize) + '</div>'; }
                         h += '</div></div>';
                     }
                     $('#assetGrid').html(h);
@@ -666,7 +666,7 @@
             window.addEventListener("resize", resize);
             var particles = [];
             var COUNT = 70;
-            var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+            var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
             for (var i = 0; i < COUNT; i++) {
                 particles.push({
                     x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
@@ -697,7 +697,7 @@
                             ctx.beginPath();
                             ctx.moveTo(p.x, p.y);
                             ctx.lineTo(q.x, q.y);
-                            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+                            ctx.strokeStyle = "rgba(5,232,240," + alpha + ")";
                             ctx.lineWidth = 0.6;
                             ctx.stroke();
                         }

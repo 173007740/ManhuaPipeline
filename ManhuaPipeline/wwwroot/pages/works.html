@@ -12,10 +12,10 @@
     .work-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(320px,1fr));gap:18px;margin-top:8px;}
     .work-card{background:var(--bg-card);border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden;transition:all 0.2s;position:relative;display:flex;flex-direction:column;}
     .work-card:hover{border-color:var(--primary);background:var(--bg-card-hover);}
-    .work-card .cover{width:100%;height:180px;object-fit:cover;display:block;background:#1e293b;cursor:pointer;}
+    .work-card .cover{width:100%;height:180px;object-fit:cover;display:block;background:#061923;cursor:pointer;}
     .work-card .body{padding:14px 16px;flex:1;display:flex;flex-direction:column;}
     .work-card .title{color:#e2e8f0;font-size:15px;font-weight:600;margin:0 0 6px 0;}
-    .work-card .desc{color:#94a3b8;font-size:13px;line-height:1.6;margin:0 0 10px 0;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
+    .work-card .desc{color:#789096;font-size:13px;line-height:1.6;margin:0 0 10px 0;flex:1;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;}
     .work-card .ops{display:flex;gap:8px;align-items:center;}
     .work-card .ops .btn{height:34px;font-size:12px;padding:0 12px;}
     .work-card .del-btn{position:absolute;top:8px;right:8px;width:26px;height:26px;border-radius:50%;background:rgba(239,68,68,0.85);color:#fff;border:none;font-size:15px;line-height:26px;text-align:center;cursor:pointer;display:block;z-index:2;}
@@ -25,10 +25,10 @@
     .btn{height:40px;box-sizing:border-box;}
     .container{max-width:100%;padding:32px 24px;}
     .modal{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.7);z-index:2000;align-items:center;justify-content:center;}
-    .modal-box{background:#1e293b;border-radius:12px;padding:24px;width:460px;max-width:92%;}
+    .modal-box{background:#061923;border-radius:12px;padding:24px;width:460px;max-width:92%;}
     .modal-box h3{color:#e2e8f0;margin:0 0 16px 0;font-size:15px;}
-    .modal-box label{color:#94a3b8;font-size:13px;display:block;margin-bottom:4px;}
-    .modal-box input[type=text],.modal-box textarea{width:100%;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:9px 10px;font-size:13px;box-sizing:border-box;font-family:inherit;}
+    .modal-box label{color:#789096;font-size:13px;display:block;margin-bottom:4px;}
+    .modal-box input[type=text],.modal-box textarea{width:100%;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:9px 10px;font-size:13px;box-sizing:border-box;font-family:inherit;}
     .modal-box textarea{resize:vertical;min-height:80px;}
     .modal-box .row{margin-bottom:12px;}
     .modal-box input[type=file]{color:#e2e8f0;font-size:13px;}
@@ -62,16 +62,16 @@
 
   <div class="container">
     <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-      <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示<span class="work-count" style="color:#94a3b8;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
+      <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示<span class="work-count" style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
       <div class="action-bar" style="margin-bottom:0;">
         <button class="btn btn-primary" onclick="showUpload()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 上传作品</button>
       </div>
     </div>
 
     <div id="workGrid" class="work-grid">
-      <p style="color:#94a3b8;text-align:center;grid-column:1/-1;">加载中...</p>
+      <p style="color:#789096;text-align:center;grid-column:1/-1;">加载中...</p>
     </div>
-    <div id="workEmpty" style="display:none;text-align:center;padding:60px 20px;color:#94a3b8;font-size:15px;">暂无作品，请先上传<br><a href="#" onclick="showUpload()" style="color:var(--primary-light);font-size:13px;margin-top:12px;display:inline-block;">上传第一个作品</a></div>
+    <div id="workEmpty" style="display:none;text-align:center;padding:60px 20px;color:#789096;font-size:15px;">暂无作品，请先上传<br><a href="#" onclick="showUpload()" style="color:var(--primary-light);font-size:13px;margin-top:12px;display:inline-block;">上传第一个作品</a></div>
   </div>
 
   <!-- Upload Modal -->
@@ -96,10 +96,10 @@
         <div id="upPreviewWrap" style="margin-top:8px;display:none;"><img id="upPreviewImg" style="max-width:100%;max-height:200px;border-radius:6px;"></div>
       </div>
       <div id="upProgressWrap" style="display:none;margin-bottom:12px;">
-        <div style="height:6px;background:#0f172a;border-radius:3px;overflow:hidden;border:1px solid #334155;">
-          <div id="upProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width 0.25s;"></div>
+        <div style="height:6px;background:#041017;border-radius:3px;overflow:hidden;border:1px solid #334155;">
+          <div id="upProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#0b8f99,#6af7ff);transition:width 0.25s;"></div>
         </div>
-        <div id="upProgressText" style="color:#94a3b8;font-size:12px;margin-top:6px;text-align:center;">上传中 0%</div>
+        <div id="upProgressText" style="color:#789096;font-size:12px;margin-top:6px;text-align:center;">上传中 0%</div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn" onclick="closeUpload()">取消</button>
@@ -130,10 +130,10 @@
         <div id="edPreviewWrap" style="margin-top:8px;display:none;"><img id="edPreviewImg" style="max-width:100%;max-height:200px;border-radius:6px;"></div>
       </div>
       <div id="edProgressWrap" style="display:none;margin-bottom:12px;">
-        <div style="height:6px;background:#0f172a;border-radius:3px;overflow:hidden;border:1px solid #334155;">
-          <div id="edProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#7c3aed,#a78bfa);transition:width 0.25s;"></div>
+        <div style="height:6px;background:#041017;border-radius:3px;overflow:hidden;border:1px solid #334155;">
+          <div id="edProgressBar" style="height:100%;width:0%;background:linear-gradient(90deg,#0b8f99,#6af7ff);transition:width 0.25s;"></div>
         </div>
-        <div id="edProgressText" style="color:#94a3b8;font-size:12px;margin-top:6px;text-align:center;">上传中 0%</div>
+        <div id="edProgressText" style="color:#789096;font-size:12px;margin-top:6px;text-align:center;">上传中 0%</div>
       </div>
       <div style="display:flex;gap:8px;justify-content:flex-end;">
         <button class="btn" onclick="closeEdit()">取消</button>
@@ -164,7 +164,7 @@
           var cover = w.coverImage || '';
           h += '<div class="work-card" style="cursor:pointer;" onclick="goDetail('+w.workId+')">';
           if(cover){ h += '<img class="cover" src="'+cover+'" loading="lazy" onclick="event.stopPropagation();goDetail('+w.workId+')" onerror="this.style.display=\'none\'">'; }
-          else { h += '<div style="width:100%;height:180px;background:linear-gradient(135deg,#1e293b,#0f172a);display:flex;align-items:center;justify-content:center;color:#475569;font-size:13px;">暂无封面</div>'; }
+          else { h += '<div style="width:100%;height:180px;background:linear-gradient(135deg,#061923,#041017);display:flex;align-items:center;justify-content:center;color:#475569;font-size:13px;">暂无封面</div>'; }
           h += '<button class="del-btn" onclick="event.stopPropagation();deleteWork('+w.workId+')">&times;</button>';
           h += '<div class="body">';
           h += '<h3 class="title">'+escHtml(w.title)+'</h3>';
@@ -301,7 +301,7 @@
     window.addEventListener("resize", resize);
     var particles = [];
     var COUNT = 70;
-    var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+    var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
     for (var i = 0; i < COUNT; i++) {
       particles.push({
         x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
@@ -332,7 +332,7 @@
             ctx.beginPath();
             ctx.moveTo(p.x, p.y);
             ctx.lineTo(q.x, q.y);
-            ctx.strokeStyle = "rgba(124,58,237," + alpha + ")";
+            ctx.strokeStyle = "rgba(5,232,240," + alpha + ")";
             ctx.lineWidth = 0.6;
             ctx.stroke();
           }

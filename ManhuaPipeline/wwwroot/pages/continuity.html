@@ -11,14 +11,14 @@
     <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
     <style>
         .page-title { color: #f1f5f9; margin-bottom: 6px; }
-        .page-sub { color: #64748b; font-size: 13px; margin-bottom: 20px; line-height: 1.7; }
-        .back-link { color: #a78bfa; text-decoration: none; font-size: 13px; display: inline-block; margin-bottom: 12px; }
+        .page-sub { color: #5c7078; font-size: 13px; margin-bottom: 20px; line-height: 1.7; }
+        .back-link { color: #6af7ff; text-decoration: none; font-size: 13px; display: inline-block; margin-bottom: 12px; }
         .back-link:hover { color: #c4b5fd; }
 
         .summary-bar { display: flex; gap: 12px; margin-bottom: 20px; flex-wrap: wrap; }
-        .summary-item { background: #1e293b; border-radius: 8px; padding: 10px 18px; text-align: center; min-width: 96px; }
-        .summary-item .num { font-size: 20px; font-weight: 700; color: #a78bfa; display: block; }
-        .summary-item .label { font-size: 11px; color: #64748b; }
+        .summary-item { background: #061923; border-radius: 8px; padding: 10px 18px; text-align: center; min-width: 96px; }
+        .summary-item .num { font-size: 20px; font-weight: 700; color: #6af7ff; display: block; }
+        .summary-item .label { font-size: 11px; color: #5c7078; }
 
         .section-title { color: #e2e8f0; font-size: 15px; font-weight: 600; margin: 26px 0 12px; display: flex; align-items: center; gap: 8px; }
         .section-title .tools { margin-left: auto; display: flex; gap: 8px; }
@@ -28,27 +28,27 @@
         .hint { background: rgba(234,179,8,0.10); border-left: 3px solid #facc15; color: #facc15; padding: 12px 16px; border-radius: 6px; font-size: 13px; line-height: 1.8; margin-bottom: 16px; }
         .hint.err { background: rgba(239,68,68,0.10); border-left-color: #ef4444; color: #f87171; }
 
-        .cont-card { background: #1e293b; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
+        .cont-card { background: #061923; border-radius: 8px; margin-bottom: 10px; overflow: hidden; }
         .cont-head { padding: 12px 16px; cursor: pointer; display: flex; align-items: center; gap: 10px; background: rgba(255,255,255,0.05); user-select: none; }
         .cont-head:hover { background: rgba(255,255,255,0.08); }
         .cont-head .name { font-weight: 600; color: #e2e8f0; font-size: 14px; }
-        .cont-head .desc { color: #64748b; font-size: 12px; flex: 1; }
-        .cont-head .arrow { color: #94a3b8; transition: transform 0.2s; font-size: 12px; }
+        .cont-head .desc { color: #5c7078; font-size: 12px; flex: 1; }
+        .cont-head .arrow { color: #789096; transition: transform 0.2s; font-size: 12px; }
         .cont-body { padding: 14px 16px; display: none; }
 
         .tag { display: inline-block; padding: 2px 8px; border-radius: 10px; font-size: 11px; font-weight: 600; }
         .tag-ok { background: rgba(34,197,94,0.2); color: #22c55e; }
-        .tag-empty { background: rgba(148,163,184,0.2); color: #94a3b8; }
+        .tag-empty { background: rgba(148,163,184,0.2); color: #789096; }
         .tag-manual { background: rgba(234,179,8,0.2); color: #facc15; }
 
-        .ep-label { color: #a78bfa; font-size: 12px; font-weight: 600; margin: 10px 0 6px; }
+        .ep-label { color: #6af7ff; font-size: 12px; font-weight: 600; margin: 10px 0 6px; }
         .ep-label:first-child { margin-top: 0; }
-        .cont-text { background: #0f172a; border-radius: 6px; padding: 12px; margin: 0; color: #cbd5e1; font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; font-family: inherit; }
+        .cont-text { background: #041017; border-radius: 6px; padding: 12px; margin: 0; color: #cbd5e1; font-size: 13px; line-height: 1.8; white-space: pre-wrap; word-break: break-word; font-family: inherit; }
         .meta { color: #475569; font-size: 11px; margin-top: 6px; }
 
-        .unit-block { background: #1e293b; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
+        .unit-block { background: #061923; border-radius: 8px; padding: 12px 14px; margin-bottom: 10px; }
         .bind-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
-        .bind-table th { text-align: left; color: #94a3b8; font-size: 11px; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #334155; }
+        .bind-table th { text-align: left; color: #789096; font-size: 11px; font-weight: 600; padding: 6px 8px; border-bottom: 1px solid #334155; }
         .bind-table td { color: #e2e8f0; font-size: 13px; padding: 6px 8px; border-bottom: 1px solid rgba(51,65,85,0.5); }
         .bind-table tr:last-child td { border-bottom: none; }
         .cat-Character { color: #60a5fa; }
@@ -76,9 +76,9 @@
         <a class="back-link" id="backLinkTop" href="project.html"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回项目</a>
         <h2 class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sitemap</span> 连续性表 · L2 层</h2>
         <div class="page-sub">
-            这是阶段 4（分集细化）的<b style="color:#a78bfa;">强输入</b>：抽取结果会被渲染成硬约束注入拆分提示词。
+            这是阶段 4（分集细化）的<b style="color:#6af7ff;">强输入</b>：抽取结果会被渲染成硬约束注入拆分提示词。
             抽错了不会报错，只会静默地让分镜、提示词跟着错——所以需要这个视图做归因。<br>
-            数据来源：<code style="color:#64748b;">ProjectContinuityTables</code>（六类表）+ <code style="color:#64748b;">UnitAssetBindings</code>（单元资产绑定）。<b>只读</b>。
+            数据来源：<code style="color:#5c7078;">ProjectContinuityTables</code>（六类表）+ <code style="color:#5c7078;">UnitAssetBindings</code>（单元资产绑定）。<b>只读</b>。
         </div>
 
         <div class="summary-bar" id="summaryBar"></div>
@@ -88,12 +88,12 @@
             <span class="material-icons" style="font-size:18px;">table_chart</span> 六类连续性表
             <span class="tools"><button class="mini-btn" onclick="copyAll()"><i class="fas fa-copy"></i> 复制全部文本</button></span>
         </div>
-        <div id="tableSection"><p style="color:#94a3b8;padding:16px;">加载中...</p></div>
+        <div id="tableSection"><p style="color:#789096;padding:16px;">加载中...</p></div>
 
         <div class="section-title">
             <span class="material-icons" style="font-size:18px;">link</span> 单元资产绑定
         </div>
-        <div id="bindingSection"><p style="color:#94a3b8;padding:16px;">加载中...</p></div>
+        <div id="bindingSection"><p style="color:#789096;padding:16px;">加载中...</p></div>
 
         <div class="section-title">
             <span class="material-icons" style="font-size:18px;">layers</span> 后期叠加清单 · L5 层
@@ -103,10 +103,10 @@
             手机短信、新闻推送、文件、告示、地图、监控画面、时间码这类<b style="color:#facc15;">文字类画面元素</b>，
             交给视频模型生成必然出现乱码或错字。因此阶段 9 只让模型画「洁净留白的屏幕/纸面」，
             文字由后期叠加——下面就是需要人工叠加的镜头清单。<br>
-            数据来源：阶段 9 提示词（<code style="color:#64748b;">SeedancePrompts</code>）；提示词未生成时回退到阶段 5 分镜。<b>只读</b>。
+            数据来源：阶段 9 提示词（<code style="color:#5c7078;">SeedancePrompts</code>）；提示词未生成时回退到阶段 5 分镜。<b>只读</b>。
         </div>
         <div class="summary-bar" id="overlayBar"></div>
-        <div id="overlaySection"><p style="color:#94a3b8;padding:16px;">加载中...</p></div>
+        <div id="overlaySection"><p style="color:#789096;padding:16px;">加载中...</p></div>
     </div>
 
     <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
@@ -150,7 +150,7 @@
             var h = "";
             h += "<div class='summary-item'><span class='num'>" + (s.tableCount || 0) + "</span><span class='label'>已有表数</span></div>";
             h += "<div class='summary-item'><span class='num' style='color:#22c55e;'>" + (s.filledTableCount || 0) + "</span><span class='label'>有内容</span></div>";
-            h += "<div class='summary-item'><span class='num' style='color:#64748b;'>" + ((s.tableCount || 0) - (s.filledTableCount || 0)) + "</span><span class='label'>空表</span></div>";
+            h += "<div class='summary-item'><span class='num' style='color:#5c7078;'>" + ((s.tableCount || 0) - (s.filledTableCount || 0)) + "</span><span class='label'>空表</span></div>";
             h += "<div class='summary-item'><span class='num' style='color:#60a5fa;'>" + (s.bindingCount || 0) + "</span><span class='label'>绑定条数</span></div>";
             h += "<div class='summary-item'><span class='num' style='color:#60a5fa;'>" + (s.unitCount || 0) + "</span><span class='label'>涉及单元</span></div>";
             $("#summaryBar").html(h);
@@ -194,7 +194,7 @@
                 h += "<div class='cont-body'" + (hasAny ? " style='display:block;'" : "") + ">";
 
                 if (list.length === 0) {
-                    h += "<div style='color:#64748b;font-size:13px;'>该表没有数据行。若阶段 4 已跑过，说明模型这次没抽出这一类，或抽取整体失败未落库。</div>";
+                    h += "<div style='color:#5c7078;font-size:13px;'>该表没有数据行。若阶段 4 已跑过，说明模型这次没抽出这一类，或抽取整体失败未落库。</div>";
                 } else {
                     for (var j = 0; j < list.length; j++) {
                         var r = list[j];
@@ -227,7 +227,7 @@
 
         function renderBindings(rows) {
             if (!rows || rows.length === 0) {
-                $("#bindingSection").html("<p style='color:#94a3b8;padding:16px;'>暂无单元资产绑定。阶段 4 拆分完成后会自动解析单元 ↔ 项目资产的引用关系并写入。</p>");
+                $("#bindingSection").html("<p style='color:#789096;padding:16px;'>暂无单元资产绑定。阶段 4 拆分完成后会自动解析单元 ↔ 项目资产的引用关系并写入。</p>");
                 return;
             }
             var groups = [];
@@ -252,9 +252,9 @@
                     var it = grp.items[m];
                     h += "<tr><td class='cat-" + esc(it.category || "") + "'>" + esc(CAT_NAME[it.category] || it.category || "-") + "</td>" +
                          "<td>" + esc(it.name || "-") + "</td>" +
-                         "<td style='color:#64748b;'>" + (it.assetId || 0) + "</td>" +
+                         "<td style='color:#5c7078;'>" + (it.assetId || 0) + "</td>" +
                          "<td>" + (it.hasImage ? "<span style='color:#22c55e;'>有</span>" : "<span class='no-img'>无</span>") + "</td>" +
-                         "<td style='color:#64748b;'>" + (it.sortOrder || 0) + "</td></tr>";
+                         "<td style='color:#5c7078;'>" + (it.sortOrder || 0) + "</td></tr>";
                 }
                 h += "</tbody></table></div>";
             }
@@ -276,7 +276,7 @@
             $("#overlayBar").html(bar);
 
             if (items.length === 0) {
-                $("#overlaySection").html("<p style='color:#94a3b8;padding:16px;'>当前镜头里没有检测到需要后期叠加的文字类元素。" +
+                $("#overlaySection").html("<p style='color:#789096;padding:16px;'>当前镜头里没有检测到需要后期叠加的文字类元素。" +
                     "若阶段 9 还没跑，本清单会回退到阶段 5 分镜；两边都为空说明确实没有这类画面。</p>");
                 return;
             }
@@ -296,11 +296,11 @@
             for (var i = 0; i < items.length; i++) {
                 var it = items[i];
                 h += "<tr>" +
-                     "<td style='color:#a78bfa;'>" + (it.episodeNumber || 0) + "</td>" +
+                     "<td style='color:#6af7ff;'>" + (it.episodeNumber || 0) + "</td>" +
                      "<td>" + esc(it.unitName || "-") + "</td>" +
                      "<td>" + esc(it.shotLabel || "-") + "</td>" +
                      "<td style='color:#facc15;'>" + esc(it.categories || "-") + "</td>" +
-                     "<td style='color:#94a3b8;font-size:12px;'>" + esc(it.cues || "-") + "</td>" +
+                     "<td style='color:#789096;font-size:12px;'>" + esc(it.cues || "-") + "</td>" +
                      "<td style='color:#cbd5e1;font-size:12px;'>" + esc(it.excerpt || "-") + "</td>" +
                      "<td>" + (it.guarded ? "<span style='color:#22c55e;'>已写入</span>" : "<span class='no-img'>未写入</span>") + "</td>" +
                      "</tr>";

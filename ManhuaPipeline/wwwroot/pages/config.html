@@ -53,7 +53,7 @@
                         <button class="btn btn-small btn-primary" id="saveDS">保存 DeepSeek 配置</button>
                     </div>
                     <div class="card">
-                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#7c3aed">cloud</span> 千问 (Qwen) 配置</h3>
+                        <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#0b8f99">cloud</span> 千问 (Qwen) 配置</h3>
                         <div class="form-group"><label>API Key</label><input type="password" id="qwKey" placeholder="sk-..."></div>
                         <div class="form-group"><label>API 地址（可选）</label><input type="text" id="qwUrl" placeholder="https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions"></div>
                         <div class="form-group"><label>模型名称（可选）</label><input type="text" id="qwModel" placeholder="qwen-max"></div>
@@ -100,7 +100,7 @@
                         <h3 style="margin-bottom:16px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#0891b2">image</span> 出图渠道（可配多个）</h3>
                         <div id="imageModelList"></div>
                         <button class="btn btn-small" id="addImageModel">+ 新增图片模型</button>
-                        <p style="font-size:11px;color:#64748b;margin-top:10px;">
+                        <p style="font-size:11px;color:#5c7078;margin-top:10px;">
                             可以配多个渠道并存（中转 / 方舟 / 302.ai …）。标了「默认」的那条是全局默认：
                             资产卡出图用它，画布节点在节点面板里没单独挑也用它 —— 画布里每个节点还能单独指定用哪个渠道。
                             填中转站的 base 地址即可（如 <code>https://xxx.com/v1</code>），只填域名会自动补 <code>/v1</code>；
@@ -117,33 +117,33 @@
                         <div class="form-group">
                             <label>画面比例</label>
                             <select id="igRatio"></select>
-                            <p style="font-size:11px;color:#64748b;margin-top:6px;">
+                            <p style="font-size:11px;color:#5c7078;margin-top:6px;">
                                 实际出图尺寸：<b id="igActualSize">—</b>
                             </p>
                         </div>
                         <div class="form-group">
                             <label>质量档位 quality</label>
                             <select id="igQuality"></select>
-                            <p style="font-size:11px;color:#64748b;margin-top:6px;">
+                            <p style="font-size:11px;color:#5c7078;margin-top:6px;">
                                 档位越高越慢（实测 low≈25s、high≈100s），token 不变。2.5 的 high 只等于上一代的 medium，xhigh 才对得上旧 high。
                             </p>
                         </div>
                         <div class="form-group">
                             <label>一次出几张 n</label>
                             <select id="igCount"></select>
-                            <p style="font-size:11px;color:#64748b;margin-top:6px;">
+                            <p style="font-size:11px;color:#5c7078;margin-top:6px;">
                                 中转一次只回 1 张，这里按次数依次生成：每张都进「我的资产」图库，第一张回填资产卡。
                             </p>
                         </div>
                         <div class="form-group">
                             <label>背景 background</label>
                             <select id="igBackground"></select>
-                            <p style="font-size:11px;color:#64748b;margin-top:6px;">transparent 会真的出带透明通道的图；jpeg 不支持透明。</p>
+                            <p style="font-size:11px;color:#5c7078;margin-top:6px;">transparent 会真的出带透明通道的图；jpeg 不支持透明。</p>
                         </div>
                         <div class="form-group">
                             <label>输出格式 output_format</label>
                             <select id="igFormat"></select>
-                            <p style="font-size:11px;color:#64748b;margin-top:6px;">当前中转恒返回 PNG，这个参数先存着，换中转后即可生效。</p>
+                            <p style="font-size:11px;color:#5c7078;margin-top:6px;">当前中转恒返回 PNG，这个参数先存着，换中转后即可生效。</p>
                         </div>
                         <button class="btn btn-small btn-primary" id="saveIG">保存出图参数</button>
                     </div>
@@ -162,7 +162,7 @@
                             <option value="2k">2k</option>
                         </select></div>
                         <div class="form-group"><label style="display:flex;align-items:center;gap:8px;cursor:pointer;"><input type="checkbox" id="mkAuto" style="width:16px;height:16px;"> 生成完成后自动画质增强</label></div>
-                        <p style="font-size:11px;color:#64748b;margin-top:8px;">填 Key 后可在视频任务页对已生成的视频一键「画质增强」（480p/720p → 1080p/2k），处理约需几分钟到十几分钟。</p>
+                        <p style="font-size:11px;color:#5c7078;margin-top:8px;">填 Key 后可在视频任务页对已生成的视频一键「画质增强」（480p/720p → 1080p/2k），处理约需几分钟到十几分钟。</p>
                         <button class="btn btn-small btn-primary" id="saveMK">保存 MediaKit 配置</button>
                     </div>
                 </div>
@@ -369,7 +369,7 @@
                     $modelFg.append($('<input>').addClass('im-model-custom').attr('type', 'text')
                         .attr('placeholder', '直接填渠道方给的模型 ID').val(cur));
                     $modelFg.append($('<p>').addClass('im-model-tip')
-                        .css({ fontSize: '11px', color: '#64748b', marginTop: '6px' }));
+                        .css({ fontSize: '11px', color: '#5c7078', marginTop: '6px' }));
                     $it.append($modelFg);
                     imRefreshModel($it);
 
@@ -379,7 +379,7 @@
                     // 不同渠道能出的分辨率差很多（gpt-image 够不到 1080p、方舟是 2K），挑的时候得先看见
                     if (m.resolutionHint) {
                         $ops.append($('<span>').text('实际出图约 ' + m.resolutionHint)
-                            .css({ fontSize: '11px', color: '#64748b' }));
+                            .css({ fontSize: '11px', color: '#5c7078' }));
                     }
                     // 删除靠右放，跟左边的「保存 / 设为默认」拉开距离，免得手滑点错
                     $ops.append($('<button>').addClass('btn btn-small im-del').text('删除').css({ marginLeft: 'auto' }));
@@ -409,7 +409,7 @@
                     var $box = $("#imageModelList").empty();
                     if (!imModels.length) {
                         $box.append($('<p>').text('还没有配置任何出图渠道，点下面「+ 新增图片模型」加一个。')
-                            .css({ fontSize: '12px', color: '#94a3b8' }));
+                            .css({ fontSize: '12px', color: '#789096' }));
                         return;
                     }
                     $.each(imModels, function (_, m) { $box.append(imItem(m)); });
@@ -562,7 +562,7 @@
             function resize() { W = c.width = window.innerWidth; H = c.height = window.innerHeight; }
             resize(); window.addEventListener("resize", resize);
             var p = [], COUNT = 70;
-            var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+            var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
             for (var i = 0; i < COUNT; i++) p.push({
                 x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
                 dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
@@ -582,7 +582,7 @@
                         if (d < DIST) {
                             var a = (1 - d / DIST) * 0.2;
                             ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
-                            ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+                            ctx.strokeStyle = "rgba(5,232,240," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
                         }
                     }
                 }

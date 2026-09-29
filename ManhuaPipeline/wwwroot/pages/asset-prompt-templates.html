@@ -12,23 +12,23 @@
   <style>
     .container{max-width:100%;padding:28px 24px;}
     .page-title{font-size:24px;font-weight:700;margin-bottom:6px;color:var(--primary-light);}
-    .page-desc{color:#94a3b8;font-size:12.5px;line-height:1.75;margin-bottom:20px;}
+    .page-desc{color:#789096;font-size:12.5px;line-height:1.75;margin-bottom:20px;}
     .apt-tabs{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;}
     .apt-tab{background:rgba(148,163,184,.16);color:#cbd5e1;border:1px solid transparent;border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:600;cursor:pointer;}
     .apt-tab:hover{background:rgba(148,163,184,.3);}
-    .apt-tab.active{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;}
+    .apt-tab.active{background:linear-gradient(135deg,#6af7ff,#0b8f99);color:#fff;}
     .apt-card{background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:12px;padding:20px;}
     .apt-head{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;}
     .apt-head h3{margin:0;font-size:16px;color:#f1f1f5;font-weight:600;}
     .apt-label{color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;}
-    .apt-area{width:100%;box-sizing:border-box;background:#0f172a;color:#e2e8f0;border:1px solid #475569;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;resize:vertical;}
+    .apt-area{width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:8px;padding:10px 12px;font-size:13px;line-height:1.6;resize:vertical;}
     .apt-field{margin-bottom:14px;}
-    .btn-grad{background:linear-gradient(135deg,#a78bfa,#7c3aed);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:600;cursor:pointer;}
+    .btn-grad{background:linear-gradient(135deg,#6af7ff,#0b8f99);color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13.5px;font-weight:600;cursor:pointer;}
     .btn-grad:hover{opacity:.9;}
     .btn-ghost{background:#475569;color:#fff;border:none;border-radius:8px;padding:9px 18px;font-size:13.5px;cursor:pointer;}
     .btn-ghost:hover{background:#52627a;}
     #aptMsg{color:#4ade80;font-size:13px;margin-top:12px;display:none;}
-    #aptHint{font-size:12px;color:#94a3b8;margin-left:10px;}
+    #aptHint{font-size:12px;color:#789096;margin-left:10px;}
   </style>
 </head>
 <body>
@@ -181,7 +181,7 @@
         function resize() { W = c.width = window.innerWidth; H = c.height = window.innerHeight; }
         resize(); window.addEventListener("resize", resize);
         var p = [], COUNT = 70;
-        var colors = ["rgba(124,58,237,", "rgba(59,130,246,", "rgba(167,139,250,"];
+        var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
         for (var i = 0; i < COUNT; i++) p.push({
             x: Math.random() * W, y: Math.random() * H, r: Math.random() * 2 + 1.2,
             dx: (Math.random() - 0.5) * 0.4, dy: (Math.random() - 0.5) * 0.4 - 0.15,
@@ -201,7 +201,7 @@
                     if (d < DIST) {
                         var a = (1 - d / DIST) * 0.2;
                         ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
-                        ctx.strokeStyle = "rgba(124,58,237," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
+                        ctx.strokeStyle = "rgba(5,232,240," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
                     }
                 }
             }
