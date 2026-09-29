@@ -150,16 +150,21 @@
     .ss-start-row select{width:auto;min-width:260px;height:36px;background:#0a0e0d;border:1px solid #27322e;
                          color:#dcebe5;padding:0 10px;outline:0;font-size:12px}
     .ss-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px;margin:16px 0}
-    .ss-fields>label{display:grid;gap:6px;font-size:10px;color:var(--t2)}
-    .ss-fields>label.wide-row{grid-column:1/-1}
+    /* 五步卡片里的表单也是同一种表单：这里把选择器并列写上，
+       不然换个容器（#form → .ss-step-form）样式就整块失联，输入框裸成 HTML 默认样式 */
+    .ss-fields>label,.ss-step-form>label{display:grid;gap:6px;font-size:10px;color:var(--t2)}
+    .ss-fields>label.wide-row,.ss-step-form>label.wide-row{grid-column:1/-1}
     /* 标签行（文字 + 必填红点 + 提示）整体作为一个网格项，子元素行内排，不再各占一行 */
-    .ss-fields>label>.ft{line-height:1.5}
-    .ss-fields>label>.ft span{font-weight:400}
-    .ss-fields input,.ss-fields select,.ss-fields textarea{
+    .ss-fields>label>.ft,.ss-step-form>label>.ft{line-height:1.5}
+    .ss-fields>label>.ft span,.ss-step-form>label>.ft span{font-weight:400}
+    .ss-fields input,.ss-fields select,.ss-fields textarea,
+    .ss-step-form input,.ss-step-form select,.ss-step-form textarea{
       width:100%;background:#090d0c;border:1px solid #26312d;color:#aab9b2;padding:9px 11px;outline:0;font-size:12px}
-    .ss-fields input,.ss-fields select{height:38px}
-    .ss-fields textarea{min-height:78px;resize:vertical;line-height:1.7}
+    .ss-fields input,.ss-fields select,
+    .ss-step-form input,.ss-step-form select{height:38px}
+    .ss-fields textarea,.ss-step-form textarea{min-height:78px;resize:vertical;line-height:1.7}
     .ss-fields input:focus,.ss-fields select:focus,.ss-fields textarea:focus,
+    .ss-step-form input:focus,.ss-step-form select:focus,.ss-step-form textarea:focus,
     .ss-start-row select:focus{border-color:#497c67}
     .ss-form-actions{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;
                      border-top:1px solid #1d2622;margin-top:20px;padding-top:18px;font:9px monospace;color:#4c5c54}
