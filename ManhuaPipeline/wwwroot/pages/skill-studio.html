@@ -649,9 +649,22 @@
     $('#rbFill').css('width', Math.round(list.length / stages.length * 100) + '%');
   }
 
+  // 浏览器里还记着上次运行的编号，但那次可能已经不在了（比如刚清过库）。
+  // 不清掉的话页面会拿着一个空编号一直轮询，看着像卡住了也不知道为什么
+  function forgetRun(msg){
+    clearInterval(timer); stopTick();
+    runId = 0; runStartAt = 0;
+    localStorage.removeItem('skillStudioRun'); localStorage.removeItem('skillStudioStartAt');
+    say('× ' + msg + '，已重置，可以重新跑', 'lwait');
+    $('#runStat').text('尚未开始'); $('#runSub').text(msg);
+    $('#btnStart').prop('disabled', false).html('▶ 开始跑');
+    renderPipe([]);
+  }
+
   function pollOnce(){
     if (!runId) return;
     $.get('/api/director-agent/runs/' + runId, function(d){
+      if (!d || !d.runId){ forgetRun('上次记下的运行已经不在了'); return; }
       logChanges(d.steps); renderPipe(d.steps); updateStats(d); updateRunBar(d);
       // 跑的过程中不许再点「开始跑」——后端也会拦，这里是让按钮自己把话说清楚
       $('#btnStart').prop('disabled', d.status === 'running').html(d.status === 'running' ? '跑着呢…' : '▶ 开始跑');
@@ -664,6 +677,8 @@
       else if (d.status === 'error') say('出错，看左侧红的那一步');
       else if (d.status === 'blocked') showBlocked(d);
       else if (d.status === 'await_confirm') showGate(d);
+    }).fail(function(xhr){
+      if (xhr.status === 404) forgetRun('这次运行已经不在了');
     });
   }
 
