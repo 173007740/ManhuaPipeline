@@ -329,8 +329,31 @@
     .ss-step-out .outbar span{cursor:pointer;color:var(--mint)}
     .ss-step-out .outbar span:hover{text-shadow:0 0 10px rgba(88,242,197,.5)}
     .ss-step-out pre{margin:0;padding:12px;max-height:360px;overflow:auto;
-                     font:11px var(--mono);line-height:1.8;
-                     color:#a9bdb9;white-space:pre-wrap}
+                      font:11px var(--mono);line-height:1.8;
+                      color:#a9bdb9;white-space:pre-wrap}
+    /* 渲染后的产出：标题/表格/引用/代码，别再是一屏 md 符号 */
+    .ss-step-out .md{margin:0;padding:13px 15px;max-height:460px;overflow:auto;
+                     font-size:12.5px;line-height:1.85;color:#c3d6d2}
+    .ss-step-out .md h1,.ss-step-out .md h2,.ss-step-out .md h3,.ss-step-out .md h4{
+      color:var(--mint);margin:15px 0 7px;line-height:1.4;font-weight:700}
+    .ss-step-out .md h1{font-size:17px;border-bottom:1px solid #1a3536;padding-bottom:5px}
+    .ss-step-out .md h2{font-size:15px}
+    .ss-step-out .md h3{font-size:13.5px}
+    .ss-step-out .md h4{font-size:13px}
+    .ss-step-out .md p{margin:0 0 8px}
+    .ss-step-out .md ul{margin:0 0 8px;padding-left:20px}
+    .ss-step-out .md li{margin:3px 0}
+    .ss-step-out .md blockquote{margin:8px 0;padding:6px 12px;border-left:2px solid var(--mint);
+                                background:rgba(5,232,240,.05);color:#a9c4c0}
+    .ss-step-out .md table{width:100%;border-collapse:collapse;margin:8px 0;font-size:12px}
+    .ss-step-out .md th,.ss-step-out .md td{border:1px solid #1a3536;padding:6px 9px;
+                                            text-align:left;vertical-align:top}
+    .ss-step-out .md th{background:#0a1c1e;color:#dff3ef}
+    .ss-step-out .md code{font:11px var(--mono);background:#0a1719;padding:1px 5px;color:#dff3ef}
+    .ss-step-out .md pre{margin:8px 0;padding:10px;background:#0a1719;overflow:auto;
+                         font:11px var(--mono);white-space:pre-wrap;color:#a9bdb9}
+    .ss-step-out .md hr{border:0;border-top:1px solid #1a3536;margin:14px 0}
+    .ss-step-out .md b{color:#eafff9}
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes scan{from{transform:translateX(-120%) skewX(-20deg)}to{transform:translateX(120%) skewX(-20deg)}}
     @media(max-width:1180px){.ss-root{grid-template-columns:1fr}.ss-sidebar{display:none}
@@ -619,7 +642,16 @@
   function calcSteps(steps){
     if (!stages.length) return [];
     var by = {};
-    (steps || []).forEach(function(s){ by[s.stageKey] = s; });
+    /* 同一阶段重跑多次时，后一条 blocked/error 会把前面那条 done 的记录整个盖掉，
+       结果「看产出」按钮直接消失——明明上一次跑出来的东西还在库里。
+       所以已有可查看（done / await_confirm）记录时，不让 blocked / error 覆盖它。 */
+    (steps || []).forEach(function(s){
+      var p = by[s.stageKey];
+      var okPrev = p && (p.status === 'done' || p.status === 'await_confirm');
+      var badNow = s.status === 'blocked' || s.status === 'error';
+      if (okPrev && badNow) return;
+      by[s.stageKey] = s;
+    });
     var order = stages.map(function(s){ return s.stageKey; });
     return STEPS.map(function(sp){
       var keys = [];
@@ -731,6 +763,54 @@
     $('[data-view]').click(function(){ viewOut(+$(this).data('view')); });
   }
 
+  /* 极简 Markdown 渲染。
+     产出是 LLM 写的 md，原来直接 esc 完塞进 <pre>，看到的是一屏 ## 、| 、** 符号，根本读不了。
+     先转义再解析——产出内容来自模型输出，不转义等于把它的 HTML 当场执行。 */
+  function mdInline(s){
+    return String(s)
+      .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+      .replace(/(^|[^*])\*([^*]+)\*/g, '$1<i>$2</i>')
+      .replace(/`([^`]+)`/g, '<code>$1</code>');
+  }
+  function mdRender(src){
+    var lines = String(src || '').split('\n'), out = [], i = 0, inCode = false, inList = false;
+    function closeList(){ if (inList){ out.push('</ul>'); inList = false; } }
+    for (; i < lines.length; i++){
+      var ln = esc(lines[i]);
+      if (/^```/.test(ln)){ closeList(); out.push(inCode ? '</code></pre>' : '<pre><code>'); inCode = !inCode; continue; }
+      if (inCode){ out.push(ln); continue; }
+      /* 表格：当前行是 |..|，下一行是 |---| 分隔行 */
+      if (/^\s*\|/.test(ln) && i + 1 < lines.length && /^\s*\|[\s:|-]+\|\s*$/.test(lines[i + 1])){
+        closeList();
+        var head = ln.split('|').slice(1, -1);
+        i += 2;
+        var body = [];
+        for (; i < lines.length && /^\s*\|/.test(lines[i]); i++) body.push(esc(lines[i]).split('|').slice(1, -1));
+        i--;
+        out.push('<table><thead><tr>' + head.map(function(c){ return '<th>' + mdInline(c) + '</th>'; }).join('')
+          + '</tr></thead><tbody>'
+          + body.map(function(r){ return '<tr>' + r.map(function(c){ return '<td>' + mdInline(c) + '</td>'; }).join('') + '</tr>'; }).join('')
+          + '</tbody></table>');
+        continue;
+      }
+      if (/^\s*\|/.test(ln)) continue;                       // 落单的表格行（表头上方/下方）跳过
+      var m = /^(#{1,6})\s+(.*)$/.exec(ln);
+      if (m){ closeList(); var lv = Math.min(m[1].length, 4); out.push('<h' + lv + '>' + mdInline(m[2]) + '</h' + lv + '>'); continue; }
+      if (/^\s*(-{3,}|\*{3,})\s*$/.test(ln)){ closeList(); out.push('<hr>'); continue; }
+      if (/^\s*>\s?/.test(ln)){ closeList(); out.push('<blockquote>' + mdInline(ln.replace(/^\s*>\s?/, '')) + '</blockquote>'); continue; }
+      if (/^\s*([-*+]|\d+\.)\s+/.test(ln)){
+        if (!inList){ out.push('<ul>'); inList = true; }
+        out.push('<li>' + mdInline(ln.replace(/^\s*([-*+]|\d+\.)\s+/, '')) + '</li>'); continue;
+      }
+      if (!ln.trim()){ closeList(); continue; }
+      closeList();
+      out.push('<p>' + mdInline(ln) + '</p>');
+    }
+    closeList();
+    if (inCode) out.push('</code></pre>');
+    return out.join('');
+  }
+
   function viewOut(i){
     var s = STEP_STATE[i];
     if (!s || !s.viewId) return;
@@ -739,7 +819,7 @@
     box.show().html('<div class="outbar">加载中…</div>');
     $.get('/api/director-agent/steps/' + s.viewId + '/output', function(o){
       box.html('<div class="outbar"><b>' + esc(STEPS[i].title) + ' · 产出</b>'
-        + '<span data-close="' + i + '">收起 ✕</span></div><pre>' + esc((o && o.output) || '（空）') + '</pre>');
+        + '<span data-close="' + i + '">收起 ✕</span></div><div class="md">' + mdRender((o && o.output) || '（空）') + '</div>');
       box.find('[data-close]').click(function(){ box.hide().empty(); });
     });
   }
