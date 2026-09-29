@@ -280,6 +280,29 @@
     .ss-btn-row .wa:hover{border-color:var(--amber);color:var(--amber)}
     .ss-btn-row button:disabled{opacity:.4;cursor:not-allowed}
     /* 交付物：立项/剧本/清单/图册/质检的产出是整篇文本，以前没地方去 */
+    /* 落地：出图 / 出视频。跑完就地干，不用跳去 project.html */
+    .land-card{margin-top:14px}
+    .land-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;padding:14px 16px 16px}
+    @media(max-width:1100px){.land-grid{grid-template-columns:1fr}}
+    .land-box{border:1px solid #1a3536;background:#081113;padding:13px}
+    .land-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .land-head b{font-size:12px;letter-spacing:.3px}
+    .land-head em{font-style:normal;font:10px var(--mono);color:var(--t3)}
+    .land-nums{display:flex;flex-wrap:wrap;gap:8px}
+    .land-num{flex:1;min-width:86px;border:1px solid #16302f;background:#061011;padding:8px 10px}
+    .land-num span{display:block;font:9px var(--mono);letter-spacing:1px;color:var(--t3)}
+    .land-num b{font-size:15px;color:var(--mint)}
+    .land-num i{font-style:normal;font-size:10px;color:var(--t3);margin-left:3px}
+    .land-line{margin:10px 0 0;font:10px var(--mono);color:var(--t2);line-height:1.7}
+    .land-line .bad{color:var(--bad)} .land-line .ok{color:var(--green)} .land-line .run{color:var(--amber)}
+    .land-params{display:flex;flex-wrap:wrap;gap:10px;margin:10px 0 0;align-items:center;font-size:11px;color:var(--t2)}
+    .land-params label{display:inline-flex;align-items:center;gap:5px;white-space:nowrap}
+    .land-params select{background:#061011;border:1px solid #1a3536;color:#c3d6d2;font-size:11px;padding:3px 6px}
+    .land-btns{display:flex;gap:8px;margin-top:12px}
+    .land-btns button{flex:none;padding:6px 14px;font-size:12px;border:1px solid #1f4a44;
+                      background:#0b1f21;color:#9fe8d5;cursor:pointer}
+    .land-btns button:hover{border-color:var(--mint);background:#0e2b2c}
+    .land-btns button:disabled{opacity:.4;cursor:not-allowed}
     .deliv-card{margin-top:14px}
     .deliv-list{display:grid;gap:6px;padding:14px 16px 16px}
     .deliv-item{display:flex;align-items:center;gap:11px;padding:9px 13px;border:1px solid #1a3536;
@@ -499,6 +522,41 @@
         </aside>
       </div>
 
+      <!-- 落地：出图 / 出视频。
+           以前这两件事要跳到 project.html 才能做。那一跳麻烦的不是多点一次，
+           是刚跑出来的东西得重新对一遍：这五个角色卡对不对、提示词生成到第几条了。
+           挪到产出旁边，跑完就地出图、就地出视频。 -->
+      <section class="ss-panel land-card" id="landCard" style="display:none">
+        <div class="ss-minihead"><b>落地 · 出图与出视频</b><span id="landHint">LOADOUT</span></div>
+        <div class="land-grid">
+          <div class="land-box">
+            <div class="land-head"><b>资产出图</b><em id="imgStat">—</em></div>
+            <div class="land-nums" id="imgNums"><div class="empty-hint">加载中</div></div>
+            <div class="land-line" id="imgTaskLine"></div>
+            <div class="land-btns">
+              <button id="btnImgMissing">补齐缺图</button>
+              <button id="btnImgAll">全部重出</button>
+              <button id="btnImgRetry" style="display:none">重试失败</button>
+            </div>
+          </div>
+
+          <div class="land-box">
+            <div class="land-head"><b>批量出视频</b><em id="vidStat">—</em></div>
+            <div class="land-nums" id="vidNums"><div class="empty-hint">加载中</div></div>
+            <div class="land-params">
+              <label>比例<select id="lvRatio"><option>16:9</option><option>9:16</option><option>1:1</option><option>4:3</option><option>3:4</option></select></label>
+              <label>分辨率<select id="lvRes"><option>480p</option><option selected>720p</option><option>1080p</option></select></label>
+              <label>像素档<select id="lvMp"><option value="0.5">0.5</option><option value="1" selected>1</option><option value="2">2</option></select></label>
+              <label><input type="checkbox" id="lvAudio" checked> 音频</label>
+              <label><input type="checkbox" id="lvWm"> 水印</label>
+            </div>
+            <div class="land-btns">
+              <button id="btnVidBatch">批量生成视频</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
       <section class="ss-panel deliv-card" id="delivCard" style="display:none">
         <div class="ss-minihead"><b>交付物</b><span>重跑留新版本，旧版不丢</span></div>
         <div class="deliv-list" id="delivList"></div>
@@ -567,6 +625,7 @@
     $('#wsTarget').text(pid ? t : '未绑定项目');
     loadEpisodes(pid);
     loadDeliverables();
+    loadLand();
   });
   $('#eps').change(function(){
     var pid = $('#proj').val();
@@ -595,7 +654,157 @@
     $('#wsTarget').text((list.filter(function(p){ return p.projectId === +pid; })[0] || {}).title || '项目 #' + pid);
     loadEpisodes(pid);
     loadDeliverables();
+    loadLand();
   }
+
+  /* ===== 落地：出图 / 出视频 ================================================
+     以前跑完流水线要跳去 project.html 才能出图、出视频。现在挪到产出旁边就地做。
+     这两件事都是后台队列：点了就入队，关掉页面也照跑，回来只看结果。 */
+  var LAND_CATS = [
+    { k:'characters', n:'角色' }, { k:'environments', n:'场景' },
+    { k:'props', n:'道具' },      { k:'effects', n:'特效' }
+  ];
+  // 后端 batch-generate 判「还在生成中」用的就是这几个状态
+  var VID_BUSY = { processing:1, running:1, pending:1, queued:1, unknown:1 };
+  var landTimer = null;
+
+  function stopLandPoll(){ if (landTimer){ clearInterval(landTimer); landTimer = null; } }
+
+  function loadLand(){
+    if (!$('#proj').val()){ $('#landCard').hide(); stopLandPoll(); return; }
+    $('#landCard').show();
+    refreshLand();
+  }
+
+  function refreshLand(){
+    var pid = $('#proj').val();
+    if (!pid){ stopLandPoll(); return; }
+    // 四类资产 + 提示词 + 出图任务一起拉。某一项拉不到不算错，那一格显示 0
+    var jobs = LAND_CATS.map(function(c){
+      return $.get('/api/project/' + pid + '/asset/' + c.k)
+        .then(function(l){ return { cat:c, list:l || [] }; }, function(){ return { cat:c, list:[] }; });
+    });
+    jobs.push($.get('/api/project/' + pid + '/prompt')
+      .then(function(l){ return { prompts:l || [] }; }, function(){ return { prompts:[] }; }));
+    jobs.push($.get('/api/project/' + pid + '/asset/image-tasks', { take:300 })
+      .then(function(l){ return { tasks:l || [] }; }, function(){ return { tasks:[] }; }));
+
+    $.when.apply($, jobs).done(function(){
+      var assets = [], prompts = [], tasks = [];
+      [].forEach.call(arguments, function(r){
+        if (!r) return;
+        if (r.cat) assets.push(r);
+        else if (r.prompts) prompts = r.prompts;
+        else if (r.tasks) tasks = r.tasks;
+      });
+      renderLand(assets, prompts, tasks);
+    });
+  }
+
+  function renderLand(assets, prompts, tasks){
+    var tot = 0, has = 0;
+    $('#imgNums').html(assets.map(function(a){
+      var n = a.list.length,
+          h = a.list.filter(function(x){ return !!x.imageUrl; }).length;
+      tot += n; has += h;
+      return '<div class="land-num"><span>' + a.cat.n + '</span><b>' + h + '</b><i>/ ' + n + '</i></div>';
+    }).join('') || '<div class="empty-hint">还没有资产，先跑「资产」那一步</div>');
+    $('#imgStat').text(tot ? has + ' / ' + tot + ' 已出图' : '—');
+
+    var q = tasks.filter(function(t){ return t.status === 'queued'; }).length,
+        r = tasks.filter(function(t){ return t.status === 'running'; }).length,
+        f = tasks.filter(function(t){ return t.status === 'failed'; }).length;
+    $('#imgTaskLine').html(
+        ((q || r) ? '<span class="run">排队 ' + q + ' · 出图中 ' + r + '</span>　' : '')
+      + (f ? '<span class="bad">失败 ' + f + '</span>　' : '')
+      + ((!q && !r && !f) ? (tasks.length ? '<span class="ok">出图任务都跑完了</span>' : '<span>还没出过图</span>') : '')
+    );
+    $('#btnImgRetry').toggle(f > 0);
+    $('#btnImgMissing').prop('disabled', !(tot - has));
+    $('#btnImgAll').prop('disabled', !tot);
+
+    var pv = prompts.filter(function(p){ return !!(p.videoUrl || p.localVideoUrl); }).length,
+        busy = prompts.filter(function(p){ return VID_BUSY[p.status]; }).length;
+    $('#vidNums').html(prompts.length
+      ? '<div class="land-num"><span>提示词</span><b>' + prompts.length + '</b><i>条</i></div>'
+      + '<div class="land-num"><span>已出视频</span><b>' + pv + '</b><i>/ ' + prompts.length + '</i></div>'
+      + '<div class="land-num"><span>生成中</span><b>' + busy + '</b><i>条</i></div>'
+      : '<div class="empty-hint">还没有提示词，先跑「提示词」那一步</div>');
+    $('#vidStat').text(prompts.length ? pv + ' / ' + prompts.length + ' 已出' : '—');
+    $('#btnVidBatch').prop('disabled', !(prompts.length - pv - busy));
+
+    // 有活儿在跑才轮询，都跑完了就别空转
+    if (q || r || busy){ if (!landTimer) landTimer = setInterval(refreshLand, 5000); }
+    else stopLandPoll();
+  }
+
+  function queueImages(scope){
+    var pid = $('#proj').val();
+    if (!pid){ say('× 先选好落点项目', 'lerr'); return; }
+    var btn = scope === 'all' ? $('#btnImgAll') : $('#btnImgMissing');
+    btn.prop('disabled', true);
+    var n = 0, skip = 0, done = 0;
+    LAND_CATS.forEach(function(c){
+      $.ajax({ url:'/api/project/' + pid + '/asset/images/queue', method:'POST',
+               contentType:'application/json',
+               data: JSON.stringify({ category:c.k, scope:scope }) })
+        .done(function(r){ n += (r.queued || 0); skip += (r.skipped || 0); })
+        .always(function(){
+          if (++done < LAND_CATS.length) return;
+          btn.prop('disabled', false);
+          say(n ? '✓ 已入队 ' + n + ' 条出图任务' + (skip ? '，' + skip + ' 条已在队列跳过' : '')
+                : '没有可入队的资产' + (skip ? '：' + skip + ' 条已在队列中' : ''), n ? 'lok' : 'lwait');
+          refreshLand();
+        });
+    });
+  }
+  $('#btnImgMissing').click(function(){ queueImages('missing'); });
+  $('#btnImgAll').click(function(){ queueImages('all'); });
+
+  // 出图失败的任务重排：只有失败 / 已完成能重试，其余后端会挡回来
+  $('#btnImgRetry').click(function(){
+    var pid = $('#proj').val(); if (!pid) return;
+    var btn = $(this); btn.prop('disabled', true);
+    $.get('/api/project/' + pid + '/asset/image-tasks', { take:300 }, function(tasks){
+      var fails = (tasks || []).filter(function(t){ return t.status === 'failed'; });
+      if (!fails.length){ btn.prop('disabled', false); refreshLand(); return; }
+      var ok = 0, done = 0;
+      fails.forEach(function(t){
+        $.post('/api/project/' + pid + '/asset/image-tasks/' + t.taskId + '/retry')
+          .done(function(){ ok++; })
+          .always(function(){
+            if (++done < fails.length) return;
+            btn.prop('disabled', false);
+            say('✓ 重新排队 ' + ok + ' / ' + fails.length + ' 条失败任务', 'lok');
+            refreshLand();
+          });
+      });
+    }).fail(function(){ btn.prop('disabled', false); });
+  });
+
+  // 批量出视频：所有还没出视频的提示词一次性提交。参数跟 project.html 第 9 步那排一致
+  $('#btnVidBatch').click(function(){
+    var pid = $('#proj').val(); if (!pid) return;
+    var btn = $(this);
+    if (!confirm('把所有还没出视频的提示词一次性提交给出视频模型。要花时间也要花钱，确定？')) return;
+    btn.prop('disabled', true).text('提交中...');
+    $.ajax({ url:'/api/project/' + pid + '/video/batch-generate', method:'POST',
+             contentType:'application/json',
+             data: JSON.stringify({ settings:{
+               ratio: $('#lvRatio').val(), watermark: $('#lvWm').is(':checked'),
+               generateAudio: $('#lvAudio').is(':checked'), resolution: $('#lvRes').val(),
+               megapixels: parseFloat($('#lvMp').val()) || 1
+             }}) })
+      .done(function(r){
+        say('✓ ' + (r.message || '已提交') + (r.count ? '（' + r.count + ' 条）' : ''), 'lok');
+        if (r.failures && r.failures.length) say('× 其中 ' + r.failures.length + ' 条提交失败', 'lerr');
+        refreshLand();
+      })
+      .fail(function(xhr){
+        say('× 提交失败：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
+      })
+      .always(function(){ btn.prop('disabled', false).text('批量生成视频'); });
+  });
 
   // 交付物：立项 / 剧本 / 资产清单 / 图册 / 质检的产出是整篇文本，
   // 没有对应的业务表，以前只能躺在步骤记录里没人看。重跑留新版本，旧版都在。
@@ -1030,6 +1239,7 @@
       // 结掉的那次不该再被「接上次运行」捞起来
       if (d.status === 'done' || d.status === 'abandoned') localStorage.removeItem('skillStudioRun');
       loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
+      loadLand();                                    // 资产/提示词刚入库，落地那两块的数字也变了
       if (d.status === 'done') say('全部跑完');
       else if (d.status === 'error') say('出错，看左边红的那一步', 'lerr');
       else if (d.status === 'blocked') showTrouble(d);
