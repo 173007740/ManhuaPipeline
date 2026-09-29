@@ -76,6 +76,13 @@ public class DirectorAgentService
             sb.AppendLine();
             sb.AppendLine("## 本阶段门禁（不满足就不要产出，直接指出卡在哪）");
             sb.AppendLine(stage.Gates);
+            // 门禁不过必须用机器认得出的标记说出来。
+            // 以前只说「指出卡在哪」，LLM 于是自由发挥写一段中文，引擎分不清那是阻断还是成品，
+            // 照样标完成、照样入库——结果一句「画幅未锁定，请回答」被当成剧本写进了 ScriptContent。
+            sb.AppendLine();
+            sb.AppendLine("门禁未通过时：正文第一行必须恰好是 `BLOCKED:`，后跟你要用户补充或确认的具体问题，");
+            sb.AppendLine("此外不产出任何内容（不要表格、不要正文、不要 json 块）。");
+            sb.AppendLine("门禁通过时：正常产出，全篇不得出现 BLOCKED 字样。");
         }
         // 产出要入库的阶段，顺便要求 LLM 附一个 json 块：解析就不用猜格式，这是可靠与能跑的分界线
         var schema = SkillOutputImporter.OutputSchemaFor(stage.OutputTarget);
@@ -203,6 +210,13 @@ public class DirectorAgentService
             try { r = await ExecuteStepAsync(userId, runId, packId, st, input); }
             catch { _db.UpdateSkillRun(runId, st.StageKey, "error"); throw; }
 
+            // 门禁没过就到此为止。继续往下喂只会被下游当成「上一步的素材」，
+            // 然后每个阶段都礼貌地拒绝一遍——跑完一片空白，还查不出是哪一步开始歪的
+            if (r.Status == "blocked")
+            {
+                _db.UpdateSkillRun(runId, st.StageKey, "blocked");
+                return;
+            }
             if (st.HumanConfirm)
             {
                 _db.UpdateSkillRun(runId, st.StageKey, "await_confirm");
@@ -222,6 +236,9 @@ public class DirectorAgentService
 
         var last = steps.OrderByDescending(s => s.SortOrder).FirstOrDefault()
                    ?? throw new InvalidOperationException("这次运行还没跑过任何阶段");
+        // 门禁没过的那一步没有产出，拿它往下串只会把一句拒绝通知传给下游
+        if (last.Status == "blocked")
+            throw new InvalidOperationException("上一步门禁没过，没有产出。按提示补充后从那一步重跑");
         var packId = _db.GetRunPackId(runId);
         var stages = _db.GetSkillStages(packId).Where(s => s.IsEnabled).OrderBy(s => s.SortOrder).ToList();
         var idx = stages.FindIndex(s => s.StageKey == last.StageKey) + 1;
@@ -266,6 +283,16 @@ public class DirectorAgentService
             var raw = await _llm.CallAsync(cfg.ApiUrl ?? "", cfg.ApiKey, cfg.ModelName ?? "", sys,
                                            "请严格按「本阶段产出要求」输出，不要输出多余解释。",
                                            jsonMode: false, temperature: 0.7, thinkingMode: cfg.ThinkingMode);
+
+            // 门禁没过：这是 LLM 在问用户要东西，不是产出。
+            // 以前没识别，照样标 done、照样往下串联、照样入库——一句话被当成剧本传了三步
+            if (LooksBlocked(raw))
+            {
+                _db.FinishSkillStep(stepId, "blocked", raw, null, "门禁未通过，等你补充后重跑本阶段");
+                return new StepResult(stepId, stage.StageKey, "blocked", raw, build.Chars,
+                                      EstimateTokens(sys), stage.Gates, cost, 0, null);
+            }
+
             var json = TryExtractJson(raw);
             var status = stage.HumanConfirm ? "await_confirm" : "done";
 
@@ -292,6 +319,21 @@ public class DirectorAgentService
             _db.FinishSkillStep(stepId, "error", null, null, ex.Message);
             throw;
         }
+    }
+
+    /// <summary>
+    /// 门禁没过时 LLM 会写 BLOCKED: 开头（prompt 里硬要求的）。
+    /// 兜底再认几个它写惯了的说法——万一模型不听话，也不能把拒绝通知当成品往下传。
+    /// </summary>
+    private static bool LooksBlocked(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return false;
+        var t = raw.TrimStart(' ', '\t', '\n', '\r', '#', '*', '`', '「', '"');
+        if (t.StartsWith("BLOCKED", StringComparison.OrdinalIgnoreCase)) return true;
+        if (t.StartsWith("⛔")) return true;
+        // 老格式的自由发挥：短文本 + 明确的拒绝措辞。真正的产出不会只有几百字
+        return t.Length < 1500
+            && Regex.IsMatch(t, @"(任务不可启动|不可启动|禁止进入|无法产出|❌\s*未锁定)");
     }
 
     /// <summary>人工确认放行。引擎自己不判断「能不能过」，只有人点了才算过。</summary>

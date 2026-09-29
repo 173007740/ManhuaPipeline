@@ -52,6 +52,10 @@
     .st.confirm>i{border-color:var(--amber);background:var(--amber);color:#1a1206;}
     .st.error{background:linear-gradient(90deg,#4a1f22,#1b1824);color:#ffc0c0;}
     .st.error>i{border-color:var(--bad);background:var(--bad);color:#1a0d0d;}
+    /* 门禁阻断：这一步什么都没产出，跟「跑失败」不是一回事，得能一眼分开 */
+    .st.blocked{background:linear-gradient(90deg,#4a3a16,#1b1824);color:#ffe0a8;}
+    .st.blocked>i{border-color:#f7b85d;background:#3a2c10;color:#f7b85d;}
+    .st.blocked .ex{color:#f7b85d;}
     .st.start{box-shadow:inset 0 0 0 1px #8b67e7;}
     .st.start:after{content:"起";position:absolute;right:8px;font-size:8px;color:#b79bff;}
     .side-bottom{margin-top:auto;}
@@ -446,6 +450,7 @@
         if (st.status === 'running'){ cls = 'running'; ico = '◐'; ex = '跑中'; }
         else if (st.status === 'await_confirm'){ cls = 'confirm'; ico = '!'; ex = '待确认'; }
         else if (st.status === 'error'){ cls = 'error'; ico = '×'; ex = '失败'; }
+        else if (st.status === 'blocked'){ cls = 'blocked'; ico = '⛔'; ex = '门禁没过'; }
         else if (st.status === 'done'){
           cls = 'done'; ico = '✓';
           ex = st.imported > 0 ? '入库 ' + st.imported : (st.importError ? '未入库' : '');
@@ -480,11 +485,11 @@
     $('#sDoneSub').text('共 ' + (d.steps || []).length + ' 步已执行');
     $('#sImp').text(imp);
     $('#sImpSub').text(imp ? '已写入业务表' : '尚未入库');
-    $('#runStat').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了' }[d.status] || '未开始');
+    $('#runStat').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了', blocked:'门禁没过' }[d.status] || '未开始');
     $('#runSub').text('当前阶段：' + (d.currentStage || '—'));
     var pct = stages.length ? Math.round(done / stages.length * 100) : 0;
     $('#runBar').css('width', pct + '%');
-    $('#stateHint').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了' }[d.status] || '');
+    $('#stateHint').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了', blocked:'门禁没过' }[d.status] || '');
   }
 
   function startPoll(reset){
@@ -523,6 +528,7 @@
       else if (s.status === 'done') say('✓ ' + nm + ' 完成' + (s.imported ? '，入库 ' + s.imported + ' 条' : ''), 'lok');
       else if (s.status === 'await_confirm') say('⏸ ' + nm + ' 停下等你确认', 'lwait');
       else if (s.status === 'error') say('× ' + nm + ' 失败' + (s.error ? '：' + s.error : ''), 'lerr');
+      else if (s.status === 'blocked') say('⛔ ' + nm + ' 门禁没过，没产出东西，等你补充', 'lwait');
     });
   }
 
@@ -550,7 +556,28 @@
       loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
       if (d.status === 'done') { say('全部跑完'); $('#gate').html('<div class="gatebox" style="border-color:#2c5540;background:linear-gradient(145deg,#101c16,#101117)"><div class="gh" style="color:#6bd3a1">流水线跑完了</div><div class="gm" style="color:#9fb8a8">产出已入库，左侧可以看到每步的入库条数。</div></div>'); }
       else if (d.status === 'error') say('出错，看左侧红的那一步');
+      else if (d.status === 'blocked') showBlocked(d);
       else if (d.status === 'await_confirm') showGate(d);
+    });
+  }
+
+  // 门禁阻断：LLM 判定前置条件不满足，拒绝产出。
+  // 以前它的拒绝被当成成品往下传——跑完拿到一堆「请回答 xx」，还查不出是哪一步开始歪的
+  function showBlocked(d){
+    var b = (d.steps || []).filter(function(s){ return s.status === 'blocked'; })[0];
+    if (!b) return;
+    $('#gate').html('<div class="gatebox">'
+      + '<div class="gh">⛔ 门禁没过 · ' + esc(b.stageKey) + ' ' + esc(b.name || '') + '</div>'
+      + '<div class="gm">这一阶段<b style="color:#f7b85d">没有产出任何东西</b> —— LLM 判定前置条件不满足，'
+      + '下面是它要你补充或确认的。补完之后从这一步重跑。</div>'
+      + '<div class="gateout" id="blkOut">加载中…</div>'
+      + '<div style="display:flex;gap:8px;margin-top:10px"><button class="primary warn" id="btnRetry">知道了，重跑这一步</button></div></div>');
+    $.get('/api/director-agent/steps/' + b.stepId + '/output', function(o){
+      $('#blkOut').text(((o && o.output) || '（没有内容）').replace(/^\s*BLOCKED\s*:?\s*/i, ''));
+    });
+    $('#btnRetry').click(function(){
+      $('#startStage').val(b.stageKey); renderForm(); $('#gate').empty();
+      say('已切到 ' + b.stageKey + '，改完上面的内容点「开始跑」', 'lwait');
     });
   }
 
