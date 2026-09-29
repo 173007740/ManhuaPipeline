@@ -13,14 +13,20 @@
     /* 视觉参照「幕界 / MANGA ENGINE」工作台：近黑底 + 青绿 HUD 强调 + 等宽小标签 + 直角卡片。
        选择器全部挂在 .ss-root 下，跟全站 style.css 隔开，换皮不至于把别处带崩。
        变量名沿用旧名——行内有 var(--mint) 之类的内联样式在引用，改名会让它们一起失效。 */
-    .ss-root{--bg:#050809;--panel:#081113;--line:#183033;--mint:#58f2c5;--green:#52e3a4;--violet:#9b7cff;
-             --cyan:#4bcce8;--amber:#f0b55d;--bad:#ff6b6b;--t1:#dce8e5;--t2:#819594;--t3:#5c7474;
+    /* 色板对齐全站：--mint/--cyan 从青绿 #58f2c5 / #4bcce8 换成 admin-theme.css 的主青 #05e8f0，
+       --green 换成亮青 #6af7ff。--violet 没有 var() 引用（只在下面已删掉的噪点层里硬编码过），先留着。
+       --amber 是等待/警告态，不动。 */
+    .ss-root{--bg:#050809;--panel:#081113;--line:#183033;--mint:#05e8f0;--green:#6af7ff;--violet:#9b7cff;
+             --cyan:#05e8f0;--amber:#f0b55d;--bad:#ff6b6b;--t1:#dce8e5;--t2:#819594;--t3:#5c7474;
              --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
-             min-height:calc(100vh - 64px);color:var(--t1);position:relative;
+             min-height:calc(100vh - 64px);color:var(--t1);position:relative;z-index:1;
              font:13px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
-             background:radial-gradient(900px 430px at 78% -8%,rgba(88,242,197,.07),transparent 70%),
-                        radial-gradient(700px 460px at 10% 108%,rgba(75,204,232,.06),transparent 70%),
-                        var(--bg);
+             /* 底色改半透明：admin-theme.css 那层全站 HUD 特效（54px 网格 + 二进制大字 + 右侧光环 + 斜扫光）
+                是 fixed z-index 0。.ss-root 抬到 z-index 1 之后，底色要是实色就把特效全挡住了，
+                降到 .62 才能让网格和光环透过页面看见。 */
+             background:radial-gradient(900px 430px at 78% -8%,rgba(5,232,240,.07),transparent 70%),
+                        radial-gradient(700px 460px at 10% 108%,rgba(106,247,255,.06),transparent 70%),
+                        rgba(5,8,9,.62);
              display:grid;grid-template-columns:262px 1fr;}
     .ss-root *{box-sizing:border-box}
     .ss-root button,.ss-root select,.ss-root textarea,.ss-root input{font:inherit}
@@ -28,17 +34,37 @@
     .ss-root ::-webkit-scrollbar-thumb{background:#1c3334}
     .ss-root ::-webkit-scrollbar-thumb:hover{background:#27494a}
     /* 背景：网格 + 两团光。纯装饰，不挡点击 */
-    .ss-grid{position:fixed;inset:0;pointer-events:none;z-index:0;
-             background-image:linear-gradient(rgba(88,242,197,.045) 1px,transparent 1px),
-                              linear-gradient(90deg,rgba(88,242,197,.045) 1px,transparent 1px);
-             background-size:44px 44px;mask-image:linear-gradient(to bottom,#000,transparent 82%)}
-    .ss-noise{position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
-              background:radial-gradient(circle at 85% 0,rgba(88,242,197,.08),transparent 28%),
-                         radial-gradient(circle at 40% 100%,rgba(155,124,255,.07),transparent 38%)}
+    /* ---- 按钮：整页统一成 dashboard.html / project.html 那颗 ----
+       40px 高、1px 描边、左上和右下各切 8px；主操作青边青字压深青底，等待态保留琥珀色，其余空心。
+       切角是 clip-path，所以 hover 不能带 box-shadow（会被裁掉），原来的 box-shadow 在这里被顶掉。
+       .ss-root 下按钮样式本来分散在三处（.ss-actions / .ss-btn-row / .ss-step-act），高度还不一样
+       （40 / 36 / padding 8px），这里一次性抹平。 */
+    :root{--hud-cyan:#05e8f0;--hud-red:#ff3852;--hud-btn:#06313b}
+    .ss-actions button,.ss-btn-row button,.ss-step-act button{
+      height:40px!important;padding:0 16px!important;font-size:12px!important;
+      display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;
+      border:1px solid #49626a!important;border-radius:0!important;
+      background-color:transparent!important;color:#dbe7e8!important;
+      clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+      box-shadow:none!important;cursor:pointer}
+    /* 卡片和步骤条里的按钮比较密，40px 会把行撑高，统一压到 34px */
+    .ss-btn-row button,.ss-step-act button{height:34px!important}
+    .ss-actions button:hover,.ss-btn-row button:hover,.ss-step-act button:hover{
+      border-color:var(--hud-cyan)!important;color:var(--hud-cyan)!important;background-color:rgba(6,49,59,.5)!important}
+    .ss-actions .run,.ss-btn-row .go,.ss-step-act button.go{
+      border-color:var(--hud-cyan)!important;background-color:var(--hud-btn)!important;
+      color:var(--hud-cyan)!important;font-weight:700!important}
+    .ss-actions .run:hover,.ss-btn-row .go:hover,.ss-step-act button.go:hover{
+      background-color:#08424f!important;color:var(--hud-cyan)!important}
+    /* 等待/警告态：形状跟着统一，颜色还是琥珀 */
+    .ss-btn-row .wa{border-color:#6b4a25!important;background-color:#1a1408!important;color:var(--amber)!important}
+    /* 左侧阶段列表和顶部流程条是导航项不是操作按钮，不在这套里 */
+    /* 注：原来这里还有 .ss-grid（44px 青绿网格）和 .ss-noise（青绿+紫色光晕）两层背景特效，
+       跟 admin-theme.css 的全站 HUD 特效重复而且带紫，已连同 HTML 里那两个 div 一起删掉，统一吃全站那套。 */
     /* ── 侧栏 ───────────────────────────────────────────── */
     .ss-sidebar{position:sticky;top:0;align-self:start;height:calc(100vh - 64px);width:262px;
                 border-right:1px solid var(--line);padding:22px 15px;
-                background:linear-gradient(180deg,rgba(6,11,12,.96),rgba(5,8,9,.88));
+                background:linear-gradient(180deg,rgba(6,11,12,.82),rgba(5,8,9,.72));
                 overflow:auto;z-index:5}
     .ss-sidebar ::-webkit-scrollbar{width:6px}
     .ss-sidebar ::-webkit-scrollbar-thumb{background:#17292a}
@@ -317,7 +343,6 @@
   </style>
 </head>
 <body>
-  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
   <div style="position:relative;z-index:1;">
 <nav class="navbar">
     <div class="nav-inner">
@@ -341,8 +366,6 @@
     </div>
   </nav>
 
-  <div class="ss-grid"></div>
-  <div class="ss-noise"></div>
   <div class="ss-root">
 
     <aside class="ss-sidebar">
