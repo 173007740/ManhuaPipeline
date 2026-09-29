@@ -6,15 +6,19 @@
     <meta name="viewport" content="width=device-width,initial-scale=1.0">
     <title>项目管理 - 漫创引擎</title>
     <link rel="stylesheet" href="../css/style.css">
+    <link rel="stylesheet" href="../css/admin-theme.css">
     <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
     <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
     <style>
+        /* project 工作区结构（颜色已切到 admin-theme 变量） */
         .project-layout {
             display: flex;
             gap: 0;
-            height: calc(100vh - 64px);
+            height: calc(100vh - 56px);
+            position: relative;
+            z-index: 1;
         }
-
+        .navbar, .project-main, .sidebar { position: relative; z-index: 1; }
         .project-main {
             flex: 1;
             padding: 28px 36px;
@@ -24,130 +28,78 @@
             flex-direction: column;
             align-items: stretch;
         }
+        .script-area textarea { min-height: 300px; }
+        .script-mode { display: flex; gap: 8px; margin-bottom: 12px; }
+        .script-mode .btn { font-size: 13px; padding: 4px 14px; }
 
-        .script-area textarea {
-            min-height: 300px;
+        /* 各类表格统一为参考站暗色 */
+        .storyboard-table th, .storyboard-table td, .storyboard-table td *,
+        #frameListContainer table th, #frameListContainer table td,
+        #assetListContainer table th, #assetListContainer table td,
+        #episodeListContainer table th, #episodeListContainer table td, #episodeListContainer table td *,
+        #episodeSection table th, #episodeSection table td, #episodeSection table td * {
+            color: var(--text) !important;
         }
-
-        .script-mode {
-            display: flex;
-            gap: 8px;
-            margin-bottom: 12px;
-        }
-
-            .script-mode .btn {
-                font-size: 13px;
-                padding: 4px 14px;
-            }
-
-        .storyboard-table th, .storyboard-table td, .storyboard-table td *, #frameListContainer table th, #frameListContainer table td, #assetListContainer table th, #assetListContainer table td, #episodeListContainer table th, #episodeListContainer table td, #episodeListContainer table td *, #episodeSection table th, #episodeSection table td, #episodeSection table td * {
-            color: #f1f1f5 !important;
-        }
-
         .storyboard-table input.frame-input {
-            color: #e2e8f0 !important;
-            background: rgba(255,255,255,0.06) !important;
-            border-color: #475569 !important;
+            color: var(--text) !important;
+            background: var(--bg-card) !important;
+            border-color: var(--line) !important;
         }
-
         .stage-result {
             background: var(--bg-surface) !important;
             border-color: var(--border) !important;
             color: var(--text) !important;
         }
-
         .storyboard-table th, #episodeListContainer table th, #episodeSection table th {
-            background: #2d3748 !important;
+            background: var(--panel2) !important;
             color: var(--text) !important;
-            border-color: #475569 !important;
+            border-color: var(--line) !important;
         }
         #episodeListContainer table th:nth-child(1) { width: 60px; min-width: 60px; }
         #episodeListContainer table th:nth-child(2) { width: 80px; min-width: 80px; }
         #episodeListContainer table th:nth-child(3) { width: 220px; min-width: 220px; }
         #episodeListContainer table td:nth-child(1), #episodeListContainer table td:nth-child(2) { white-space: nowrap; }
-
         .storyboard-table td, #episodeListContainer table td, #episodeSection table td {
             background: transparent !important;
             color: var(--text) !important;
-            border-color: #475569 !important;
+            border-color: var(--line) !important;
         }
-
-            .storyboard-table td * {
-                color: var(--text) !important;
-            }
-
+        .storyboard-table td * { color: var(--text) !important; }
         .storyboard-table tr:nth-child(even), #episodeListContainer table tr:nth-child(even), #episodeSection table tr:nth-child(even) {
             background: rgba(255,255,255,0.03) !important;
         }
-
         .storyboard-table tr:hover, #episodeListContainer table tr:hover, #episodeSection table tr:hover {
-            background: rgba(124,58,237,0.08) !important;
+            background: rgba(109,230,238,0.08) !important;
         }
-
         .card {
             background: var(--bg-surface) !important;
             border-color: var(--border) !important;
             color: var(--text) !important;
         }
-
-        .accordion-header {
-            background: var(--bg-surface) !important;
-        }
-
-        .accordion-body {
-            background: var(--bg-surface) !important;
-        }
-
-        .accordion-item {
-            border-color: var(--border) !important;
-        }
-
+        .accordion-header, .accordion-body { background: var(--bg-surface) !important; }
+        .accordion-item { border-color: var(--border) !important; }
         #episodeCountWrap {
-            background: rgba(124,58,237,0.1) !important;
-            border-color: rgba(124,58,237,0.2) !important;
+            background: rgba(109,230,238,0.1) !important;
+            border-color: rgba(109,230,238,0.2) !important;
         }
-
         .ops-col {
-            display: flex;
-            flex-direction: column;
-            gap: 8px;
-            align-items: center;
-            justify-content: center;
-            height: 100%;
+            display: flex; flex-direction: column; gap: 8px;
+            align-items: center; justify-content: center; height: 100%;
         }
-
-        .prompt-table {
-            table-layout: fixed;
-        }
-
-        /* 视口外的行直接跳过「布局 + 绘制」（content-visibility 原生能力，Chromium 85+/Safari 18+/Firefox 125+）。
-           安全性依据：
-             • 表格是 table-layout: fixed，列宽只由表头 th 的 width 决定，行内容不参与，
-               所以被跳过渲染的行不会把列宽算歪；
-             • 行高由下面 .prompt-table td 的 height:430px 固定，渲染/跳过状态切换时高度不变，
-               所以不会出现滚动位置跳动（这是 content-visibility 最常见的副作用，这里被固定行高规避）；
-             • 仅仅是不渲染，DOM 节点仍在，getElementById / querySelector / onclick 全部照常有效。 */
+        .prompt-table { table-layout: fixed; }
         .prompt-table tbody tr {
             content-visibility: auto;
             contain-intrinsic-size: auto 430px;
         }
-
         .prompt-table td {
             overflow: hidden !important;
             height: 430px !important;
         }
-
         .prompt-table .cell-wrap {
             overflow-y: auto !important;
             display: block !important;
             padding-right: 4px;
             height: 100%;
-        }
-    </style>
-    <style>
-        .navbar, .project-layout, .project-main, .sidebar {
-            position: relative;
-            z-index: 1;
         }
     </style>
 </head>
