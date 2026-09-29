@@ -74,17 +74,19 @@ public class DirectorAgentService
         if (!string.IsNullOrWhiteSpace(stage.Gates))
         {
             sb.AppendLine();
-            sb.AppendLine("## 本阶段门禁（不满足就不要产出，直接指出卡在哪）");
+            sb.AppendLine("## 本阶段质检清单（动笔前逐条自查，并逐条落到产出里）");
             sb.AppendLine(stage.Gates);
-            // 门禁不过必须用机器认得出的标记说出来。
-            // 以前只说「指出卡在哪」，LLM 于是自由发挥写一段中文，引擎分不清那是阻断还是成品，
-            // 照样标完成、照样入库——结果一句「画幅未锁定，请回答」被当成剧本写进了 ScriptContent。
+            // 以前这里写的是「门禁不过就第一行写 BLOCKED: 然后什么也别产出」。
+            // 那条规矩本身就是这次卡死的源头：流水线是自动串下来的，中途没有一个人在听，
+            // 模型却被告知可以停下来提问 —— 于是每一步都可能礼貌地拒绝一次，整部剧停在那儿等人。
+            // 清单改回它本来的用途：约束产出质量，而不是给模型一个拒绝任务的合法理由
             sb.AppendLine();
-            sb.AppendLine("门禁未通过时：正文第一行必须恰好是 `BLOCKED:`，后跟你要用户补充或确认的具体问题，");
-            sb.AppendLine("此外不产出任何内容（不要表格、不要正文、不要 json 块）。");
-            sb.AppendLine("门禁通过时：正常产出，全篇不得出现 BLOCKED 字样。");
-            // 怎么算「已锁定」说死。之前契约里写过一遍，模型照样把明明填了值的项判成未锁定，
-            // 于是整条线被一个误判锁住。放在引擎侧所有有门禁的阶段都生效，不指望每个契约各自写清楚
+            sb.AppendLine("【这条流水线上没有人在中途回答你】它由系统自动串联，你的产出会原样喂给下一个阶段。");
+            sb.AppendLine("所以上面这份清单是约束你产出质量的，不是让你向用户提问的。发现某一项没给足依据时：");
+            sb.AppendLine("不许写 BLOCKED，不许写「请补充 / 请确认 / 不满足 / 无法产出」——");
+            sb.AppendLine("按行业惯例取最合理的那个值继续往下做，并在产出末尾用「## 本次假设」");
+            sb.AppendLine("列出你替用户做出的判断（不超过 5 条），让他事后一眼看得到、也改得动。");
+            // 怎么算「已锁定」说死。之前模型把明明填了值的项判成未锁定，于是整条线被一个误判锁住
             sb.AppendLine("【怎么判定有没有锁定】输入区中出现过的每一项取值，都是用户在表单里逐项选定的，");
             sb.AppendLine("一律视为已锁定。判定某项「未锁定」前，必须先在输入区里找它的值——找不到才是真缺失；");
             sb.AppendLine("不得以「表述不够明确」「需要用户再确认一次」「请用 A/B/C 标签回答」为由判缺失。");
@@ -195,7 +197,7 @@ public class DirectorAgentService
     /// 手动把上一步产出复制粘贴到下一步，是最没价值的那种操作。
     /// </summary>
     public async Task RunFromAsync(int userId, int runId, string startStageKey, string firstInput,
-                                   int? projectId = null, int? episodeId = null)
+                                   int? projectId = null, int? episodeId = null, string? stopStageKey = null)
     {
         // 落点以本次请求为准：页面上换了项目/剧集立刻生效，不用重开一次运行
         if (projectId > 0 || episodeId > 0)
@@ -207,6 +209,13 @@ public class DirectorAgentService
         if (idx < 0) throw new InvalidOperationException($"阶段不存在：{startStageKey}");
 
         var input = firstInput;
+
+        // 点了某一步的「生成」却没带素材进来 —— 这一步页面上没有表单（资产/分镜/提示词都靠上游），
+        // 人自然没什么可填。这里自动把它上一个阶段的产出接上，
+        // 否则 LLM 会拿着一份空输入开工，对着空气提取实体
+        if (string.IsNullOrWhiteSpace(input) && idx > 0)
+            input = ChainHead(stages[idx - 1].StageKey) + LastOutputOf(runId, stages[idx - 1].StageKey);
+
         for (int i = idx; i < stages.Count; i++)
         {
             var st = stages[i];
@@ -227,7 +236,15 @@ public class DirectorAgentService
                 _db.UpdateSkillRun(runId, st.StageKey, "await_confirm");
                 return;
             }
-            input = r.Output ?? "";   // 自动串联：上一步的产出就是下一步的素材
+            // 跑到这一步就收手。五步流程里每一步都是人单独点的，
+            // 越界替他把下一步也跑掉，等于把「我在这一站要不要下车」的决定权抢了
+            if (!string.IsNullOrWhiteSpace(stopStageKey)
+                && string.Equals(st.StageKey, stopStageKey, StringComparison.OrdinalIgnoreCase))
+            {
+                _db.UpdateSkillRun(runId, st.StageKey, "step_done");
+                return;
+            }
+            input = ChainHead(st.StageKey) + (r.Output ?? "");   // 自动串联：上一步的产出就是下一步的素材
         }
         _db.UpdateSkillRun(runId, stages[^1].StageKey, "done");
     }
@@ -246,7 +263,7 @@ public class DirectorAgentService
         if (last.Status == "blocked")
         {
             _db.ConfirmSkillStep(last.StepId);
-            await RunFromAsync(userId, runId, last.StageKey, ConfirmedHead(steps) + (last.InputText ?? ""));
+            await RunFromAsync(userId, runId, last.StageKey, last.InputText ?? "");
             return;
         }
 
@@ -260,23 +277,27 @@ public class DirectorAgentService
             _db.UpdateSkillRun(runId, last.StageKey, "done");
             return;
         }
-        await RunFromAsync(userId, runId, stages[idx].StageKey, ConfirmedHead(steps) + (last.OutputText ?? ""));
+        await RunFromAsync(userId, runId, stages[idx].StageKey, ChainHead(last.StageKey) + (last.OutputText ?? ""));
     }
 
     /// <summary>
-    /// 「上游已经被人确认过了」这件事必须明写在素材里，不能指望下游自己猜。
-    /// 人工卡点阶段产出的就是一张写着「请逐项回复」的确认表，人点过确认之后文本原样流下去，
-    /// 下游看到这张待填写的表，就判「清单未经确认」再拒绝一遍 —— P2c1 就是这么被拦住的。
+    /// 串联时必须交代的一句话：下面这段是上游产出的**成品**，不是待办的表格。
+    /// 人工卡点阶段写出来的就是一张写着「请逐项回复」的清单，取消卡点之前靠人点确认把状态记进 ConfirmedAt；
+    /// 现在半路不再有任何人点头了，这句话得无条件带上——
+    /// 否则下游读到那张空着的表就会判「前置条件未满足」，整个流水线停在第二次这样的误判上。
     /// </summary>
-    private static string ConfirmedHead(List<DbService.SkillStepRow> steps)
-    {
-        var c = steps.Where(s => !string.IsNullOrEmpty(s.ConfirmedAt))
-                     .OrderByDescending(s => s.SortOrder).FirstOrDefault();
-        if (c == null) return "";
-        return $"【工作流状态·引擎注入】上游 {c.StageKey} 已于 {c.ConfirmedAt} 经用户人工确认放行。"
-             + "下面引用的内容即最终确认版本，其中「请逐项回复」「待确认」之类的措辞只是阶段产出模板的残留，"
-             + "不代表仍有待完成的事项，不得据以判定前置条件未满足。\n\n";
-    }
+    private static string ChainHead(string prevStageKey)
+        => $"【流水线状态·引擎注入】下面引用的是上游 {prevStageKey} 的最终产出。"
+         + "其中「请逐项回复」「待确认」「是否修改」这类措辞，只是阶段产出模板的残留说法，"
+         + "不代表还有任何事等着用户回答——这条流水线上的前置步骤均已由系统放行，请你照常接着做。\n\n";
+
+    /// <summary>取某阶段最近一次有产出的内容。多次重跑时以最新的那次为准。</summary>
+    private string LastOutputOf(int runId, string stageKey)
+        => _db.GetSkillSteps(runId)
+              .Where(s => s.StageKey == stageKey && s.Status is "done" or "await_confirm")
+              .OrderByDescending(s => s.StepId)
+              .Select(s => s.OutputText)
+              .FirstOrDefault() ?? "";
 
     // ========== 3c. 单步执行的核心：单跑和连跑都走这里 ==========
 
@@ -312,11 +333,34 @@ public class DirectorAgentService
                                            "请严格按「本阶段产出要求」输出，不要输出多余解释。",
                                            jsonMode: false, temperature: 0.7, thinkingMode: cfg.ThinkingMode);
 
-            // 门禁没过：这是 LLM 在问用户要东西，不是产出。
-            // 以前没识别，照样标 done、照样往下串联、照样入库——一句话被当成剧本传了三步
             if (LooksBlocked(raw))
             {
-                _db.FinishSkillStep(stepId, "blocked", raw, null, "门禁未通过，等你补充后重跑本阶段");
+                // 契约已经改成「自查 + 自行取合理值」，模型还是吐出一句拒绝，
+                // 多半是没反应过来这条线上没有人在中途答话。先给它一次机会：
+                // 把它的拒绝原话塞回去，明说这条不成立，要求立刻重做。
+                // 直接把这个问题甩给正在等结果的人，是这套系统最招人烦的动作
+                var push = "# 补充指令\n你上一次的回复是一句拒绝（原文附后），在本任务中不成立。\n"
+                         + "这条流水线由系统自动串联，中途没有任何人会回答你的提问，停下来提问等于让整部剧停在这里。\n"
+                         + "现在按「本阶段产出要求」直接输出完整内容：缺依据的项按行业惯例自行取值，\n"
+                         + "末尾用「## 本次假设」列出你替用户做出的判断（不超过 5 条）。\n"
+                         + "不得再出现 BLOCKED、请补充、请确认、无法产出这类拒绝性表述。\n\n"
+                         + "---- 你上一次的回复 ----\n" + raw;
+                try
+                {
+                    raw = await _llm.CallAsync(cfg.ApiUrl ?? "", cfg.ApiKey, cfg.ModelName ?? "", sys, push,
+                                               jsonMode: false, temperature: 0.7, thinkingMode: cfg.ThinkingMode);
+                }
+                catch
+                {
+                    // 重试这一发自己炸了就照原样往下判，下面的 blocked 分支会接住
+                }
+            }
+
+            // 走到这一步还没产出：第二次仍然是一句拒绝。这是 LLM 在要东西，不是产出，
+            // 不能标 done、不能往下串、更不能入库——以前一句「请回答」被当成剧本传了三步
+            if (LooksBlocked(raw))
+            {
+                _db.FinishSkillStep(stepId, "blocked", raw, null, "这一步没能产出内容，已自动重试过一次");
                 return new StepResult(stepId, stage.StageKey, "blocked", raw, build.Chars,
                                       EstimateTokens(sys), stage.Gates, cost, 0, null);
             }

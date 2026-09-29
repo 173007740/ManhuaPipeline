@@ -211,6 +211,39 @@
     .deliv-body{margin:0 15px 15px;background:#090d0c;border:1px solid #232f2b;padding:12px;
                 font:11px ui-monospace,Menlo,monospace;line-height:1.75;color:#aab9b2;white-space:pre-wrap;
                 max-height:320px;overflow:auto}
+    /* ── 五步流程：一步一张卡，每张卡自己带表单、状态和「生成」按钮 ──
+       门禁、确认、卡点这些编排概念全部收进引擎，页面只回答三件事：
+       这一步跑没跑完、要等多久、出来的东西是什么 */
+    .ss-steps{display:grid;gap:9px;margin-top:16px}
+    .ss-step{border:1px solid #232d29;background:#0b0f0e;padding:13px 14px;display:grid;
+             grid-template-columns:34px minmax(0,1fr) auto;gap:12px;align-items:start;transition:.18s}
+    .ss-step:hover{border-color:#2e4340}
+    .ss-step.is-run{border-color:#2f6b52;background:linear-gradient(90deg,rgba(126,255,207,.05),transparent)}
+    .ss-step.is-done{border-color:#274537}
+    .ss-step.is-bad{border-color:#5d2a2a;background:linear-gradient(90deg,rgba(255,107,107,.06),transparent)}
+    .ss-step-no{width:34px;height:34px;display:grid;place-items:center;font:13px monospace;
+                border:1px solid #2c3936;background:#0e1413;color:var(--t2)}
+    .ss-step.is-done .ss-step-no{border-color:var(--mint);color:var(--mint);background:#0d1a15}
+    .ss-step.is-run .ss-step-no{border-color:var(--green);color:var(--green)}
+    .ss-step.is-bad .ss-step-no{border-color:var(--bad);color:var(--bad)}
+    .ss-step-body b{display:block;font-size:14px;color:#e2f2ea;line-height:1.5}
+    .ss-step-body>small{display:block;margin-top:4px;font:9px monospace;color:var(--t3);line-height:1.6}
+    .ss-step-body em{font-style:normal;color:#5d6d66;font-size:11px;font-weight:400}
+    .ss-step-meta{margin-top:7px;font:9px monospace;color:#5f8574;display:flex;gap:9px;flex-wrap:wrap}
+    .ss-step-act{display:flex;flex-direction:column;gap:5px;align-items:stretch}
+    .ss-step-act button{white-space:nowrap;font-size:11px;padding:7px 11px}
+    .ss-step-form{margin-top:11px;border-top:1px dashed #243029;padding-top:11px;display:grid;
+                  grid-template-columns:1fr 1fr;gap:9px}
+    .ss-step.dim{opacity:.5}
+    /* 产出就地铺开：以前要跑去交付物列表里翻，做这一步的人只想当场看到它出来的是什么 */
+    .ss-step-out{display:none;margin-top:11px;border:1px solid #243029;background:#080c0b}
+    .ss-step-out .outbar{display:flex;justify-content:space-between;align-items:center;gap:10px;
+                         padding:6px 9px;border-bottom:1px solid #1e2a26;background:#0c1211;
+                         font:9px monospace;color:var(--t2)}
+    .ss-step-out .outbar span{cursor:pointer;color:var(--mint)}
+    .ss-step-out pre{margin:0;padding:11px;max-height:360px;overflow:auto;
+                     font:11px ui-monospace,Menlo,monospace;line-height:1.75;
+                     color:#a9b9b2;white-space:pre-wrap}
     @keyframes spin{to{transform:rotate(360deg)}}
     @keyframes scan{from{transform:translateX(-120%) skewX(-20deg)}to{transform:translateX(120%) skewX(-20deg)}}
     @media(max-width:1180px){.ss-root{grid-template-columns:1fr}.ss-sidebar{display:none}
@@ -283,13 +316,12 @@
       <div class="ss-command-head">
         <div>
           <div class="ss-kicker">DIRECTOR PIPELINE · <span id="packName2">—</span></div>
-          <h1>一键跑到下一个卡点</h1>
-          <p>填一次设定，点一下就往下跑：上一步产出自动喂给下一步，产出自动入库。
-             只在<b>错了代价大</b>的地方停 —— 停的时候会说清错了要赔多少。</p>
+          <h1>五步出一部漫剧</h1>
+          <p>立项 → 剧本 → 资产 → 分镜 → 提示词。每一步各自点亮，上一步的产出自动喂给下一步，
+             产出自动入库。<b>没有卡点、没有确认对话框</b>——中途不会停下来问你要东西。</p>
         </div>
         <div class="ss-actions">
-          <button class="run" id="btnStart">▶ 开始跑</button>
-          <button id="btnNew">↻ 新开一次</button>
+          <button id="btnNew">↻ 从头再来</button>
         </div>
       </div>
 
@@ -314,24 +346,14 @@
       <div class="ss-workspace">
         <section class="ss-panel ss-setup">
           <div class="ss-panel-title">
-            <span id="formIndex">—</span>
-            <div><small>STEP INPUT</small><h2 id="formTitle">立项设定</h2></div>
-            <em id="formBadge">表单</em>
+            <span>①</span>
+            <div><small>DIRECTOR PIPELINE</small><h2>五步做一部漫剧</h2></div>
+            <em id="overallBadge">待开始</em>
           </div>
-          <p class="ss-desc" id="formDesc">画幅 / 交付 / 平台 / 集数 / 时长已预填默认值，想改再改；填过的会自动记住。</p>
+          <p class="ss-desc" id="formDesc">一步一步往下点，每一步的产出会自动喂给下一步。
+             需要你拿主意的东西单独放在该步的卡片里，别的都不问。</p>
 
-          <div class="ss-start-row">
-            <span>从</span><select id="startStage"></select>
-            <small style="color:#4c5c54;font:9px monospace" id="startHint"></small>
-          </div>
-
-          <div class="ss-fields" id="form"></div>
-
-          <div class="ss-fields" style="margin-top:4px">
-            <label class="wide-row">补充原文（可选，会和上面表单一起喂进去）
-              <textarea id="extra" style="min-height:64px"></textarea>
-            </label>
-          </div>
+          <div class="ss-steps" id="stepList"></div>
 
           <div class="ss-form-actions">
             <span id="stateHint"></span>
@@ -414,16 +436,12 @@
       return $.get('/api/director-skill/packs/' + pack.packId + '/stages').then(function(st){
         stages = (st || []).filter(function(s){ return s.isEnabled; })
                            .sort(function(a,b){ return a.sortOrder - b.sortOrder; });
-        $('#startStage').html(stages.map(function(s){
-          return '<option value="' + esc(s.stageKey) + '">' + esc(s.stageKey) + ' · ' + esc(s.name) + '</option>';
-        }).join(''));
-        var gates = stages.filter(function(s){ return s.humanConfirm; });
         $('#sTotal').text(stages.length);
-        $('#sTotalSub').text('其中 ' + gates.length + ' 个卡点');
-        $('#sGate').text(gates.length);
-        $('#sGateSub').text(gates.map(function(s){ return s.stageKey; }).join(' / ') || '没有');
-        renderForm();
+        $('#sTotalSub').text('内部编排阶段，页面上合成五步');
+        $('#sGate').text(STEPS.length);
+        $('#sGateSub').text(STEPS.map(function(s){ return s.title; }).join(' → '));
         // 拿最新一次运行状态补画，别用空数组把已经跑完的步骤抹回未完成
+        renderSteps(lastRun ? lastRun.steps : []);
         renderPipe(lastRun ? lastRun.steps : []);
       });
     });
@@ -498,15 +516,57 @@
 
   // 表单预填：上次填过的 > 字段自带 default > 空。
   // 画幅/交付/平台这类参数一部剧定一次就够了，不该每次跑都手填一遍。
-  function renderForm(){
-    var key = $('#startStage').val();
+  // ── 对外只认这五步 ──
+  // 以前页面上摆着十一个编排阶段，每个还挂着门禁和卡点，人得先把这套编排学明白才敢下手。
+  // 编排是引擎的事：from/to 之间那几个内部阶段跑几次、怎么串，页面上不该出现
+  var STEPS = [
+    { title:'立项',   desc:'定画幅、交付形态与题材调性',   from:'P0',  to:'P0',  form:'P0' },
+    { title:'剧本',   desc:'一句话前提、五道剧本门、分集', from:'P1',  to:'P1',  form:'P1' },
+    { title:'资产',   desc:'实体提取 → 清单 → 三批出图提示词', from:'P2a', to:'P2d', form:null },
+    { title:'分镜',   desc:'镜头调度与帧表',               from:'P3',  to:'P3',  form:null },
+    { title:'提示词', desc:'投喂出图 / 视频模型的终稿',     from:'P4',  to:'P4',  form:null }
+  ];
+  var STEP_STATE = [];
+
+  // 把一步内部那几个编排阶段合成一个状态。人只关心这一步做完没有，
+  // 「资产」内部是六次调用还是三次，是引擎自己的事
+  function calcSteps(steps){
+    if (!stages.length) return [];
+    var by = {};
+    (steps || []).forEach(function(s){ by[s.stageKey] = s; });
+    var order = stages.map(function(s){ return s.stageKey; });
+    return STEPS.map(function(sp){
+      var keys = [];
+      for (var i = order.indexOf(sp.from); i >= 0 && i < order.length; i++){
+        keys.push(order[i]);
+        if (order[i] === sp.to) break;
+      }
+      if (!keys.length) keys = [sp.from];
+      var doneN = 0, imported = 0, running = null, bad = null, viewId = 0;
+      keys.forEach(function(k){
+        var s = by[k];
+        if (!s) return;
+        if (s.status === 'done' || s.status === 'await_confirm'){ doneN++; viewId = s.stepId; }
+        if (s.status === 'running') running = s;
+        if (s.status === 'error' || s.status === 'blocked') bad = s;
+        imported += (s.imported || 0);
+      });
+      var tier = running ? 'run'
+               : bad     ? 'bad'
+               : doneN >= keys.length ? 'done'
+               : doneN > 0 ? 'part' : 'idle';
+      return { tier: tier, doneN: doneN, total: keys.length, running: running,
+               bad: bad, imported: imported, viewId: viewId };
+    });
+  }
+
+  // 表单渲染到指定的容器：五步里只有立项和剧本需要人拿主意，其余靠上游产出
+  function renderStepForm(el, key){
+    if (!key){ el.empty(); return; }
     var st = stages.filter(function(s){ return s.stageKey === key; })[0];
     var fields = [];
     try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; } catch (e) { fields = []; }
-    $('#formIndex').text(key || '—');
-    $('#formTitle').text((st && st.name) || '设定');
-    $('#formBadge').text((st && st.humanConfirm) ? '人工卡点' : '自动通过');
-    if (!fields.length){ $('#form').html('<div class="empty-hint">本阶段没有要收集的字段</div>'); return; }
+    if (!fields.length){ el.empty(); return; }
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem('skillStudioForm_' + key) || '{}'); } catch (e) { saved = {}; }
     var h = '';
@@ -530,85 +590,172 @@
       else h += '<input value="' + esc(v) + '"' + k + '>';
       h += '</label>';
     });
-    $('#form').html(h);
+    el.html(h);
   }
 
-  function collectInput(){
+  function collectFrom(el){
     var parts = [];
-    $('#form [data-fk]').each(function(){
+    el.find('[data-fk]').each(function(){
       var v = ($(this).val() || '').trim();
       if (v) parts.push($(this).data('fl') + '：' + v);
     });
-    var ex = ($('#extra').val() || '').trim();
-    if (ex) parts.push(ex);
     return parts.join(NL);
   }
 
-  // 侧栏 + 顶部横向流程条：同一份数据换个方向看，跑到哪、入库几条、卡在哪
+  // 五步主面板：每步一张卡，自己带表单、状态和「生成」
+  function renderSteps(steps){
+    if (!stages || !stages.length) return;
+    STEP_STATE = calcSteps(steps);
+    var prevDone = true, doneCnt = 0;
+    var h = STEP_STATE.map(function(s, i){
+      var sp = STEPS[i];
+      if (s.tier === 'done') doneCnt++;
+      var cls = s.tier === 'run' ? 'is-run' : s.tier === 'bad' ? 'is-bad' : s.tier === 'done' ? 'is-done' : '';
+      var can = prevDone;
+      if (!can) cls += ' dim';
+      var sub = '';
+      if (s.tier === 'run')
+        sub = '跑中 · 内部第 ' + (s.doneN + 1) + '/' + s.total + ' 步'
+            + (s.running ? ' · ' + (s.running.name || s.running.stageKey) : '');
+      else if (s.tier === 'done')
+        sub = '已完成' + (s.imported ? ' · 入库 ' + s.imported + ' 条' : '')
+            + (s.total > 1 ? ' · 内含 ' + s.total + ' 个子阶段' : '');
+      else if (s.tier === 'part') sub = '跑了 ' + s.doneN + '/' + s.total + '，没跑完';
+      else if (s.tier === 'bad')  sub = '这一步没跑出东西（' + (s.bad ? s.bad.stageKey : '') + '）';
+      else sub = can ? '还没跑' : '等上一步跑完';
+      prevDone = (s.tier === 'done');
+      var label = s.tier === 'done' ? '重跑' : s.tier === 'part' ? '接着跑' : '生成';
+      return '<div class="ss-step ' + cls + '" data-i="' + i + '">'
+           + '<div class="ss-step-no">' + (i + 1) + '</div>'
+           + '<div class="ss-step-body"><b>' + esc(sp.title) + ' <em>' + esc(sp.desc) + '</em></b>'
+           + '<small>' + esc(sub) + '</small>'
+           + (sp.form ? '<div class="ss-step-form" id="sf' + i + '"></div>' : '')
+           + '<div class="ss-step-out" id="so' + i + '"></div></div>'
+           + '<div class="ss-step-act">'
+           +   '<button class="go" data-run="' + i + '"' + (can ? '' : ' disabled') + '>' + label + '</button>'
+           +   (s.viewId ? '<button data-view="' + i + '">看产出</button>' : '')
+           + '</div></div>';
+    }).join('');
+    $('#stepList').html(h);
+    STEP_STATE.forEach(function(s, i){
+      if (STEPS[i].form) renderStepForm($('#sf' + i), STEPS[i].form);
+    });
+    $('#overallBadge').text(doneCnt === STEPS.length ? '全部跑完' : doneCnt + ' / ' + STEPS.length);
+    $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
+    $('[data-view]').click(function(){ viewOut(+$(this).data('view')); });
+  }
+
+  function viewOut(i){
+    var s = STEP_STATE[i];
+    if (!s || !s.viewId) return;
+    var box = $('#so' + i);
+    if (box.is(':visible')){ box.hide().empty(); return; }
+    box.show().html('<div class="outbar">加载中…</div>');
+    $.get('/api/director-agent/steps/' + s.viewId + '/output', function(o){
+      box.html('<div class="outbar"><b>' + esc(STEPS[i].title) + ' · 产出</b>'
+        + '<span data-close="' + i + '">收起 ✕</span></div><pre>' + esc((o && o.output) || '（空）') + '</pre>');
+      box.find('[data-close]').click(function(){ box.hide().empty(); });
+    });
+  }
+
+  // 跑一步：只跑到这一步的最后一个内部阶段就收手，不越界替他把下一步也做了
+  function doStep(i){
+    var sp = STEPS[i];
+    var txt = collectFrom($('#sf' + i));
+    if (sp.form){
+      var form = {};
+      $('#sf' + i + ' [data-fk]').each(function(){ form[$(this).data('fk')] = $(this).val(); });
+      localStorage.setItem('skillStudioForm_' + sp.form, JSON.stringify(form));
+    }
+    $('#so' + i).empty().hide();
+    say('开始跑第 ' + (i + 1) + ' 步 · ' + sp.title);
+    ensureRun(function(rid){
+      $.ajax({ url: '/api/director-agent/runs/' + rid + '/run-all', method: 'POST',
+               contentType: 'application/json',
+               data: JSON.stringify({ stageKey: sp.from, inputText: txt, stopStageKey: sp.to,
+                                      projectId: $('#proj').val() ? +$('#proj').val() : null,
+                                      episodeId: $('#eps').val() ? +$('#eps').val() : null }) })
+       .done(function(r){
+          if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); return; }
+          startPoll(true);
+       })
+       .fail(function(xhr){ say('× 启动失败：' + (xhr.status || ''), 'lerr'); });
+    });
+  }
+
+  // 没有运行就先建一次。每次跑之前补敞口，别让人先去找「新建」按钮
+  function ensureRun(cb){
+    if (runId) { cb(runId); return; }
+    $.ajax({ url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json',
+             data: JSON.stringify({
+               packId: pack ? pack.packId : 0, title: pack ? pack.name : '',
+               projectId: $('#proj').val() ? +$('#proj').val() : null,
+               episodeId: $('#eps').val() ? +$('#eps').val() : null,
+               // 提示词类型属于整次运行：它是自动串下来的，不该跑到第 5 步再回来选一次
+               inputsJson: JSON.stringify({ promptType: $('#promptType').val() })
+             }) })
+     .done(function(d){
+        runId = d.runId;
+        localStorage.setItem('skillStudioRun', runId);
+        say('新开一次运行 #' + runId);
+        cb(runId);
+     })
+     .fail(function(){ say('× 建立运行失败，先在左边挑个规则包', 'lerr'); });
+  }
+
+  // 侧栏 + 顶部横向流程条：同一份五步数据换个方向看
   function renderPipe(steps){
     // 阶段列表还没到就别画：拿零个阶段去渲染会把列表清空，而那之后可能再没人补画
     if (!stages || !stages.length) return;
-    var byKey = {};
-    (steps || []).forEach(function(s){ byKey[s.stageKey] = s; });
-    var done = 0;
-    var nav = stages.map(function(s){
-      var st = byKey[s.stageKey], cls = '', ico = '·', ex = '';
-      if (st){
-        if (st.status === 'running'){ cls = 'running'; ico = '◐'; ex = '跑中'; }
-        else if (st.status === 'await_confirm'){ cls = 'confirm'; ico = '!'; ex = '待确认'; }
-        else if (st.status === 'error'){ cls = 'error'; ico = '×'; ex = '失败'; }
-        else if (st.status === 'blocked'){ cls = 'blocked'; ico = '⛔'; ex = '门禁没过'; }
-        else if (st.status === 'done'){
-          cls = 'done'; ico = '✓'; done++;
-          ex = st.imported > 0 ? '入库 ' + st.imported : (st.importError ? '未入库' : '已完成');
-        }
-      }
-      return '<button class="' + cls + '" data-key="' + esc(s.stageKey) + '">'
+    var st = calcSteps(steps);
+    var done = st.filter(function(s){ return s.tier === 'done'; }).length;
+    var nav = STEPS.map(function(sp, i){
+      var s = st[i] || {};
+      var cls = s.tier === 'done' ? 'done' : s.tier === 'run' ? 'running'
+              : s.tier === 'bad'  ? 'error' : '';
+      var ico = s.tier === 'done' ? '✓' : s.tier === 'run' ? '◐'
+              : s.tier === 'bad'  ? '×' : '·';
+      var ex  = s.tier === 'done' ? (s.imported ? '入库 ' + s.imported : '已完成')
+              : s.tier === 'run'  ? '跑中 ' + s.doneN + '/' + s.total
+              : s.tier === 'bad'  ? '没跑出东西' : '';
+      return '<button class="' + cls + '" data-i="' + i + '">'
            + '<span class="ss-node"><i>' + ico + '</i></span>'
-           + '<span class="ss-stage-copy"><b>' + esc(s.stageKey) + ' ' + esc(s.name) + '</b>'
-           + '<small>' + esc(ex) + '</small></span>'
-           + (ex ? '<em>' + ico + '</em>' : '') + '</button>';
+           + '<span class="ss-stage-copy"><b>' + esc(sp.title) + '</b>'
+           + '<small>' + esc(ex) + '</small></span></button>';
     }).join('');
     $('#pipeNav').html(nav);
-    $('#pipeCount').text(done + ' / ' + stages.length);
+    $('#pipeCount').text(done + ' / ' + STEPS.length);
 
-    var track = stages.map(function(s){
-      var st = byKey[s.stageKey];
-      var lit = st && (st.status === 'done' || st.status === 'await_confirm') ? 'lit' : '';
-      return '<button data-key="' + esc(s.stageKey) + '"><span>' + esc(s.stageKey) + '</span>'
-           + '<i class="' + lit + '"></i><b>' + esc(s.name) + '</b></button>';
+    var track = STEPS.map(function(sp, i){
+      var s = st[i] || {};
+      var lit = (s.tier === 'done' || s.tier === 'run') ? 'lit' : '';
+      return '<button data-i="' + i + '"><span>' + (i + 1) + '</span>'
+           + '<i class="' + lit + '"></i><b>' + esc(sp.title) + '</b></button>';
     }).join('');
     $('#pipeTrack').html(track);
-
-    markStart();
     $('#pipeNav button, #pipeTrack button').click(function(){
-      $('#startStage').val($(this).data('key'));
-      renderForm(); $('#gate').empty(); markStart();
+      var el = $('.ss-step[data-i=' + $(this).data('i') + ']')[0];
+      if (el) el.scrollIntoView({ behavior:'smooth', block:'center' });
     });
   }
 
-  function markStart(){
-    var k = $('#startStage').val();
-    $('#pipeNav button, #pipeTrack button').removeClass('active').each(function(){
-      if ($(this).data('key') === k) $(this).addClass('active');
-    });
-  }
-
+  // 统计按「五步」算，不按内部那十几个编排阶段算——
+  // 人问的是「做完了几步」，没人关心 P2c 内部跑了几批
   function updateStats(d){
-    var done = 0, imp = 0;
-    (d.steps || []).forEach(function(s){
-      if (s.status === 'done') done++;
-      if (s.imported) imp += s.imported;
-    });
+    var imp = 0;
+    (d.steps || []).forEach(function(s){ if (s.imported) imp += s.imported; });
+    var stState = STEP_STATE.length ? STEP_STATE : calcSteps(d.steps);
+    var done = stState.filter(function(s){ return s.tier === 'done'; }).length;
     $('#sDone').text(done);
-    $('#sDoneSub').text('共 ' + (d.steps || []).length + ' 步已执行');
+    $('#sDoneSub').text('共 ' + STEPS.length + ' 步');
     $('#sImp').text(imp);
     $('#sImpSub').text(imp ? '已写入业务表' : '尚未入库');
-    $('#runStat').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了', blocked:'门禁没过' }[d.status] || '未开始');
-    $('#runSub').text('当前阶段：' + (d.currentStage || '—'));
-    var pct = stages.length ? Math.round(done / stages.length * 100) : 0;
-    $('#runBar').css('width', pct + '%');
-    $('#stateHint').text({ running:'跑中…', await_confirm:'等你确认', done:'跑完了', error:'出错了', blocked:'门禁没过' }[d.status] || '');
+    $('#runStat').text({ running:'跑中…', done:'全部跑完', error:'出错了',
+                         blocked:'这一步没跑出内容', step_done:'这一步跑完了' }[d.status] || '未开始');
+    $('#runSub').text('当前内部阶段：' + (d.currentStage || '—'));
+    $('#runBar').css('width', Math.round(done / STEPS.length * 100) + '%');
+    $('#stateHint').text({ running:'跑中…', done:'全部跑完', error:'出错了',
+                           blocked:'这一步没跑出内容', step_done:'这一步跑完了' }[d.status] || '');
   }
 
   function startPoll(reset){
@@ -630,14 +777,14 @@
     $('#runBarTop').toggleClass('ss-idle', !!on);
     if (!on) return;
     $('#rbStage').text('待命');
-    $('#rbSub').text('选好落点，填设定，点开始跑');
+    $('#rbSub').text('点某一步的「生成」，或者直接重跑');
   }
 
   // 计时 + 剩余估算。十几分钟的等待，不知道还要多久是最难熬的部分
   function updateTick(){
     if (!runStartAt) return;
     var el = Math.floor((Date.now() - runStartAt) / 1000);
-    var done = +($('#sDone').text() || 0), total = stages.length || 0;
+    var done = STEP_STATE.filter(function(s){ return s.tier === 'done'; }).length, total = STEPS.length || 0;
     var txt = mmss(el);
     if (done > 0 && total > done) txt += ' · 还需约 ' + mmss(Math.round(el / done * (total - done)));
     $('#rbTime').text(txt);
@@ -654,7 +801,7 @@
       else if (s.status === 'done') say('✓ ' + nm + ' 完成' + (s.imported ? '，入库 ' + s.imported + ' 条' : ''), 'lok');
       else if (s.status === 'await_confirm') say('⏸ ' + nm + ' 停下等你确认', 'lwait');
       else if (s.status === 'error') say('× ' + nm + ' 失败' + (s.error ? '：' + s.error : ''), 'lerr');
-      else if (s.status === 'blocked') say('⛔ ' + nm + ' 门禁没过，没产出东西，等你补充', 'lwait');
+      else if (s.status === 'blocked') say('× ' + nm + ' 没能产出内容，这一步可以重跑', 'lerr');
     });
   }
 
@@ -662,15 +809,20 @@
   function updateRunBar(d){
     var list = d.steps || [];
     var running = list.filter(function(s){ return s.status === 'running'; })[0];
-    if (d.status !== 'running' || !running){ if (d.status !== 'running') setIdle(true); return; }
-    var idx = stages.map(function(s){ return s.stageKey; }).indexOf(running.stageKey) + 1;
+    if (d.status !== 'running' || !running){ setIdle(true); return; }
+    // 这一刻跑的是五步里的哪一步，说忙着的那一个子阶段叫什么。
+    // 「第 3 步 · 内部 4/6」比「P2c1」好懂：前者他知道还剩多久，后者他得先背下缩写
+    var si = 0;
+    STEP_STATE.forEach(function(s, i){ if (s.running) si = i; });
+    var stt = STEP_STATE[si] || {};
     var imp = +($('#sImp').text() || 0);
     setIdle(false);
-    $('#rbStage').text(running.stageKey + ' · ' + (running.name || ''));
-    $('#rbSub').text('第 ' + (idx > 0 ? idx : '?') + ' / ' + stages.length + ' 步'
-      + ' · 已完成 ' + ($('#sDone').text() || 0) + ' 步'
+    $('#rbStage').text((STEPS[si] ? STEPS[si].title : '—') + ' · ' + (running.name || running.stageKey));
+    $('#rbSub').text('第 ' + (si + 1) + ' / ' + STEPS.length + ' 步'
+      + (stt.total > 1 ? ' · 这一步内部 ' + (stt.doneN + 1) + '/' + stt.total : '')
       + (imp ? '，入库 ' + imp + ' 条' : ''));
-    $('#rbFill').css('width', Math.round(list.length / stages.length * 100) + '%');
+    $('#rbFill').css('width', Math.round((si + (stt.doneN || 0) / Math.max(1, stt.total || 1))
+                                         / STEPS.length * 100) + '%');
   }
 
   // 浏览器里还记着上次运行的编号，但那次可能已经不在了（比如刚清过库）。
@@ -681,8 +833,7 @@
     localStorage.removeItem('skillStudioRun'); localStorage.removeItem('skillStudioStartAt');
     say('× ' + msg + '，已重置，可以重新跑', 'lwait');
     $('#runStat').text('尚未开始'); $('#runSub').text(msg);
-    $('#btnStart').prop('disabled', false).html('▶ 开始跑');
-    renderPipe([]);
+    renderSteps([]); renderPipe([]);
   }
 
   function pollOnce(){
@@ -690,159 +841,48 @@
     $.get('/api/director-agent/runs/' + runId, function(d){
       if (!d || !d.runId){ forgetRun('上次记下的运行已经不在了'); return; }
       lastRun = d;                                  // 阶段列表晚到时要拿它补画一次
-      logChanges(d.steps); renderPipe(d.steps); updateStats(d); updateRunBar(d);
-      // 跑的过程中不许再点「开始跑」——后端也会拦，这里是让按钮自己把话说清楚
-      $('#btnStart').prop('disabled', d.status === 'running').html(d.status === 'running' ? '跑着呢…' : '▶ 开始跑');
+      logChanges(d.steps); renderSteps(d.steps); renderPipe(d.steps); updateStats(d); updateRunBar(d);
+      toggleRunButtons(d.status === 'running');
       if (d.status === 'running') return;          // 还在跑，继续轮询
       clearInterval(timer); stopTick();
       // 结掉的那次不该再被「接上次运行」捞起来
       if (d.status === 'done' || d.status === 'abandoned') localStorage.removeItem('skillStudioRun');
       loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
-      if (d.status === 'done') { say('全部跑完'); $('#gate').html('<div class="gatebox ok"><div class="gh">流水线跑完了</div><div class="gm">产出已入库，左侧可以看到每步的入库条数。</div></div>'); }
-      else if (d.status === 'error') say('出错，看左侧红的那一步');
-      else if (d.status === 'blocked') showBlocked(d);
-      else if (d.status === 'await_confirm') showGate(d);
+      if (d.status === 'done') say('全部跑完');
+      else if (d.status === 'error') say('出错，看左边红的那一步', 'lerr');
+      else if (d.status === 'blocked') showTrouble(d);
+      else if (d.status === 'step_done') say('这一步跑完了，下一步可以继续点了', 'lok');
     }).fail(function(xhr){
       if (xhr.status === 404) forgetRun('这次运行已经不在了');
     });
   }
 
-  // 门禁阻断：LLM 判定前置条件不满足，拒绝产出。
-  // 以前它的拒绝被当成成品往下传——跑完拿到一堆「请回答 xx」，还查不出是哪一步开始歪的
-  function showBlocked(d){
-    var b = (d.steps || []).filter(function(s){ return s.status === 'blocked'; })[0];
+  // 跑的过程中把各步的按钮按住：一次点击就是一次 LLM 调用，
+  // 后端也会拦（同一运行不允许并发），按钮这边先把话说明白
+  function toggleRunButtons(running){
+    var prevDone = true;
+    STEP_STATE.forEach(function(s, i){
+      var can = prevDone;
+      prevDone = (s.tier === 'done');
+      var label = running ? '跑着呢…'
+                : s.tier === 'done' ? '重跑'
+                : s.tier === 'part' ? '接着跑' : '生成';
+      $('[data-run=' + i + ']').prop('disabled', running ? true : !can).text(label);
+      // 前置没做完的步骤往后排：不给按钮，比给了按钮点下去再报错体面
+      $('.ss-step[data-i=' + i + ']').toggleClass('dim', !can && s.tier !== 'run' && s.tier !== 'done');
+    });
+  }
+
+  // 某一步没能产出内容：这里以前会弹出一张卡，摆两个按钮让人替模型的判断做决定。
+  // 那是在把编排事故转嫁给用户。现在只说一句人话——卡片上已经标红了，点「重跑」就行
+  function showTrouble(d){
+    var b = (d.steps || []).filter(function(s){
+      return s.status === 'blocked' || s.status === 'error';
+    })[0];
     if (!b) return;
-    $('#gate').html('<div class="gatebox">'
-      + '<div class="gh">⛔ 门禁没过 · ' + esc(b.stageKey) + ' ' + esc(b.name || '') + '</div>'
-      + '<div class="gm">这一阶段<b>没有产出任何东西</b> —— LLM 判定前置条件不满足，'
-      + '下面是它要你补充或确认的。补完之后从这一步重跑。</div>'
-      + '<div class="gateout" id="blkOut" style="color:#617069;font:10px monospace">加载中…</div>'
-      + '<div class="ss-btn-row" style="margin-top:10px">'
-      +   '<button class="wa" id="btnRetry">补充后重跑这一步</button>'
-      +   '<button class="go" id="btnForce" title="LLM 会误判：输入里明写着画幅值它照样说未锁定。你核对过确实不缺，就放行重跑这一步">信息没问题，重跑这一步</button>'
-      + '</div></div>');
-    $.get('/api/director-agent/steps/' + b.stepId + '/output', function(o){
-      $('#blkOut').text(((o && o.output) || '（没有内容）').replace(/^\s*BLOCKED\s*:?\s*/i, ''));
-    });
-    // 从这一步重跑 = 换一次新运行；不先作废旧的那次，后端会以为「还有没跑完的」继续拦着
-    $('#btnRetry').click(function(){
-      if (runId){
-        $.post('/api/director-agent/runs/' + runId + '/abort', function(){}, 'json');
-        runId = 0; localStorage.removeItem('skillStudioRun');
-      }
-      $('#startStage').val(b.stageKey); renderForm(); $('#gate').empty();
-      say('已作废这次运行并切到 ' + b.stageKey + '，改完上面的内容点「开始跑」', 'lwait');
-    });
-    // 放行权在人手里：LLM 判「未锁定」不代表真的缺，它经常看漏已经填好的值
-    $('#btnForce').click(function(){
-      var $t = $(this).prop('disabled', true).text('继续中…');
-      $('#gate').empty();
-      say('你放行了 ' + b.stageKey + ' 的门禁，会用同样的素材重跑这一步', 'lwait');
-      $.post('/api/director-agent/runs/' + runId + '/continue', function(){
-        $t.prop('disabled', false); startPoll(true);
-      }, 'json').fail(function(){ $t.prop('disabled', false).text('放行失败'); });
-    });
+    say('× 「' + (b.name || b.stageKey) + '」这一步没跑出内容。可以再点一次「重跑」；'
+      + '接连不行的话，多半是这一步的产出要求对当前模型太重', 'lerr');
   }
-
-  // 卡点：产出、门禁、代价、确认并继续摆在一起。没有代价的确认就是形式主义
-  function showGate(d){
-    var pending = (d.steps || []).filter(function(s){ return s.status === 'await_confirm'; })[0];
-    if (!pending) return;
-    say('停在 ' + pending.stageKey + '，等你确认');
-    var box = '<div class="gatebox"><div class="gh">⏸ 停在人工确认 · ' + esc(pending.stageKey) + ' ' + esc(pending.name || '') + '</div>';
-    if (pending.gates) box += '<div class="gm">门禁：' + esc(pending.gates) + '</div>';
-    box += '<div class="gc" id="gateCost">代价计算中…</div>'
-        + '<div class="ss-btn-row"><button class="go" id="btnGoOn">确认并继续</button> '
-        + '<button id="btnView">看产出</button></div>'
-        + '<div class="gateout" id="gateOut"></div></div>';
-    $('#gate').html(box);
-
-    $.post('/api/director-agent/preview', JSON.stringify({ packId: pack.packId, stageKey: pending.stageKey }), function(p){
-      if (!p || !p.cost){ $('#gateCost').text(''); return; }
-      $('#gateCost').html('放行的代价：错了重跑约 <b>' + w(p.cost.rerunTokens) + '</b> token'
-        + (p.cost.downstreamCount ? '，下游 <b class="r">' + p.cost.downstreamCount + '</b> 个阶段跟着重跑，约 <b class="r">' + w(p.cost.downstreamTokens) + '</b> token' : '（后面没有阶段了）'));
-    }, 'json');
-
-    $('#btnView').click(function(){
-      $.get('/api/director-agent/steps/' + pending.stepId + '/output', function(o){
-        $('#gateOut').html('<textarea readonly>' + esc(o.output || '') + '</textarea>');
-      });
-    });
-    $('#btnGoOn').click(function(){
-      $('#gate').empty(); say('已确认，继续往下跑');
-      $.post('/api/director-agent/runs/' + runId + '/continue', function(){ startPoll(true); }, 'json');
-    });
-  }
-
-  $('#startStage').change(function(){ renderForm(); markStart(); $('#gate').empty(); });
-
-  // 连点保护：一个「开始跑」下去就是一次 LLM 调用，多按几下就多一份产出。
-  // 后端也会拦（同一项目有没跑完的运行就拒绝新建），按钮这边先把第一轮扛住
-  var starting = false;
-  $('#btnStart').click(function(){
-    if (starting) return;
-    var txt = collectInput();
-    if (!txt.trim()){ alert('先填设定（上面表单或补充原文）'); return; }
-
-    // 记住这次填的：下次进来直接预填，技术参数不用一遍遍重填
-    var form = {};
-    $('#form [data-fk]').each(function(){ form[$(this).data('fk')] = $(this).val(); });
-    localStorage.setItem('skillStudioForm_' + $('#startStage').val(), JSON.stringify(form));
-
-    var payload = {
-      packId: pack.packId, title: pack.name,
-      projectId: $('#proj').val() ? +$('#proj').val() : null,
-      episodeId: $('#eps').val() ? +$('#eps').val() : null,
-      // 提示词类型属于整次运行：P4 是自动串下来的，不会停下来让人再选一次
-      inputsJson: JSON.stringify({ promptType: $('#promptType').val() })
-    };
-    // 从中间阶段独立起跑，上游产出是带不进来的，素材只能自己贴。
-    // 不拦一下的话空着也照样能跑：LLM 对着空气提取实体，一次调用白花，还看不出素材是空的
-    var curKey = $('#startStage').val();
-    var firstKey = stages.length ? stages[0].stageKey : '';
-    if (curKey !== firstKey){
-      var miss = [];
-      $('#form [data-fk]').each(function(){
-        if (!$.trim($(this).val() || '')) miss.push($(this).data('fl'));
-      });
-      if (miss.length && !confirm('从 ' + curKey + ' 单独起跑，上游的产出带不进来。\n\n'
-          + '这几项目前是空的：\n  ' + miss.join('\n  ')
-          + '\n\n如果是接着上游往下跑，剧本、资产这类素材字段留空是对的（串起来的时候引擎会自己带进来）。'
-          + '\n确定就这么跑？')) return;
-    }
-
-    starting = true;
-    $('#btnStart').prop('disabled', true).html('启动中...');
-    $.ajax({ url: '/api/director-agent/runs', method: 'POST', contentType: 'application/json', data: JSON.stringify(payload) })
-     .done(function(d){
-        runId = d.runId;
-        localStorage.setItem('skillStudioRun', runId);
-        $.ajax({ url: '/api/director-agent/runs/' + runId + '/run-all', method: 'POST', contentType: 'application/json',
-                 data: JSON.stringify({ stageKey: $('#startStage').val(), inputText: txt,
-                                        projectId: payload.projectId, episodeId: payload.episodeId }) })
-         .done(function(r){
-            if (!r.started){ alert(r.message || '没启动'); return; }
-            say('从 ' + $('#startStage').val() + ' 开始跑，自动串下去');
-            startPoll(true);
-         })
-         .always(function(){ starting = false; $('#btnStart').prop('disabled', false).html('▶ 开始跑'); });
-     })
-     .fail(function(xhr){
-        starting = false; $('#btnStart').prop('disabled', false).html('▶ 开始跑');
-        var d = xhr.responseJSON || {};
-        // 409 = 这个项目还有一次没跑完。不新建，直接把页面接到那次上，让他先处理完
-        if (xhr.status === 409){
-          say('× ' + (d.message || '还有一次没跑完的运行'), 'lwait');
-          alert(d.message || '还有一次没跑完的运行');
-          if (d.runId){
-            runId = d.runId; localStorage.setItem('skillStudioRun', runId);
-            say('改为接上运行 #' + runId);
-            startPoll();
-          }
-        }
-        else alert('启动失败：' + (d.message || xhr.status));
-     });
-  });
 
   $('#btnNew').click(function(){
     if (runId){

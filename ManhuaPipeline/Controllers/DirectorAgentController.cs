@@ -147,7 +147,8 @@ public class DirectorAgentController : ControllerBase
 
         _ = Task.Run(async () =>
         {
-            try { await _agent.RunFromAsync(uid, runId, body.StageKey, body.InputText ?? "", body.ProjectId, body.EpisodeId); }
+            try { await _agent.RunFromAsync(uid, runId, body.StageKey, body.InputText ?? "",
+                                            body.ProjectId, body.EpisodeId, body.StopStageKey); }
             catch (Exception ex)
             {
                 _log.LogError(ex, "run-all failed run={RunId} stage={Stage}", runId, body.StageKey);
@@ -238,6 +239,8 @@ public class DirectorAgentController : ControllerBase
     {
         public string StageKey { get; set; } = "";
         public string? InputText { get; set; }
+        /// <summary>跑到这个阶段为止就收手。五步里的每一步单独点，不该替人越过这一步往下做。</summary>
+        public string? StopStageKey { get; set; }
         /// <summary>本次落点。以请求带的为准，页面上改了项目/剧集立刻生效。</summary>
         public int? ProjectId { get; set; }
         public int? EpisodeId { get; set; }
