@@ -129,8 +129,9 @@
     .ss-model small{display:block;font:9px var(--mono);color:var(--t3);margin-top:3px}
     /* ── 主区 ───────────────────────────────────────────── */
     .ss-content{padding:26px 30px 44px;position:relative;z-index:2;min-width:0}
-    /* 宽屏下内容居中对齐，最大 1450：贴着两边跑满反而看不出主次 */
-    .ss-content>*{max-width:1450px;margin-left:auto;margin-right:auto}
+    /* 内容铺满可用宽度：原来这里给子元素加了 max-width:1450px + 左右 auto 居中，
+       宽屏下两侧会空出一大条。现在去掉限制，贴着两边跑满 */
+    .ss-content>*{min-width:0}
     .ss-command-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
                      padding-bottom:20px;border-bottom:1px solid var(--line)}
     .ss-kicker{font:9px var(--mono);letter-spacing:2.2px;color:var(--mint)}
