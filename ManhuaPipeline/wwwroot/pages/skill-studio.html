@@ -152,6 +152,9 @@
     .ss-fields{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:11px;margin:16px 0}
     .ss-fields>label{display:grid;gap:6px;font-size:10px;color:var(--t2)}
     .ss-fields>label.wide-row{grid-column:1/-1}
+    /* 标签行（文字 + 必填红点 + 提示）整体作为一个网格项，子元素行内排，不再各占一行 */
+    .ss-fields>label>.ft{line-height:1.5}
+    .ss-fields>label>.ft span{font-weight:400}
     .ss-fields input,.ss-fields select,.ss-fields textarea{
       width:100%;background:#090d0c;border:1px solid #26312d;color:#aab9b2;padding:9px 11px;outline:0;font-size:12px}
     .ss-fields input,.ss-fields select{height:38px}
@@ -496,8 +499,12 @@
     fields.forEach(function(f){
       var v = saved[f.key] != null ? saved[f.key] : (f.default || '');
       var wide = (f.type === 'textarea') ? 'wide-row' : '';
-      h += '<label class="' + wide + '">' + esc(f.label || f.key) + (f.required ? ' <span style="color:#ff6b6b">*</span>' : '')
-         + (f.tip ? ' <span style="color:#4f655b">' + esc(f.tip) + '</span>' : '');
+      // 标签文字、必填红点、提示必须包在一个 span 里：label 是 grid 容器，
+      // 每个直接子元素会各自占一行，散着放 span 会让红点掉到标签下面单独一行
+      h += '<label class="' + wide + '"><span class="ft">' + esc(f.label || f.key)
+         + (f.required ? ' <span style="color:#ff6b6b">*</span>' : '')
+         + (f.tip ? ' <span style="color:#4f655b">' + esc(f.tip) + '</span>' : '')
+         + '</span>';
       var k = ' data-fk="' + esc(f.key) + '" data-fl="' + esc(f.label || f.key) + '"';
       if (f.type === 'select')
         h += '<select' + k + '>' + (f.options || []).map(function(o){
