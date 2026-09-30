@@ -308,13 +308,66 @@ public class DirectorAgentService
     /// step_done 也得算：每一步都是人单独点的，跑到这一步边界就收手时状态是 step_done，
     /// 产出早就写进库了。以前只认 done / await_confirm，于是「点完图册再点分镜」
     /// 拿到的上游素材是空的——分镜拿着空输入开工，只能照着剧本自己编场景名。
+    ///
+    /// 本运行里没有这一段时回落到「已经落库的那一份」（见 DramaLevelOutputOf）：
+    /// 逐集跑剧本是另起一次运行，链上根本没有 P0 那一步，不回落就是空手开工。
     /// </summary>
     private string LastOutputOf(int runId, string stageKey)
-        => _db.GetSkillSteps(runId)
-              .Where(s => s.StageKey == stageKey && s.Status is "done" or "await_confirm" or "step_done")
-              .OrderByDescending(s => s.StepId)
-              .Select(s => s.OutputText)
-              .FirstOrDefault() ?? "";
+    {
+        var own = _db.GetSkillSteps(runId)
+                     .Where(s => s.StageKey == stageKey && s.Status is "done" or "await_confirm" or "step_done")
+                     .OrderByDescending(s => s.StepId)
+                     .Select(s => s.OutputText)
+                     .FirstOrDefault();
+
+        return string.IsNullOrWhiteSpace(own) ? DramaLevelOutputOf(runId, stageKey) : own;
+    }
+
+    /// <summary>
+    /// 跨运行的上游产出从库里取，不再要求它跟本次运行绑在一起。
+    ///
+    /// 立项（P0）跑在漫剧那一次的运行上，逐集跑剧本是另一条运行——按 runId 去找 P0 步骤
+    /// 必然找空，模型手里只剩「题材：宫崎骏自愈系、画幅 16:9」三个锁定项，
+    /// 全剧结构一个字都没有，于是自己重写了一份「三、全剧梗概」：
+    /// 第 1 集（立项那次运行里顺带跑的，链上有完整 P0）写的梗概和第 2 集（另起运行）
+    /// 写的梗概对不上，12 集跑下来就是 12 个互不认识的故事。
+    ///
+    /// 只认两类可以安全共用的产出：
+    ///   P0 —— 漫剧级，一部一份，立项结果就存在 Dramas.P0OutputText；
+    ///   P1 —— 本集剧本，跑完已写回 Projects.ScriptContent，按项目取就是这一集的。
+    /// 其余阶段（P2c 三批、P2d 图册、P3 分镜、P4 提示词）都是集级的，
+    /// 跨运行去拿会拿到别的集的东西，宁可空着也不回落。
+    /// </summary>
+    private string DramaLevelOutputOf(int runId, string stageKey)
+    {
+        if (string.Equals(stageKey, "P0", StringComparison.OrdinalIgnoreCase))
+        {
+            var did = _db.GetRunDramaId(runId);
+            if (did <= 0) return "";
+
+            var saved = _db.GetDramaP0Result(did);
+            var text = !string.IsNullOrWhiteSpace(saved?.OutputText) ? saved!.OutputText
+                                                                    : _db.GetLatestP0Output(did);
+            return string.IsNullOrWhiteSpace(text)
+                ? ""
+                : "（本运行里没有立项这一步，下面是这部漫剧已入库的立项结果。"
+                  + "全剧结构、逐集梗概、人物与场景设定一律以这份为准：剧本里的「全剧梗概」一章照抄它，"
+                  + "不得照着题材另写一份——另写一份，第 2 集就会跟第 1 集对不上。）\n" + text;
+        }
+
+        if (string.Equals(stageKey, "P1", StringComparison.OrdinalIgnoreCase))
+        {
+            var pid = _db.GetRunContext(runId).ProjectId;
+            if (pid <= 0) return "";
+
+            var script = _db.GetProjectScriptContent(pid);
+            return string.IsNullOrWhiteSpace(script)
+                ? ""
+                : "（本运行里没有剧本这一步，下面是这一集已入库的剧本）\n" + script;
+        }
+
+        return "";
+    }
 
     /// <summary>
     /// 某些阶段的上家不是它前面那一个，而是更早那一站的定稿。
@@ -370,7 +423,10 @@ public class DirectorAgentService
             var t = LastOutputOf(runId, k);
             if (!string.IsNullOrWhiteSpace(t)) head += ChainHead(k) + t + "\n\n";
         }
-        return head + ChainHead(prevStageKey) + (prevOutput ?? LastOutputOf(runId, prevStageKey));
+        /* prevOutput 是内存里刚跑出来的那份。空串也算没有——单跑某一步时它常常是空的，
+           这时必须走回落，否则跨运行的立项/剧本接不上（见 DramaLevelOutputOf）。 */
+        var prev = string.IsNullOrWhiteSpace(prevOutput) ? LastOutputOf(runId, prevStageKey) : prevOutput;
+        return head + ChainHead(prevStageKey) + prev;
     }
 
     /// <summary>给第 idx 个阶段找素材：默认接上一个阶段的产出，P2c 三批则回头拿台账。</summary>
