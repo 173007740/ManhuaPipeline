@@ -2813,9 +2813,10 @@ function closeAssetLib() { $("#assetLibModal").hide() }
         // 所以只在资产列表顶部展示一次，不写进每张卡片的提示词里。
         // 资产画风（Projects.ImageStyleId → ImageStyles）跟视频画风分开：这条提示说的是资产出图会拼上什么
         function renderAssetStyleHint() {
-            function paint() {
+            function paint(briefStyleId) {
                 var el = $("#assetStyleHint"); if (!el.length) return;
-                var id = window.projectImageStyleId || 0;
+                // 项目上设过就用项目的，没有就用立项（漫剧）那份
+                var id = window.projectImageStyleId || briefStyleId || 0;
                 var s = null;
                 (window._imgStyles || []).forEach(function (x) { if (id && String(x.styleId) === String(id)) s = x });
                 if (!s) {
@@ -2829,8 +2830,17 @@ function closeAssetLib() { $("#assetLibModal").hide() }
                 if (sd) html += "<div style='margin-top:4px;padding:6px 8px;border-radius:6px;background:rgba(106,247,255,0.08);border:1px solid rgba(106,247,255,0.22);color:#c4b5fd;white-space:pre-wrap;max-height:110px;overflow-y:auto;'>" + escHtml(sd) + "</div>";
                 el.html(html);
             }
-            if (window._imgStyles) { paint(); return }
-            $.get("/api/image-style", function (styles) { window._imgStyles = styles || []; paint() }).fail(paint);
+            function withStyles(fallbackId) {
+                if (window._imgStyles) { paint(fallbackId); return }
+                $.get("/api/image-style", function (styles) { window._imgStyles = styles || []; paint(fallbackId) })
+                 .fail(function () { paint(fallbackId) });
+            }
+            /* 项目上没单独设过资产画风时，立项（漫剧）那一栏「画风方向」就是这部剧的画风——
+               第 1 集当初手工选过、第 2 集起没人再选，不查立项就一律显示「未设置」。 */
+            if (window.projectImageStyleId) { withStyles(0); return }
+            $.get("/api/director-agent/brief", { projectId: currentProjectId })
+             .done(function (b) { withStyles((b && b.artStyleId) || 0) })
+             .fail(function () { withStyles(0) });
         }
 
         // ===== 本剧提示词模版（覆盖账号默认，只影响当前这部剧） =====
