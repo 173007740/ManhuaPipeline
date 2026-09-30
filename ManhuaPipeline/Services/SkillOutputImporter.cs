@@ -219,6 +219,22 @@ public class SkillOutputImporter
                 claimed.Add(table + " " + key);
                 n++; written = true; break;
             }
+            /* 精确名全都对不上时再用「包含」救一次：提示词那批常把台账名写成简称
+               （台账「刘如烟植物染工坊」，它写「染工坊」），一模一样比自然一条也不中，
+               整批入库 0 —— 这一步明明跑完了，资产上却什么提示词都没有。
+               只在同类里唯一命中时才写（见 FindAssetNameLike），命中多条就宁可跳过。 */
+            if (!written)
+            {
+                foreach (var key in KeysOf(it.Name, it.Code))
+                {
+                    var hit = _db.FindAssetNameLike(projectId, table, key);
+                    if (string.IsNullOrEmpty(hit)) continue;
+                    if (claimed.Contains(table + " " + hit)) { written = true; break; }
+                    if (!_db.UpdateAssetPrompt(projectId, table, hit, it.Image, it.Negative)) continue;
+                    claimed.Add(table + " " + hit);
+                    n++; written = true; break;
+                }
+            }
             if (!written) missed++;
         }
 

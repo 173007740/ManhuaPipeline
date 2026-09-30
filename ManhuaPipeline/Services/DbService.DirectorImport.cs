@@ -206,6 +206,31 @@ WHERE TABLE_NAME=@t AND COLUMN_NAME=@c", conn);
         return cmd.ExecuteNonQuery() > 0;
     }
 
+    /// <summary>
+    /// 名字精确相等一条都没匹配上时的兜底：在同类资产里找「互相包含」的那一条。
+    /// 模型给的名字常常只是台账名的一部分——台账上叫「刘如烟植物染工坊」，
+    /// 提示词那批写的是「染工坊」，只按相等比就一条也对不上，整批入库 0，这一步等于白跑。
+    /// 只在唯一命中时才认：命中多条说明这个名字指代不清，宁可跳过也不乱写。
+    /// </summary>
+    public string? FindAssetNameLike(int projectId, string table, string key)
+    {
+        if (projectId <= 0 || string.IsNullOrEmpty(table) || string.IsNullOrWhiteSpace(key)) return null;
+        key = key!.Trim();
+        if (key.Length < 2) return null;          // 一两个字的键谁都像，不做推断
+
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(
+            $"SELECT DISTINCT Name FROM {table} WHERE ProjectId=@p AND Name IS NOT NULL " +
+            "AND (Name LIKE '%' + @k + '%' OR @k LIKE '%' + Name + '%')", conn);
+        cmd.Parameters.AddWithValue("@p", projectId);
+        cmd.Parameters.AddWithValue("@k", key);
+
+        var hits = new List<string>();
+        using var r = cmd.ExecuteReader();
+        while (r.Read()) hits.Add(r.GetString(0));
+        return hits.Count == 1 ? hits[0] : null;
+    }
+
     /// <summary>四类资产表：CHR / SCN / PRP / VFX。</summary>
     public static readonly string[] AssetTables =
         { "CharacterAssets", "EnvironmentAssets", "PropAssets", "EffectAssets" };

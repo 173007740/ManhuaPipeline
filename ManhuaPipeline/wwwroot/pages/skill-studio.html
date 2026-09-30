@@ -1077,7 +1077,7 @@
         if (order[i] === sp.to) break;
       }
       if (!keys.length) keys = [sp.from];
-      var doneN = 0, imported = 0, running = null, bad = null, viewId = 0;
+      var doneN = 0, imported = 0, running = null, bad = null, viewId = 0, err = '';
       keys.forEach(function(k){
         var s = by[k];
         if (!s) return;
@@ -1085,13 +1085,15 @@
         if (s.status === 'running') running = s;
         if (s.status === 'error' || s.status === 'blocked') bad = s;
         imported += (s.imported || 0);
+        // 入库 0 条是「跑完了但什么也没写进去」，页面上不写出来，人只会以为又没跑
+        if (s.importError) err = s.importError;
       });
       var tier = running ? 'run'
                : bad     ? 'bad'
                : doneN >= keys.length ? 'done'
                : doneN > 0 ? 'part' : 'idle';
       return { tier: tier, doneN: doneN, total: keys.length, running: running,
-               bad: bad, imported: imported, viewId: viewId };
+               bad: bad, imported: imported, viewId: viewId, err: err };
     });
   }
 
@@ -1222,6 +1224,9 @@
     else if (s.tier === 'done'){
       sub = '已完成' + (s.imported ? ' · 入库 ' + s.imported + ' 条' : '')
           + (s.total > 1 ? ' · 内含 ' + s.total + ' 个子阶段' : '');
+      /* 跑完了却一条也没写进业务表：这一步等于白跑，页面上必须说。
+         不说的话人只看到「已完成」，接着往下跑，后面每一步都拿不到这一站的产出。 */
+      if (!s.imported && s.err) sub += ' · 没写进资产：' + s.err;
       /* 这一格是立项：整部漫剧一份，12 集共用，不是本集自己跑出来的。
          立项结果存在漫剧那一行上（episodeNumber = 0），说清是整部共用；
          老数据还没归位时才显示是哪一集跑的。 */
