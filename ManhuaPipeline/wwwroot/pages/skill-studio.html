@@ -1684,12 +1684,19 @@
   function toggleRunButtons(running){
     var prevDone = true;
     STEP_STATE.forEach(function(s, i){
-      var can = prevDone;
+      /* 已经跑过的格子永远可以再点：它自己跑成过一次，把它锁住、点下去没反应最费解。
+         其余的按「前面那一步跑完没有」排队——它要吃前面那一步的产出。 */
+      var can = prevDone || s.tier === 'done';
       prevDone = (s.tier === 'done');
+      var act = STEPS[i].act || '生成';
       var label = running ? '跑着呢…'
-                : s.tier === 'done' ? '重跑'
-                : s.tier === 'part' ? '接着跑' : '生成';
-      $('[data-run=' + i + ']').prop('disabled', running ? true : !can).text(label);
+                : s.tier === 'done' ? '重跑 · ' + act
+                : s.tier === 'part' ? '接着' + act : act;
+      var $b = $('[data-run=' + i + ']');
+      $b.prop('disabled', running ? true : !can).text(label);
+      // 不给点的说清为什么，别让人点了没反应还不知道原因
+      if (!running && !can) $b.attr('title', '前面那一步还没跑完，它的产出是这一步的输入');
+      else $b.removeAttr('title');
       // 前置没做完的步骤往后排：不给按钮，比给了按钮点下去再报错体面
       $('.ss-step[data-i=' + i + ']').toggleClass('dim', !can && s.tier !== 'run' && s.tier !== 'done');
     });

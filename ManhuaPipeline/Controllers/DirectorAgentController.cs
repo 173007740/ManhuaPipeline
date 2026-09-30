@@ -139,10 +139,15 @@ public class DirectorAgentController : ControllerBase
     {
         var uid = GetUserId();
         if (uid == 0) return Unauthorized();
-        // 已经跑完或被丢掉的那次不许再点火：重跑一遍只会多一份同名产出
+        /* 只拦「已经作废的那次」和「正在跑的那次」。
+           跑完（done）的那次允许再点火——页面上「重跑 · 生成场景提示词」这类按钮点下去
+           就是要把这一件事再做一遍，挡掉它等于点了没反应。
+           而且必须记在同一次运行里：这一站的上游（立项 / 剧本 / P2b 资产台账）都挂在这次运行上，
+           换成新开一次运行它们全是空的，模型手里没有台账就只能照剧本编场景名，
+           回填时一条也对不上、入库 0 条（LedgerSourceOf 规定 P2c 三批一律取 P2b）。 */
         var st = _db.GetSkillRunStatus(runId);
-        if (st is "done" or "abandoned")
-            return Ok(new { started = false, message = $"这次运行已经结掉了（{st}），要重来请「新开一次」" });
+        if (st is "abandoned")
+            return Ok(new { started = false, message = "这次运行已经作废了，要再来请「新开一次」" });
         if (!_running.TryAdd(runId, 0)) return Ok(new { started = false, message = "这次运行正在跑" });
 
         // 先把状态落库再动手。后台任务要等排上队、跑到第一个阶段才会写 running，
