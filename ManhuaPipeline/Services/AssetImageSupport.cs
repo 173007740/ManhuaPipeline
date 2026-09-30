@@ -76,6 +76,21 @@ public static class AssetImageSupport
                 var imageStyle = db.GetImageStyle(imageStyleId);
                 if (!string.IsNullOrWhiteSpace(imageStyle?.StyleDesc)) return imageStyle!.StyleDesc;
             }
+
+            /* 项目上没设过资产画风：立项那一栏「画风方向」是给整部漫剧定的，存在 Dramas.ArtStyleId。
+               逐集的项目是立项之后自动长出来的，除第 1 集（当初手工选过一次）之外没人再选过，
+               于是第 2 集起资产出图一直退回视频画风——12 集跑下来画风是断的。
+               这里上溯一级按漫剧那份来；项目上单独设过的值仍然优先，立项只是兜底。 */
+            var dramaId = db.GetDramaIdByProject(projectId);
+            if (dramaId > 0)
+            {
+                var brief = db.GetDramaBrief(dramaId);
+                if (brief?.ArtStyleId is int artStyleId)
+                {
+                    var artStyle = db.GetImageStyle(artStyleId);
+                    if (!string.IsNullOrWhiteSpace(artStyle?.StyleDesc)) return artStyle!.StyleDesc;
+                }
+            }
         }
         catch (Exception ex)
         {
