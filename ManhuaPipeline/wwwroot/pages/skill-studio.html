@@ -1198,6 +1198,7 @@
       if (STEPS[activeStep].form === 'P0') loadBrief();
     }
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
+    $('[data-runall]').click(function(){ doStep(+$(this).data('runall'), true); });
     renderWork();
     // 立项那一条是异步才到的，等它归位才知道该从哪一步动手；放这儿补一次
     focusFirstUndone();
@@ -1234,6 +1235,11 @@
          + '<div class="ss-step-out" id="so' + i + '"></div></div>'
          + '<div class="ss-step-act">'
          +   '<button class="go" data-run="' + i + '">' + label + '</button>'
+         /* 资产这一大段拆成四格（角色 / 环境 / 道具 / 图册），一格一个按钮就得点四次。
+            下面这颗从这一格一路跑到最后，剩下的不用再点。 */
+         +   (sp.noRun || i >= STEPS.length - 1 ? ''
+              : '<button data-runall="' + i + '" title="从这一格起一路往下跑，中途遇卡点自动停">'
+                + '一路跑到底 ›</button>')
          + '</div></div>';
   }
 
@@ -1417,8 +1423,9 @@
     });
   }
 
-  // 跑一步：只跑到这一步的最后一个内部阶段就收手，不越界替他把下一步也做了
-  function doStep(i){
+  /* 跑一步：默认只跑到这一格的最后一个内部阶段就收手，不越界替他把下一格也做了。
+     toEnd 为真是「一路跑到底」：不给终点，从这一格起一直跑到最后一格（遇卡点自动停）。 */
+  function doStep(i, toEnd){
     var sp = STEPS[i];
     // 视频那一步不跑模型，它的「运行」就是把工作区切到出视频那块
     if (sp.noRun){
@@ -1440,12 +1447,14 @@
     $('#so' + i).empty().hide();
     // 半途停下的那一步要「接着跑」，不能从头再来：这一步内部可能已经跑好了前几个子阶段
     // （资产这步内含 P2a/P2b），从 from 起跑等于把做好的部分重做一遍，白烧一次调用
-    say((tier === 'part' ? '接着跑第 ' : '开始跑第 ') + (i + 1) + ' 步 · ' + sp.title);
+    say((tier === 'part' ? '接着跑第 ' : '开始跑第 ') + (i + 1) + ' 步 · ' + sp.title
+        + (toEnd ? '，一路跑到最后一格' : ''));
     ensureRun(function(rid){
       if (tier === 'part'){
         $.ajax({ url: '/api/director-agent/runs/' + rid + '/continue', method: 'POST',
                  contentType: 'application/json',
-                 data: JSON.stringify({ stopStageKey: sp.to }) })   // 只跑到这一步的边界，不越界替他做下一步
+                 // 只跑到这一步的边界，不越界替他做下一步；toEnd 时不给终点，一路跑完
+                 data: JSON.stringify({ stopStageKey: toEnd ? null : sp.to }) })
          .done(function(r){
             if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); return; }
             startPoll(true);
@@ -1455,7 +1464,8 @@
       }
       $.ajax({ url: '/api/director-agent/runs/' + rid + '/run-all', method: 'POST',
                contentType: 'application/json',
-               data: JSON.stringify({ stageKey: sp.from, inputText: txt, stopStageKey: sp.to,
+               data: JSON.stringify({ stageKey: sp.from, inputText: txt,
+                                      stopStageKey: toEnd ? null : sp.to,
                                       projectId: $('#proj').val() ? +$('#proj').val() : null,
                                       episodeId: $('#eps').val() ? +$('#eps').val() : null }) })
        .done(function(r){
@@ -1678,6 +1688,8 @@
                 : s.tier === 'done' ? '重跑'
                 : s.tier === 'part' ? '接着跑' : '生成';
       $('[data-run=' + i + ']').prop('disabled', running ? true : !can).text(label);
+      // 「一路跑到底」跟主按钮同一个开合：跑起来一律按住，前置没做完也不给它
+      $('[data-runall=' + i + ']').prop('disabled', running ? true : !can);
       // 前置没做完的步骤往后排：不给按钮，比给了按钮点下去再报错体面
       $('.ss-step[data-i=' + i + ']').toggleClass('dim', !can && s.tier !== 'run' && s.tier !== 'done');
     });
