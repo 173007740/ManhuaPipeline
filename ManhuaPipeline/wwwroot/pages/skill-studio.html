@@ -1121,7 +1121,8 @@
         // 画风方向：选项从图片风格库（/api/image-style）拉，存的是 StyleId —— 出图时按它取风格描述。
         // value / 存 localStorage 的都是 id，所以历史上手填的风格名（非数字）直接忽略，别选中一个不存在的项
         var savedId = /^\d+$/.test(String(v || '')) ? String(v) : '';
-        var cur = savedId || (PROJ_IMG_STYLE ? String(PROJ_IMG_STYLE) : '');
+        // 项目上那一份优先，没有就用立项那份。两个请求谁先回来不一定，所以两个变量都看一眼
+        var cur = savedId || String(PROJ_IMG_STYLE || BRIEF_ART_STYLE || '');
         h += '<select' + k + ' data-fsid="1"><option value="">（不选，出图退回视频画风）</option>'
            + IMG_STYLES.map(function(s){
                return '<option value="' + s.styleId + '"'
@@ -1803,8 +1804,11 @@
       /* 立项的画风方向兜底项目上的资产画风。两个请求谁先回来不一定，
          所以读回来就补画一次——后到的那次也要生效。 */
       BRIEF_ART_STYLE = b.artStyleId || 0;
-      if (!PROJ_IMG_STYLE && BRIEF_ART_STYLE && stages.length)
-        renderSteps(lastRun ? lastRun.steps : []);
+      // 立项那份要落进 PROJ_IMG_STYLE：重画读的是它，光记在 BRIEF_ART_STYLE 上下拉还是空的
+      if (!PROJ_IMG_STYLE && BRIEF_ART_STYLE){
+        PROJ_IMG_STYLE = BRIEF_ART_STYLE;
+        if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
+      }
 
       applyEngineLock(b.promptEngine || '', briefDramaId);
       if (b.promptEngine) say('提示词引擎已由立项锁定：' + b.promptEngine);
