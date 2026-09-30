@@ -948,33 +948,37 @@
 
   // 表单预填：上次填过的 > 字段自带 default > 空。
   // 画幅/交付/平台这类参数一部剧定一次就够了，不该每次跑都手填一遍。
-  // ── 对外只认这五步 ──
-  // 以前页面上摆着十一个编排阶段，每个还挂着门禁和卡点，人得先把这套编排学明白才敢下手。
-  // 编排是引擎的事：from/to 之间那几个内部阶段跑几次、怎么串，页面上不该出现
+  // ── 一格一个功能，一个按钮一件事 ──
+  // 以前把十几个编排阶段并成几大步（「角色资产」一格实际连跑 提取→定稿→出提示词），
+  // 于是按钮只能写一个笼统的「生成」：点下去要做几件事、做完出来的是什么，全靠猜。
+  // 现在一格只挂一个编排阶段，按钮上直接写清要干什么（提取资产 / 生成角色提示词 / 生成分镜）。
+  // from / to 相同是刻意的：点一次只做这一件事，不越界替他把下一件也做掉。
   var STEPS = [
     /* view 说明这一步做完的东西在哪看：
-         text  = 整篇文本产出（立项 / 剧本），在本页渲染
+         text  = 整篇文本产出（立项 / 剧本 / 清单 / 图册），在本页渲染
          frame = 业务表里的数据，直接把 project.html 对应 stage 搬过来（iframe 加载 &embed=1）
-         video = 终稿提示词批量出视频 */
-    { title:'项目立项', desc:'定画幅、交付形态与题材调性',     from:'P0',  to:'P0',  form:'P0', view:{kind:'text'} },
-    { title:'剧本生成', desc:'一句话前提、五道剧本门、分集',   from:'P1',  to:'P1',  form:'P1', view:{kind:'text'} },
+         video = 终稿提示词批量出视频
+       act = 按钮上写的动作。按钮就是「我要做什么」，状态（已完成 / 没跑完）写在卡片副标题上 */
+    { title:'项目立项', desc:'定画幅、交付形态与题材调性',      from:'P0',  to:'P0',  form:'P0', view:{kind:'text'},  act:'立项' },
+    { title:'剧本生成', desc:'一句话前提、五道剧本门、分集',    from:'P1',  to:'P1',  form:'P1', view:{kind:'text'},  act:'写剧本' },
+    /* 提取与定稿分开：提取是把剧本里的实体抽成台账，定稿是给每项定 ABC 分级和出图规格。
+       并成一格时按钮只能写「生成」，人不知道点下去是抽台账还是定规格 */
+    { title:'提取资产', desc:'从剧本里抽出 CHR-/SCN-/PRP-/VFX- 台账', from:'P2a', to:'P2a', form:null, view:{kind:'frame', stage:6}, act:'提取资产' },
+    { title:'资产清单定稿', desc:'ABC 分级、是否出图、出图规格', from:'P2b', to:'P2b', form:null, view:{kind:'text'},  act:'定稿资产清单' },
     /* 顺序按后台批次走：P2c2 出场景、P2c3 出「道具与特效」。
        以前道具站从 P2c2 起跑，于是场景批被写了两遍（环境站还排在它后面），白烧一次调用。 */
-    { title:'角色资产', desc:'角色卡与出图提示词',             from:'P2a', to:'P2c1', form:null, view:{kind:'frame', stage:6} },
-    { title:'环境资产', desc:'场景卡与出图提示词',             from:'P2c2', to:'P2c2', form:null, view:{kind:'frame', stage:8} },
-    /* 道具与特效同属 P2c3 一批，这一跑两类的提示词都出来了。
-       所以特效站不再从 P2c3 起跑——那等于把这一批又跑一遍、把刚写好的覆盖掉 */
-    { title:'道具资产', desc:'道具卡与出图提示词',             from:'P2c3', to:'P2c3', form:null, view:{kind:'frame', stage:7} },
-    /* 特效与道具同属 P2c3 一批：跑「道具资产」那一步时，特效的提示词跟着一起出来了。
-       以前这一格挂的是 from/to = P2d（资产图册），于是点「特效资产」跑出来的是图册、
+    { title:'角色提示词', desc:'角色 4 View 出图提示词（第一批）', from:'P2c1', to:'P2c1', form:null, view:{kind:'frame', stage:6}, act:'生成角色提示词' },
+    { title:'场景提示词', desc:'场景母版 / 拼接图 / 站位版（第二批）', from:'P2c2', to:'P2c2', form:null, view:{kind:'frame', stage:8}, act:'生成场景提示词' },
+    /* 道具与特效同属 P2c3 一批，这一跑两类的提示词都出来了 */
+    { title:'道具与特效提示词', desc:'道具资产图 + 特效并入宿主状态图（第三批）', from:'P2c3', to:'P2c3', form:null, view:{kind:'frame', stage:7}, act:'生成道具与特效提示词' },
+    /* 特效与道具同属 P2c3 一批：跑上面那一格时，特效的提示词跟着一起出来了。
+       以前这一格挂的是 P2d（资产图册），于是点「特效资产」跑出来的是图册、
        特效页却空着——看着像「特效跑了但什么都没有」。改成只看不跑，状态跟着 P2c3 走。 */
     { title:'特效资产', desc:'与道具同批产出（P2c3），这儿只看', noRun:true, watch:['P2c3'],
       runLabel:'看特效资产', form:null, view:{kind:'frame', stage:11} },
-    /* 资产图册（P2d）以前没有自己的入口：编排里有这一阶段，对外九格里却没有它，
-       想看图册只能借「特效资产」那格错跑一次。它是整篇文本产出，跟立项 / 剧本一样本页渲染。 */
-    { title:'资产图册', desc:'资产图与提示词汇成图册（交付物）', from:'P2d', to:'P2d',  form:null, view:{kind:'text'} },
-    { title:'导演分镜', desc:'镜头调度与帧表',                 from:'P3',  to:'P3',   form:null, view:{kind:'frame', stage:5} },
-    { title:'提示词生成', desc:'投喂出图 / 视频模型的终稿',     from:'P4',  to:'P4',   form:null, view:{kind:'frame', stage:9} },
+    { title:'资产图册', desc:'资产图与提示词汇成图册（交付物）', from:'P2d', to:'P2d',  form:null, view:{kind:'text'},  act:'生成资产图册' },
+    { title:'导演分镜', desc:'镜头调度与帧表',                  from:'P3',  to:'P3',   form:null, view:{kind:'frame', stage:5}, act:'生成分镜' },
+    { title:'终稿提示词', desc:'投喂出图 / 视频模型的终稿',      from:'P4',  to:'P4',   form:null, view:{kind:'frame', stage:9}, act:'生成终稿提示词' },
     /* 视频生成这一步不跑模型：它把上一步的终稿提示词批量提交给出视频模型。
        所以没有 from / to，状态按「提示词里已经出过几条视频」算 */
     { title:'视频生成', desc:'把终稿提示词批量提交出视频', noRun:true, view:{kind:'video'} }
@@ -1198,7 +1202,6 @@
       if (STEPS[activeStep].form === 'P0') loadBrief();
     }
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
-    $('[data-runall]').click(function(){ doStep(+$(this).data('runall'), true); });
     renderWork();
     // 立项那一条是异步才到的，等它归位才知道该从哪一步动手；放这儿补一次
     focusFirstUndone();
@@ -1225,8 +1228,12 @@
     else if (s.tier === 'part') sub = '跑了 ' + s.doneN + '/' + s.total + '，没跑完';
     else if (s.tier === 'bad')  sub = '这一步没跑出东西（' + (s.bad ? s.bad.stageKey : '') + '）';
     else sub = sp.noRun ? (sp.watch ? '跟着 ' + sp.watch.join(' / ') + ' 一起出' : '等终稿提示词跑出来') : '还没跑';
+    /* 按钮上写的是「要做什么」，不是「生成」这种谁也看不出会干出什么来的词。
+       状态不抢按钮的主文案：跑过没有写在卡片副标题上，重跑 / 接着跑只是前缀。 */
+    var act = sp.act || '生成';
     var label = sp.noRun ? (sp.runLabel || '去生成视频')
-              : s.tier === 'done' ? '重跑' : s.tier === 'part' ? '接着跑' : '生成';
+              : s.tier === 'done' ? '重跑 · ' + act
+              : s.tier === 'part' ? '接着' + act : act;
     return '<div class="ss-step ' + cls + '" data-i="' + i + '">'
          + '<div class="ss-step-no">' + (i + 1) + '</div>'
          + '<div class="ss-step-body"><b>' + esc(sp.title) + ' <em>' + esc(sp.desc) + '</em></b>'
@@ -1235,11 +1242,6 @@
          + '<div class="ss-step-out" id="so' + i + '"></div></div>'
          + '<div class="ss-step-act">'
          +   '<button class="go" data-run="' + i + '">' + label + '</button>'
-         /* 资产这一大段拆成四格（角色 / 环境 / 道具 / 图册），一格一个按钮就得点四次。
-            下面这颗从这一格一路跑到最后，剩下的不用再点。 */
-         +   (sp.noRun || i >= STEPS.length - 1 ? ''
-              : '<button data-runall="' + i + '" title="从这一格起一路往下跑，中途遇卡点自动停">'
-                + '一路跑到底 ›</button>')
          + '</div></div>';
   }
 
@@ -1277,7 +1279,8 @@
       var eStamp = 'empty:' + activeStep;
       if (box.data('wk') !== eStamp){
         box.data('wk', eStamp);
-        box.html('<div class="empty-hint">这一步还没跑出内容，点上面的「生成」</div>');
+        box.html('<div class="empty-hint">这一步还没跑出内容，点上面的「'
+                 + esc(sp.act || '生成') + '」</div>');
       }
       return;
     }
@@ -1423,9 +1426,8 @@
     });
   }
 
-  /* 跑一步：默认只跑到这一格的最后一个内部阶段就收手，不越界替他把下一格也做了。
-     toEnd 为真是「一路跑到底」：不给终点，从这一格起一直跑到最后一格（遇卡点自动停）。 */
-  function doStep(i, toEnd){
+  // 跑一步：一格只挂一个编排阶段，所以点一次就是做这一件事，不越界替他把下一件也做了
+  function doStep(i){
     var sp = STEPS[i];
     // 视频那一步不跑模型，它的「运行」就是把工作区切到出视频那块
     if (sp.noRun){
@@ -1447,14 +1449,12 @@
     $('#so' + i).empty().hide();
     // 半途停下的那一步要「接着跑」，不能从头再来：这一步内部可能已经跑好了前几个子阶段
     // （资产这步内含 P2a/P2b），从 from 起跑等于把做好的部分重做一遍，白烧一次调用
-    say((tier === 'part' ? '接着跑第 ' : '开始跑第 ') + (i + 1) + ' 步 · ' + sp.title
-        + (toEnd ? '，一路跑到最后一格' : ''));
+    say((tier === 'part' ? '接着做第 ' : '开始做第 ') + (i + 1) + ' 步 · ' + (sp.act || sp.title));
     ensureRun(function(rid){
       if (tier === 'part'){
         $.ajax({ url: '/api/director-agent/runs/' + rid + '/continue', method: 'POST',
                  contentType: 'application/json',
-                 // 只跑到这一步的边界，不越界替他做下一步；toEnd 时不给终点，一路跑完
-                 data: JSON.stringify({ stopStageKey: toEnd ? null : sp.to }) })
+                 data: JSON.stringify({ stopStageKey: sp.to }) })   // 只做这一件事，做完就收手
          .done(function(r){
             if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); return; }
             startPoll(true);
@@ -1464,8 +1464,7 @@
       }
       $.ajax({ url: '/api/director-agent/runs/' + rid + '/run-all', method: 'POST',
                contentType: 'application/json',
-               data: JSON.stringify({ stageKey: sp.from, inputText: txt,
-                                      stopStageKey: toEnd ? null : sp.to,
+               data: JSON.stringify({ stageKey: sp.from, inputText: txt, stopStageKey: sp.to,
                                       projectId: $('#proj').val() ? +$('#proj').val() : null,
                                       episodeId: $('#eps').val() ? +$('#eps').val() : null }) })
        .done(function(r){
@@ -1539,8 +1538,7 @@
     });
   }
 
-  // 统计按「五步」算，不按内部那十几个编排阶段算——
-  // 人问的是「做完了几步」，没人关心 P2c 内部跑了几批
+  // 统计按页面上的格子算。一格一件事，所以「做完了几格」就是「做完了几件事」
   function updateStats(d){
     var imp = 0;
     (d.steps || []).forEach(function(s){ if (s.imported) imp += s.imported; });
@@ -1688,8 +1686,6 @@
                 : s.tier === 'done' ? '重跑'
                 : s.tier === 'part' ? '接着跑' : '生成';
       $('[data-run=' + i + ']').prop('disabled', running ? true : !can).text(label);
-      // 「一路跑到底」跟主按钮同一个开合：跑起来一律按住，前置没做完也不给它
-      $('[data-runall=' + i + ']').prop('disabled', running ? true : !can);
       // 前置没做完的步骤往后排：不给按钮，比给了按钮点下去再报错体面
       $('.ss-step[data-i=' + i + ']').toggleClass('dim', !can && s.tier !== 'run' && s.tier !== 'done');
     });
