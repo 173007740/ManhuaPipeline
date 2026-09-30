@@ -684,7 +684,10 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
                     $("#stageResult").addClass("no-content").html("<div class=\"icon\">🖌\ufe0f</div><p>暂无内容，点击“生成”开始分析</p>");
                     return;
                 }
-                $("#stageResult").removeClass("no-content").html(renderFramesTable(d));
+                // 分镜表有 18 列，各列都有 min-width，总宽远超面板——
+                // 不给一层横向滚动容器，右侧的「镜头状态 / 操作」就被顶到可视区之外，看着像内容丢了。
+                $("#stageResult").removeClass("no-content")
+                    .html("<div style='overflow-x:auto;-webkit-overflow-scrolling:touch;'>" + renderFramesTable(d) + "</div>");
             }).always(function () { window._stage5FramesLoading = false; });
         }
         function refreshStage5Frames() {
@@ -692,6 +695,30 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
             if (window._stage5FrameRefreshAt && now - window._stage5FrameRefreshAt < 4000) return;
             window._stage5FrameRefreshAt = now;
             loadStage5Frames();
+        }
+        // 分镜表上方的统计条：镜数 / 总时长 / 平均镜长 / 覆盖单元数。
+        // 每跑一次分镜都要开 SQL 数一遍太麻烦，这两行数字直接摆在表头上最省事。
+        function frameStatBar(frames) {
+            var n = (frames || []).length;
+            if (!n) return "";
+            var sec = 0, units = {};
+            for (var i = 0; i < n; i++) {
+                var f = frames[i];
+                var m = String(f.duration || "").match(/(\d+(?:\.\d+)?)/);
+                if (m) sec += parseFloat(m[1]);
+                if (f.unitNumber) units[f.unitNumber] = 1;
+            }
+            var un = 0; for (var k in units) if (units.hasOwnProperty(k)) un++;
+            var avg = Math.round(sec / n * 10) / 10;
+            var mm = Math.floor(sec / 60), ss = Math.round(sec % 60);
+            return "<div style='display:flex;flex-wrap:wrap;gap:18px;align-items:center;padding:8px 14px;margin-bottom:8px;"
+                + "border:1px solid var(--line);border-radius:8px;background:rgba(5,232,240,0.06);font-size:13px;'>"
+                + "<span>共 <b style='color:#6af7ff;font-size:15px;'>" + n + "</b> 条镜头</span>"
+                + "<span>总时长 <b style='color:#6af7ff;font-size:15px;'>" + Math.round(sec) + "</b> 秒"
+                + "<span style='color:#9ca3af;margin-left:4px;'>（约 " + mm + " 分 " + ss + " 秒）</span></span>"
+                + "<span>平均 <b>" + avg + "</b> 秒/镜</span>"
+                + "<span>覆盖 <b>" + un + "</b> 个单元</span>"
+                + "</div>";
         }
         function renderFramesTable(frames) {
            function cell(v) { return escHtml(v || "").replace(/\n/g, "<br>") }
@@ -723,16 +750,16 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
                }
                return out.join("，");
            }
-            var h = "<table class='storyboard-table'><thead><tr><th style='width:70px;min-width:70px;'>集</th><th style='width:80px;min-width:80px;'>单元</th><th>类型</th><th>镜头编号</th><th style='width:550px;min-width:550px;max-width:550px;'>镜头描述</th><th style='width:350px;min-width:350px;max-width:350px;'>时间轴</th><th style='width:150px;min-width:150px;max-width:150px;'>技能</th><th>构图方式</th><th>景别</th><th>镜头运动</th><th>出镜角色</th><th style='width:170px;min-width:170px;max-width:220px;'>引用资产</th><th>对话/台词</th><th>镜头时长</th><th>起始画面</th><th>结束画面</th><th style='width:280px;min-width:280px;max-width:280px;'>镜头状态<br><span style='font-weight:400;font-size:10px;color:#6b7280;'>起始/动作/结束/衔接/禁变/新信息</span></th><th style='width:95px;min-width:95px;'>操作</th></tr></thead><tbody>";
+            var h = frameStatBar(frames) + "<table class='storyboard-table'><thead><tr><th style='width:70px;min-width:70px;'>集</th><th style='width:80px;min-width:80px;'>单元</th><th>类型</th><th>镜头编号</th><th style='width:360px;min-width:360px;max-width:360px;'>镜头描述</th><th style='width:150px;min-width:150px;max-width:150px;'>时间轴</th><th style='width:90px;min-width:90px;max-width:90px;'>技能</th><th>构图方式</th><th style='width:110px;min-width:110px;max-width:110px;'>景别</th><th style='width:170px;min-width:170px;max-width:170px;'>镜头运动</th><th>出镜角色</th><th style='width:170px;min-width:170px;max-width:220px;'>引用资产</th><th>对话/台词</th><th>镜头时长</th><th>起始画面</th><th>结束画面</th><th style='width:440px;min-width:440px;max-width:440px;'>镜头状态<br><span style='font-weight:400;font-size:10px;color:#6b7280;'>起始/动作/结束/衔接/禁变/新信息</span></th><th style='width:95px;min-width:95px;'>操作</th></tr></thead><tbody>";
             for (var i = 0; i < frames.length; i++) {
                 var f = frames[i];
                 h += "<tr><td>" + escHtml(f.episodeNumber ? "第" + f.episodeNumber + "集" : "") + "</td>";
                 h += "<td>" + escHtml(f.unitNumber ? "单元" + f.unitNumber : "") + "</td>";
                 h += "<td>" + typeBadge(f.unitType) + "</td>";
                 h += "<td>" + escHtml(f.shotNumber || f.frameNumber || "") + "</td>";
-                h += "<td style='max-width:550px;overflow-wrap:break-word;word-break:break-word;'>" + cell(f.description) + "</td>";
-                h += "<td style='max-width:350px;overflow-wrap:break-word;word-break:break-word;'>" + cell(f.timeline) + "</td>";
-                h += "<td style='max-width:150px;overflow-wrap:break-word;word-break:break-word;'>" + skillCell(f.skills) + "</td>";
+                h += "<td style='max-width:360px;overflow-wrap:break-word;word-break:break-word;'>" + cell(f.description) + "</td>";
+                h += "<td style='max-width:150px;overflow-wrap:break-word;word-break:break-word;'>" + cell(f.timeline) + "</td>";
+                h += "<td style='max-width:90px;overflow-wrap:break-word;word-break:break-word;'>" + skillCell(f.skills) + "</td>";
                 h += "<td>" + cell(f.composition) + "</td>";
                 h += "<td>" + cell(f.shotSize) + "</td>";
                 h += "<td>" + cell(f.camera) + "</td>";
@@ -742,7 +769,9 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
                 h += "<td>" + cell(f.duration) + "</td>";
                 h += "<td>" + cell(f.startScene) + "</td>";
                 h += "<td>" + cell(f.endScene) + "</td>";
-                h += "<td>" + stateCell(f) + "</td>";
+                // 镜头状态六行文字：td 上的 max-width 在 auto 表格布局里是不作数的，
+                // 单元格会被最长的那一行撑开，把整张表顶宽。用内层 div 限宽才真的断得开。
+                h += "<td style='max-width:440px;'><div style='max-width:440px;overflow-wrap:break-word;word-break:break-word;'>" + stateCell(f) + "</div></td>";
                 h += "<td style='text-align:center;'><button onclick='generateFramePrompt(" + f.frameId + ", this)' title='单独对该镜头生成提示词（覆盖该镜头已有的提示词）' style='font-size:11px;background:#0891b2;color:#fff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;'><i class='fas fa-wand-magic-sparkles' style='font-size:11px;'></i> 生成提示词</button></td></tr>";
             }
             h += "</tbody></table>";
@@ -2091,7 +2120,7 @@ function loadVideoStyles() { $.get("/api/video-style", function (styles) { var s
         } function parseStoryboardTable(t) {
            if (!t) return "";
             var lines = t.split("\n");
-            var h = "<table class='storyboard-table'><thead><tr><th style='width:70px;min-width:70px;'>集</th><th style='width:80px;min-width:80px;'>单元</th><th>类型</th><th>镜头编号</th><th style='width:550px;min-width:550px;max-width:550px;'>镜头描述</th><th style='width:350px;min-width:350px;max-width:350px;'>时间轴</th><th>构图方式</th><th>景别</th><th>镜头运动</th><th>出镜角色</th><th style='width:170px;min-width:170px;max-width:220px;'>引用资产</th><th>对话/台词</th><th>镜头时长</th><th>起始画面</th><th>结束画面</th></tr></thead><tbody>";
+            var h = "<table class='storyboard-table'><thead><tr><th style='width:70px;min-width:70px;'>集</th><th style='width:80px;min-width:80px;'>单元</th><th>类型</th><th>镜头编号</th><th style='width:360px;min-width:360px;max-width:360px;'>镜头描述</th><th style='width:150px;min-width:150px;max-width:150px;'>时间轴</th><th>构图方式</th><th style='width:110px;min-width:110px;max-width:110px;'>景别</th><th style='width:170px;min-width:170px;max-width:170px;'>镜头运动</th><th>出镜角色</th><th style='width:170px;min-width:170px;max-width:220px;'>引用资产</th><th>对话/台词</th><th>镜头时长</th><th>起始画面</th><th>结束画面</th></tr></thead><tbody>";
             var curEp = "", curUnit = "", curUnitType = "", shot = {}, pendingField = null;
             var fieldMap = { "镜头描述": "desc", "时间轴": "timeline", "构图方式": "composition", "景别": "scene", "镜头运动": "camera", "出镜角色": "characters", "对话/台词": "dialogue", "镜头时长": "duration", "时长": "duration", "起始画面": "start", "结束画面": "end" };
             function cell(v) { return escHtml(v || "").replace(/\n/g, "<br>") }
@@ -2106,7 +2135,7 @@ function loadVideoStyles() { $.get("/api/video-style", function (styles) { var s
             function addShot() {
                 shot.desc = shot.desc || shot.timeline || "";
                 if (shot.number) {
-                    h += "<tr><td>" + escHtml(curEp) + "</td><td>" + escHtml(curUnit) + "</td><td>" + typeBadge(curUnitType) + "</td><td>" + escHtml(shot.number || "") + "</td><td style='max-width:550px;overflow-wrap:break-word;word-break:break-word;'>" + cell(shot.desc) + "</td><td style='max-width:350px;overflow-wrap:break-word;word-break:break-word;'>" + cell(shot.timeline) + "</td><td>" + cell(shot.composition) + "</td><td>" + cell(shot.scene) + "</td><td>" + cell(shot.camera) + "</td><td>" + cell(shot.characters) + "</td><td style='max-width:220px;overflow-wrap:break-word;word-break:break-word;'>" + shotBindCell() + "</td><td>" + cell(shot.dialogue) + "</td><td>" + cell(shot.duration) + "</td><td>" + cell(shot.start) + "</td><td>" + cell(shot.end) + "</td></tr>"
+                    h += "<tr><td>" + escHtml(curEp) + "</td><td>" + escHtml(curUnit) + "</td><td>" + typeBadge(curUnitType) + "</td><td>" + escHtml(shot.number || "") + "</td><td style='max-width:360px;overflow-wrap:break-word;word-break:break-word;'>" + cell(shot.desc) + "</td><td style='max-width:150px;overflow-wrap:break-word;word-break:break-word;'>" + cell(shot.timeline) + "</td><td>" + cell(shot.composition) + "</td><td>" + cell(shot.scene) + "</td><td>" + cell(shot.camera) + "</td><td>" + cell(shot.characters) + "</td><td style='max-width:220px;overflow-wrap:break-word;word-break:break-word;'>" + shotBindCell() + "</td><td>" + cell(shot.dialogue) + "</td><td>" + cell(shot.duration) + "</td><td>" + cell(shot.start) + "</td><td>" + cell(shot.end) + "</td></tr>"
                 }
                 shot = {}; pendingField = null;
             }

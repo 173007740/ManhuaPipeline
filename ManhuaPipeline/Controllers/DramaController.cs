@@ -9,8 +9,10 @@ namespace ManhuaPipeline.Controllers;
 public class DramaController : ControllerBase
 {
     private readonly DbService _db;
+    private readonly DirectorAgentService _agent;
     private readonly ILogger<DramaController> _logger;
-    public DramaController(DbService db, ILogger<DramaController> logger) { _db = db; _logger = logger; }
+    public DramaController(DbService db, DirectorAgentService agent, ILogger<DramaController> logger)
+    { _db = db; _agent = agent; _logger = logger; }
 
     private int GetUserId() => HttpContext.Session.GetInt32("UserId") ?? 0;
 
@@ -115,6 +117,124 @@ public class DramaController : ControllerBase
         }
         return Ok(new { coverUrl = coverUrl, message = "上传成功" });
     }
+
+    // ============================================================
+    // 分集提纲：立项（P0）产出 → 单集项目
+    //
+    // 立项是漫剧级的：跑 P0 时一个项目都还没建，产出里那张「N 集分集卡点」表
+    // 解析出来存进 Dramas，再按它长出 N 个项目（一集一个）。
+    // 三步都能单独重来：跑立项、解析分集表、建项目。
+    // ============================================================
+
+    /// <summary>取分集提纲。没跑过立项就是空数组。</summary>
+    [HttpGet("{id}/episodes")]
+    public IActionResult GetEpisodes(int id)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        return Ok(new { items = _db.GetEpisodeOutline(id) });
+    }
+
+    /// <summary>
+    /// 从最近一次 P0 产出里解析分集提纲并存库，但不建项目——
+    /// 模型给的表对不对，让人先看一眼再决定建不建。
+    /// </summary>
+    [HttpPost("{id}/episodes/parse")]
+    public IActionResult ParseEpisodes(int id)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+
+        var step = _db.GetLatestP0Step(id);
+        if (step == null || string.IsNullOrWhiteSpace(step.OutputText))
+            return BadRequest(new { message = "这漫剧还没跑过立项（P0），先跑一次再来解析" });
+
+        // 立项产出归漫剧：解析的同一份原文也写进 Dramas，每一集按 dramaId 就能读到它
+        _db.SaveDramaP0Result(id, step.StepId, step.OutputText);
+
+        var list = EpisodeOutlineParser.Parse(step.OutputText);
+        if (list.Count == 0)
+            return BadRequest(new { message = "这次 P0 产出里没找到分集表。重跑一次立项，或在项目里手工建" });
+
+        _db.SaveEpisodeOutline(id, list);
+        return Ok(new { items = list, count = list.Count });
+    }
+
+    /// <summary>按已存的分集提纲建（或更新）单集项目。重复调用不会长出重复项目。</summary>
+    [HttpPost("{id}/episodes/build")]
+    public IActionResult BuildEpisodes(int id)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+
+        var list = _db.GetEpisodeOutline(id);
+        if (list.Count == 0)
+            return BadRequest(new { message = "还没有分集提纲：先跑立项，或点「解析分集表」" });
+
+        var (created, updated) = _db.BuildEpisodeProjects(uid, id, list);
+        return Ok(new { created, updated, total = list.Count });
+    }
+
+    /// <summary>
+    /// 跑一次立项（P0），产出解析成分集提纲后直接建出单集项目。
+    /// 后台跑、前端拿 runId 轮询：一次立项几分钟，不能让 HTTP 请求干等到超时。
+    /// </summary>
+    [HttpPost("{id}/episodes/generate")]
+    public IActionResult GenerateEpisodes(int id)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+
+        var drama = _db.GetDrama(id, uid);
+        if (drama == null) return NotFound(new { message = "漫剧不存在" });
+
+        var pack = _db.GetSkillPacks().FirstOrDefault();
+        if (pack.PackId == 0) return BadRequest(new { message = "没有可用的规则包，先去技能库导入" });
+
+        var running = _db.FindUnfinishedSkillRun(pack.PackId, null, id);
+        if (running != null)
+            return Conflict(new { message = $"这漫剧还有一次立项没跑完（#{running}），先处理完再重跑", runId = running });
+
+        var input = _db.BuildP0InputText(id);
+        if (input.Trim().Length == 0)
+            return BadRequest(new { message = "立项还没填：画幅、题材、集数这些一项都没有，先填立项再跑" });
+
+        var runId = _db.CreateSkillRun(pack.PackId, null, null, "立项 · " + drama.Title, null, id);
+        _db.UpdateSkillRun(runId, "P0", "running");
+
+        _ = Task.Run(async () =>
+        {
+            try
+            {
+                var r = await _agent.RunStepAsync(uid, runId, "P0", input, null, null);
+
+                /* 产出先落到漫剧那一行，再谈解析。
+                   立项整部漫剧一份：这一份落住了，12 集每一集打开都能看到它，
+                   不用去翻「哪一集跑了 P0」那条运行史。
+                   就算下面这张分集表没解析出来，产出本身也已经在库里，人能看见。 */
+                _db.SaveDramaP0Result(id, r.StepId, r.Output);
+
+                var list = EpisodeOutlineParser.Parse(r.Output);
+                if (list.Count == 0)
+                {
+                    /* 产出对人是完整的，只是没按表格写——原文已经存在步骤记录里让人能去看。
+                       这里停成 error，但不停在 running，免得页面一直转圈等一个不会来的结果。 */
+                    _db.UpdateSkillRun(runId, "P0", "error");
+                    return;
+                }
+
+                _db.SaveEpisodeOutline(id, list);
+                _db.BuildEpisodeProjects(uid, id, list);
+                _db.UpdateSkillRun(runId, "P0", "done");
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "立项生成分集失败 drama={DramaId} run={RunId}", id, runId);
+                _db.UpdateSkillRun(runId, "P0", "error");
+            }
+        });
+
+        return Ok(new { runId, started = true });
+    }
+
 }
 
 public class CreateDramaRequest

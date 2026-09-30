@@ -12,6 +12,9 @@ public class Project
     public string? TargetDurationText { get; set; }
     public int CurrentStage { get; set; } = 0;
     public int EpisodeCount { get; set; } = 1;
+    /// <summary>这条项目是整部漫剧的第几集。一集一个项目，排序和「第N集」标签都靠它，
+    /// 标题保持纯集名不掺编号。手工建的项目没集号，为 null，排在最后。</summary>
+    public int? EpisodeNumber { get; set; }
     public int CurrentBatch { get; set; } = 1;
     public string? CoverImage { get; set; }
     /// <summary>视频画风（→ VideoStyles.StyleId）：出视频时作为【项目风格】整段写进提示词。</summary>

@@ -39,7 +39,7 @@
        切角是 clip-path，所以 hover 不能带 box-shadow（会被裁掉），原来的 box-shadow 在这里被顶掉。
        .ss-root 下按钮样式本来分散在三处（.ss-actions / .ss-btn-row / .ss-step-act），高度还不一样
        （40 / 36 / padding 8px），这里一次性抹平。 */
-    :root{--hud-cyan:#05e8f0;--hud-red:#ff3852;--hud-btn:#06313b}
+    :root{--hud-cyan:#05e8f0;--hud-red:#ff3852;--hud-btn:#06313b;--hud-line:#183033}
     .ss-actions button,.ss-btn-row button,.ss-step-act button{
       height:40px!important;padding:0 16px!important;font-size:12px!important;
       display:inline-flex!important;align-items:center!important;justify-content:center!important;gap:6px!important;
@@ -61,6 +61,38 @@
     /* 左侧阶段列表和顶部流程条是导航项不是操作按钮，不在这套里 */
     /* 注：原来这里还有 .ss-grid（44px 青绿网格）和 .ss-noise（青绿+紫色光晕）两层背景特效，
        跟 admin-theme.css 的全站 HUD 特效重复而且带紫，已连同 HTML 里那两个 div 一起删掉，统一吃全站那套。 */
+
+    /* ---- 弹窗：跟 dashboard.html 那颗一模一样 ----
+       切角卡片（右上切 13px）、25px 内距、外发光、右上角 ×、
+       label 12px 灰、输入框 1px #18505c 描边压 #020b11 底、底部按钮右对齐。
+       admin-theme.css 只给了 .modal-overlay / .modal 的基础款（圆角、520px），
+       dashboard 是在页面里覆写成切角发光款的——这里照抄那份覆写，
+       音色参考弹窗（js/voice-refs.js）打开后就是同一颗。
+       .btn 那套也一并搬过来：弹窗底部的按钮要用，页面自己的按钮走 .ss-* 那套，互不影响。 */
+    .btn{height:40px;padding:0 16px;font-size:12px;border-radius:0;
+         border:1px solid #49626a;background:transparent;color:#dbe7e8;
+         clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+         display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+    .btn:hover{border-color:var(--hud-cyan);color:var(--hud-cyan);background:#06313b80}
+    .btn-primary{border-color:var(--hud-cyan);background:var(--hud-btn);color:var(--hud-cyan)}
+    .btn-primary:hover{border-color:var(--hud-cyan);color:var(--hud-cyan);background:#08424f}
+    .btn-danger{border-color:var(--hud-red);background:transparent;color:var(--hud-red)}
+    .btn-danger:hover{border-color:var(--hud-red);color:#fff;background:#3a0d14}
+    .btn-sm{height:30px;padding:0 10px;font-size:11px}
+    .modal-overlay{background:#000c;padding:20px;backdrop-filter:none}
+    .modal{width:min(580px,96vw);max-width:none;padding:25px;border-radius:0;border-color:var(--hud-line);
+           box-shadow:0 0 80px #10dce633;
+           clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px))}
+    .modal>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .modal h3{font-size:16px;letter-spacing:1px;margin-bottom:0}
+    .modal h3 .material-icons{color:var(--hud-cyan)}
+    .modal-close{border:0;background:none;color:#8ea7ae;font-size:26px;line-height:1;padding:0 4px;cursor:pointer}
+    .modal-close:hover{color:var(--hud-cyan)}
+    .modal label{display:block;color:#8da6ad;font-size:12px;font-weight:400;margin-top:16px}
+    .modal input,.modal textarea,.modal select{width:100%;margin-top:7px;padding:12px;
+           border:1px solid #18505c;border-radius:0;background:#020b11;color:#e4fbff;font-size:13px}
+    .modal input:focus,.modal textarea:focus,.modal select:focus{border-color:var(--hud-cyan);box-shadow:none}
+    .modal-actions{margin-top:24px}
     /* ── 侧栏 ───────────────────────────────────────────── */
     .ss-sidebar{position:sticky;top:0;align-self:start;height:calc(100vh - 64px);width:262px;
                 border-right:1px solid var(--line);padding:22px 15px;
@@ -134,9 +166,11 @@
     .ss-content>*{min-width:0}
     .ss-command-head{display:flex;justify-content:space-between;align-items:flex-end;gap:18px;flex-wrap:wrap;
                      padding-bottom:20px;border-bottom:1px solid var(--line)}
-    /* 「怎么用」这句话跟按钮同一行：它是整页的说明，不是某个面板的标题，
-       所以去掉 .ss-desc 原本的 margin-top，免得在这行里被顶下去 */
-    .ss-command-head .ss-desc{margin:0;max-width:680px;line-height:1.7}
+    /* 落点行：跟右侧那排按钮同一行。一进页面就该看见自己站在第几集，所以字要大一号。
+       不带「产出落点」这类标签——「第1集 回不去的屋顶」自己就说清了，标签只是占地方 */
+    .ss-target-head{min-width:0}
+    .ss-target-head span{font-size:19px;font-weight:800;letter-spacing:.3px;color:#e7f6f2;
+                         overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .ss-actions{display:flex;gap:10px;flex:none}
     .ss-actions button{height:40px;padding:0 18px;border:1px solid #23474a;background:#0a1517;color:#9cb3b1;
                        font-size:12px;letter-spacing:.4px;cursor:pointer;transition:.16s}
@@ -454,20 +488,38 @@
 
       <div class="ss-model">
         <label>提示词引擎（P4 用）</label>
+        <!-- value 必须是 SD / H3 这两个短值：立项里存的（Dramas.PromptEngine）就是它，
+             P4 生成提示词时直接读这一列。option 不写 value 的话 .val() 拿到的是整句显示
+             文本「SD（Seedance·火山方舟）」，跟库里的「H3」对不上，回填会静默失败——
+             人选过 H3，刷新回来下拉还是默认的 SD，看着像改丢了。 -->
         <select id="promptType">
-          <option>SD（Seedance·火山方舟）</option>
-          <option>H3（MiniMax·本地 ComfyUI）</option>
+          <option value="SD">SD（Seedance·火山方舟）</option>
+          <option value="H3">H3（MiniMax·本地 ComfyUI）</option>
         </select>
+        <!-- 立项定了引擎之后，这里只显示、不让改：改要回立项页，别在两个地方各存一份 -->
+        <div id="ptLock" style="display:none;margin-top:6px;font-size:11px;color:var(--muted);line-height:1.6;">
+          立项已锁定 <b id="ptLockVal">—</b> ·
+          <a id="ptLockLink" href="#" target="_blank" style="color:var(--mint);text-decoration:none">去立项页改 ↗</a>
+        </div>
         <div><i>DB</i><span>产出自动入库<small>分镜 / 资产 / 提示词</small></span></div>
         <div><i id="runLabel">本次</i><span id="runStat">尚未开始<small id="runSub">选好落点，填设定，点开始跑</small></span></div>
         <div style="height:3px;background:#141a18;margin-top:10px"><i id="runBar" style="display:block;height:100%;width:0;background:var(--mint);box-shadow:0 0 10px var(--mint);transition:.4s"></i></div>
+        <!-- 音色 SD 与 H3 都用得上：H3 写 <Audio N>，SD 写 @音频N，编号同源、都能带音频提交。
+             入口跟着「提示词引擎」放，提示这里配的东西就是给 P4 那一步用的。
+             套 .ss-btn-row + .go 就是整页那颗按钮（34px 切角青边），不另起一套样式。 -->
+        <div class="ss-btn-row" style="margin-top:12px">
+          <button id="btnVoiceRefs" class="go" style="width:100%">音色参考</button>
+        </div>
       </div>
     </aside>
 
     <div class="ss-content">
       <div class="ss-command-head">
-        <p class="ss-desc" id="formDesc">一步一步往下点，每一步的产出会自动喂给下一步。
-           需要你拿主意的东西单独放在该步的卡片里，别的都不问。</p>
+        <!-- 落点摆在这儿：一进页面先看见自己站在第几集。
+             左边那个下拉是选项目的，位置靠下又挤在一堆控件里，切了集很容易没注意。 -->
+        <div class="ss-target-head">
+          <span id="wsTargetHead">未绑定项目</span>
+        </div>
         <div class="ss-actions" style="margin-left:auto">
           <button id="btnConsole">终端 ◧</button>
           <button id="btnDeliv" disabled>交付物 · 0 ↗</button>
@@ -553,8 +605,13 @@
 
   <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
   <script src="../js/app.js?v=2"></script>
+  <script src="../js/voice-refs.js?v=1"></script>
   <script>
   var pack = null, stages = [], runId = 0, timer = null;
+  /* 立项是漫剧级的，URL 上带了 dramaId 就直接用它读（表单 + 产出），
+     不必再从 projectId 上溯 DramaId、再跨到别的集的运行里翻 StepId。
+     那条路绕一圈不说，第 2 集自己没有运行记录时全靠它，哪一环没接上立项就整个空着。 */
+  var DRAMA_ID = +(new URLSearchParams(location.search).get('dramaId') || 0);
   // 图片风格库（立项「画风方向」下拉的数据源）与项目上已存的资产画风
   var IMG_STYLES = [], PROJ_IMG_STYLE = 0;
   var runStartAt = 0, tickTimer = null, seenStatus = {}, logLines = 0;
@@ -600,9 +657,12 @@
       });
     });
     var pProj = $.get('/api/project', function(list){
+      // 顶部那行落点要拿集号，而下拉的 option 里只有标题，所以整份项目留一份
+      PROJ_MAP = {};
+      (list || []).forEach(function(p){ PROJ_MAP[p.projectId] = p; });
       $('#proj').html('<option value="">（不入库，只留文本）</option>'
         + (list || []).map(function(p){ return '<option value="' + p.projectId + '">' + esc(p.title) + '</option>'; }).join(''));
-      applyPreset(list || []);
+      applyPreset();
     });
     // 风格库跟阶段列表并行拉。它晚到一步时立项表单可能已经画过一遍（那时下拉是空的），
     // 到手后重画一次把选项补上
@@ -616,8 +676,12 @@
   $('#proj').change(function(){
     var pid = $(this).val(), t = $(this).find('option:selected').text();
     $('#wsTarget').text(pid ? t : '未绑定项目');
+    updateTargetHead();
     loadEpisodes(pid);
     loadDeliverables();
+    applyEngineLock('', 0);   // 先放开，等新项目的立项读回来再决定锁不锁
+    loadBrief();          // 立项跟着项目走：换了项目要把它那份立项读回来
+    loadSharedStep(pid);  // 立项产出是漫剧级的，换了集要重新问一次是哪一集跑的
     loadLand();
     loadProjImageStyle(pid);
   });
@@ -650,16 +714,26 @@
     });
   }
 
+  /* 顶部那行落点：第几集 + 集名。一集一个项目，只显示标题的话「回不去的屋顶」
+     看不出是第几集，切到别的集容易浑过去。没集号的项目就只显示标题。 */
+  var PROJ_MAP = {};
+  function updateTargetHead(){
+    var p = PROJ_MAP[$('#proj').val()];
+    $('#wsTargetHead').text(
+      !p ? '未绑定项目'
+         : (p.episodeNumber ? '第' + p.episodeNumber + '集 ' : '') + (p.title || ('项目 #' + p.projectId)));
+  }
+
   // 从项目卡片跳进来时带 projectId：直接替他选中，别让他再点一次下拉
-  function applyPreset(list){
+  function applyPreset(){
     var pid = new URLSearchParams(location.search).get('projectId');
     if (!pid) return;
     $('#proj').val(pid);
-    $('#wsTarget').text((list.filter(function(p){ return p.projectId === +pid; })[0] || {}).title || '项目 #' + pid);
-    loadEpisodes(pid);
-    loadDeliverables();
-    loadLand();
-    loadProjImageStyle(pid);
+    /* 只改下拉的值不会触发 change，而立项回填、漫剧级立项那一格都挂在 change 上。
+       这里以前手动挑了几个函数调用，漏了 loadBrief / loadSharedStep——于是从链接进
+       第 2 集：立项表单是空的、引擎不锁（看着像没选过 H3）、P0 那一格也不显示已完成，
+       跟手动选项目完全是两种样子。索性直接触发 change，两边走同一条路，以后加东西不会再漏。 */
+    $('#proj').trigger('change');
   }
 
   /* ===== 落地：出图 / 出视频 ================================================
@@ -882,7 +956,14 @@
     /* 道具与特效同属 P2c3 一批，这一跑两类的提示词都出来了。
        所以特效站不再从 P2c3 起跑——那等于把这一批又跑一遍、把刚写好的覆盖掉 */
     { title:'道具资产', desc:'道具卡与出图提示词',             from:'P2c3', to:'P2c3', form:null, view:{kind:'frame', stage:7} },
-    { title:'特效资产', desc:'特效卡与出图提示词',             from:'P2d', to:'P2d',  form:null, view:{kind:'frame', stage:11} },
+    /* 特效与道具同属 P2c3 一批：跑「道具资产」那一步时，特效的提示词跟着一起出来了。
+       以前这一格挂的是 from/to = P2d（资产图册），于是点「特效资产」跑出来的是图册、
+       特效页却空着——看着像「特效跑了但什么都没有」。改成只看不跑，状态跟着 P2c3 走。 */
+    { title:'特效资产', desc:'与道具同批产出（P2c3），这儿只看', noRun:true, watch:['P2c3'],
+      runLabel:'看特效资产', form:null, view:{kind:'frame', stage:11} },
+    /* 资产图册（P2d）以前没有自己的入口：编排里有这一阶段，对外九格里却没有它，
+       想看图册只能借「特效资产」那格错跑一次。它是整篇文本产出，跟立项 / 剧本一样本页渲染。 */
+    { title:'资产图册', desc:'资产图与提示词汇成图册（交付物）', from:'P2d', to:'P2d',  form:null, view:{kind:'text'} },
     { title:'导演分镜', desc:'镜头调度与帧表',                 from:'P3',  to:'P3',   form:null, view:{kind:'frame', stage:5} },
     { title:'提示词生成', desc:'投喂出图 / 视频模型的终稿',     from:'P4',  to:'P4',   form:null, view:{kind:'frame', stage:9} },
     /* 视频生成这一步不跑模型：它把上一步的终稿提示词批量提交给出视频模型。
@@ -891,6 +972,50 @@
   ];
   var STEP_STATE = [];
   var activeStep = 0;
+  /* 立项（P0）是漫剧级的：整部漫剧一份产出，12 集共用。
+     可产出挂在「运行」上、运行又按集绑，于是第 2 集打开时没有自己的 P0 记录，
+     那一格空着——看着像立项没做，其实第 1 集早跑完了。
+     这里存这部漫剧里已跑出的那一条（多半是第 1 集），本集没有时接过来显示。 */
+  var sharedStep = null;
+  function withShared(steps){
+    if (!sharedStep) return steps || [];
+    var has = (steps || []).some(function(s){ return s.stageKey === sharedStep.stageKey; });
+    return has ? (steps || []) : (steps || []).concat([sharedStep]);
+  }
+  function loadSharedStep(pid){
+    sharedStep = null;
+    if (!DRAMA_ID && !pid) return;
+    // 有 dramaId 就按漫剧直接查；没有才退回按项目上溯
+    var q = DRAMA_ID ? { dramaId: DRAMA_ID, stageKey: 'P0' } : { projectId: pid, stageKey: 'P0' };
+    $.get('/api/director-agent/shared-step', q, function(d){
+      if (!d || !d.stepId) return;              // 这部漫剧还没跑过立项，那一格就该是空的
+      sharedStep = { stepId: d.stepId, stageKey: d.stageKey, status: 'done',
+                     imported: 0, hasOutput: true, episodeNumber: d.episodeNumber };
+      renderSteps(window.lastSteps || []);      // 用刚到手的那条重画一次
+      focusFirstUndone();                       // 立项归位了，才知道这一集该从哪一步动手
+    });
+  }
+
+  /* 第 2 集进来时页面停在「项目立项」那一格：立项整部漫剧一份，第 1 集早跑完了，
+     这一集没必要再立一次，停在那儿只会让人以为还要从头填一遍。
+     所以本集还没跑过时，默认跳到第一个没做完的步骤（多半就是剧本）。
+     接上本集自己的运行（runId 有值）就不动：那是有进度要接着看的，跳走反而碍事。
+     人自己点过菜单之后就不再自动跳，免得他正看着的东西被挪走。 */
+  var autoFocus = true;
+  function focusFirstUndone(){
+    if (!autoFocus || runId || !stages.length || !STEP_STATE.length) return;
+    var i = 0;
+    while (i < STEP_STATE.length && STEP_STATE[i].tier === 'done') i++;
+    if (i >= STEP_STATE.length || i === activeStep) return;   // 全做完了，就停在当前这格
+    autoFocus = false;
+    activeStep = i;
+    renderPipe(window.lastSteps || []);
+    renderSteps(window.lastSteps || []);
+    /* 顺带说清楚立项那份产出在哪看：跳走之后那一格不再显示，人回头找不着，
+       还以为「跑过的结果没加载出来」。 */
+    say('立项是整部漫剧共用的，已经跑过（看产出：点左侧「项目立项」）· 从「'
+        + STEPS[i].title + '」接着做');
+  }
   var landVid = { total:0, done:0 };   // 视频那一步的状态靠它：终稿提示词条数 / 已出视频条数
 
   // 把一步内部那几个编排阶段合成一个状态。人只关心这一步做完没有，
@@ -912,6 +1037,18 @@
     return STEPS.map(function(sp){
       // 视频那一步没有编排阶段，它的进度就是「提示词里出过了几条视频」
       if (sp.noRun){
+        // 还有一种「自己不跑、状态挂在别的批次上」的步骤（特效跟着 P2c3 一起出）：
+        // 用 watch 里列的阶段判断做完没有，不然它永远显示成「还没跑」。
+        if (sp.watch && sp.watch.length){
+          var wd = 0, wv = 0;
+          sp.watch.forEach(function(k){
+            var s = by[k];
+            if (s && (s.status === 'done' || s.status === 'await_confirm')){ wd++; wv = s.stepId; }
+          });
+          return { tier: wd >= sp.watch.length ? 'done' : wd ? 'part' : 'idle',
+                   doneN: wd, total: sp.watch.length,
+                   running: null, bad: null, imported: 0, viewId: wv };
+        }
         return { tier: landVid.total && landVid.done >= landVid.total ? 'done'
                      : landVid.done ? 'part' : 'idle',
                  doneN: landVid.done, total: landVid.total,
@@ -945,9 +1082,18 @@
   function renderStepForm(el, key){
     if (!key){ el.empty(); return; }
     var st = stages.filter(function(s){ return s.stageKey === key; })[0];
-    var fields = [];
-    try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; } catch (e) { fields = []; }
-    if (!fields.length){ el.empty(); return; }
+    /* 字段定义写在阶段编排的 InputsJson 里。它要是坏 JSON，以前只是 catch 掉留个空表单——
+       一格不剩，看着像「这一步不用填」，其实是配置坏了，人根本没处查。说清楚一点。
+       （真出过一次：P0 那段少了个结尾的 ]，立项表单整片消失，立项数据读回来了也没处填。） */
+    var fields = [], badJson = false;
+    try { fields = JSON.parse(st && st.inputsJson ? st.inputsJson : '[]') || []; }
+    catch (e) { fields = []; badJson = !!((st && st.inputsJson) || '').trim().length; }
+    if (!fields.length){
+      el.html(badJson
+        ? '<div class="empty-hint">这一步的字段定义解析失败（InputsJson 不是合法 JSON），去「阶段编排」里检查一下</div>'
+        : '');
+      return;
+    }
     var saved = {};
     try { saved = JSON.parse(localStorage.getItem('skillStudioForm_' + key) || '{}'); } catch (e) { saved = {}; }
     var h = '';
@@ -1032,12 +1178,20 @@
   // 主面板只摆「当前阶段」这一张卡。九个阶段靠左边菜单切，不铺九张卡占一屏
   function renderSteps(steps){
     if (!stages || !stages.length) return;
-    window.lastSteps = steps || window.lastSteps;   // 切阶段时要拿最近一次的状态重画
-    STEP_STATE = calcSteps(steps);
+    // 立项那份是漫剧级的，本集没跑过也要算进去，不然第 2 集起那一格永远是空的
+    var merged = withShared(steps);
+    window.lastSteps = merged || window.lastSteps;  // 切阶段时要拿最近一次的状态重画
+    STEP_STATE = calcSteps(merged);
     $('#stepList').html(stepCard(activeStep));
-    if (STEPS[activeStep].form) renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
+    if (STEPS[activeStep].form){
+      renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
+      // 表单画完才有元素可填：立项的值要等这一步切过来时才回填
+      if (STEPS[activeStep].form === 'P0') loadBrief();
+    }
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
     renderWork();
+    // 立项那一条是异步才到的，等它归位才知道该从哪一步动手；放这儿补一次
+    focusFirstUndone();
   }
 
   // 一张阶段卡：状态 + 表单（只有立项 / 剧本要人拿主意）+ 运行按钮
@@ -1048,13 +1202,20 @@
     if (s.tier === 'run')
       sub = '跑中 · 内部第 ' + (s.doneN + 1) + '/' + s.total + ' 步'
           + (s.running ? ' · ' + (s.running.name || s.running.stageKey) : '');
-    else if (s.tier === 'done')
+    else if (s.tier === 'done'){
       sub = '已完成' + (s.imported ? ' · 入库 ' + s.imported + ' 条' : '')
           + (s.total > 1 ? ' · 内含 ' + s.total + ' 个子阶段' : '');
+      /* 这一格是立项：整部漫剧一份，12 集共用，不是本集自己跑出来的。
+         立项结果存在漫剧那一行上（episodeNumber = 0），说清是整部共用；
+         老数据还没归位时才显示是哪一集跑的。 */
+      if (sharedStep && s.viewId === sharedStep.stepId)
+        sub += ' · 漫剧级，' + (sharedStep.episodeNumber > 0 && sharedStep.episodeNumber < 999
+                              ? '第 ' + sharedStep.episodeNumber + ' 集跑的' : '整部共用');
+    }
     else if (s.tier === 'part') sub = '跑了 ' + s.doneN + '/' + s.total + '，没跑完';
     else if (s.tier === 'bad')  sub = '这一步没跑出东西（' + (s.bad ? s.bad.stageKey : '') + '）';
-    else sub = sp.noRun ? '等终稿提示词跑出来' : '还没跑';
-    var label = sp.noRun ? '去生成视频'
+    else sub = sp.noRun ? (sp.watch ? '跟着 ' + sp.watch.join(' / ') + ' 一起出' : '等终稿提示词跑出来') : '还没跑';
+    var label = sp.noRun ? (sp.runLabel || '去生成视频')
               : s.tier === 'done' ? '重跑' : s.tier === 'part' ? '接着跑' : '生成';
     return '<div class="ss-step ' + cls + '" data-i="' + i + '">'
          + '<div class="ss-step-no">' + (i + 1) + '</div>'
@@ -1094,13 +1255,23 @@
       bindVideoPanel();
       return;
     }
-    // text：把这一步的整篇产出渲染出来。同理别每 2.5 秒重新拉一次，只在内容真的换了时重取
-    if (!s.viewId){ box.html('<div class="empty-hint">这一步还没跑出内容，点上面的「生成」</div>'); return; }
+    /* text：把这一步的整篇产出渲染出来。同理别每 2.5 秒重新拉一次，只在内容真的换了时重取。
+       切了步骤要立刻把旧标记换掉：产出是异步拉回来的，切走之后那次请求才回来的话，
+       它会把上一格的内容写进这一格——看着就是「明明停在剧本，下面却显示立项那篇」。 */
+    if (!s.viewId){
+      var eStamp = 'empty:' + activeStep;
+      if (box.data('wk') !== eStamp){
+        box.data('wk', eStamp);
+        box.html('<div class="empty-hint">这一步还没跑出内容，点上面的「生成」</div>');
+      }
+      return;
+    }
     var tStamp = 'text:' + s.viewId + ':' + (s.tier === 'run' ? 'run' : (s.tier + '/' + (s.doneN || 0)));
     if (box.data('wk') === tStamp) return;
     box.data('wk', tStamp);
     box.html('<div class="md">加载中…</div>');
     $.get('/api/director-agent/steps/' + s.viewId + '/output', function(o){
+      if (box.data('wk') !== tStamp) return;     // 期间切走了，这份已经不是这一格要的
       box.html('<div class="md">' + mdRender((o && o.output) || '（空）') + '</div>');
     });
   }
@@ -1252,6 +1423,10 @@
       var form = {};
       $('#sf' + i + ' [data-fk]').each(function(){ form[$(this).data('fk')] = $(this).val(); });
       localStorage.setItem('skillStudioForm_' + sp.form, JSON.stringify(form));
+      /* 立项这一步填的东西直接进库：它是独立模块，不是「跑完才有的一段文本」。
+         画幅、集数、提示词引擎进 Dramas 上各自的列，改哪个都不用重跑这一步。
+         进的是漫剧那一行——同部漫剧下换一集再填，改的还是同一份立项。 */
+      if (sp.form === 'P0') saveBrief(briefFromForm(form), '立项已存库');
     }
     $('#so' + i).empty().hide();
     // 半途停下的那一步要「接着跑」，不能从头再来：这一步内部可能已经跑好了前几个子阶段
@@ -1334,6 +1509,7 @@
     $('#pipeTrack').html(track);
     // 点左侧菜单 = 切到那个阶段，右侧整块工作区跟着换
     $('#pipeNav button, #pipeTrack button').click(function(){
+      autoFocus = false;              // 人自己选了步骤，后面的自动跳转就别再插手
       activeStep = +$(this).data('i');
       /* 选中态是 renderPipe 写进按钮 class 里的。只重画右侧工作区的话，
          右边跟着换了、左边却还锁在原来那一项上，看着像没点中。 */
@@ -1523,19 +1699,180 @@
     renderPipe([]);
   });
 
+  /* 立项是漫剧级的，不是流水线里的一段文本：填完直接进 Dramas 那一行，
+     改哪个字段都是改一列，不用重跑流水线。
+     提示词引擎就是立项的一个字段——P4 生成投喂提示词时读的是表里那一列，
+     不再是建运行时塞进 InputsJson、再靠正则抠出来的那份。
+
+     传的是 projectId，不是 dramaId：页面上选的是项目（一集一个），
+     立项挂在它所属的漫剧上，上溯那一步交给后端做。
+     所以同部漫剧下的「第1集」「第2集」改的是同一份立项。 */
+  function saveBrief(patch, okMsg){
+    var pid = $('#proj').val();
+    if (!pid) return;                     // 没绑项目就是只跑文本，没有立项可存
+    var body = { projectId: +pid };
+    $.extend(body, patch);
+    $.ajax({ url:'/api/director-agent/brief', method:'PUT', contentType:'application/json',
+             data: JSON.stringify(body) })
+     .done(function(d){ if (okMsg) say(okMsg + ' · 漫剧 #' + d.dramaId); })
+     .fail(function(){ say('× 立项存库失败', 'lerr'); });
+  }
+
+  /* 立项表单 → 立项表字段。数字字段要转成数字存（不然集数是个字符串，没法比大小），
+     角色在表单里是逗号分隔的一段文本，进库存成 JSON 数组，后面要用能直接取出来。 */
+  function briefFromForm(form){
+    var num = function(v){ var n = parseInt(v, 10); return isNaN(n) ? null : n; };
+    var chars = String(form.characters || '').split(/[,，、]/)   // 中英文逗号、顿号都认
+                  .map(function(s){ return s.trim(); }).filter(function(s){ return s; });
+    return {
+      aspect: form.aspect || null,
+      delivery: form.delivery || null,
+      genre: form.genre || null,
+      artStyleId: /^\d+$/.test(String(form.artStyle || '')) ? +form.artStyle : null,
+      hook: form.hook || null,
+      premise: form.premise || null,
+      platform: form.platform || null,
+      episodeCount: num(form.episodeCount),
+      episodeDuration: num(form.episodeDuration),
+      charactersJson: chars.length ? JSON.stringify(chars) : null,
+      promptEngine: form.promptEngine || null
+    };
+  }
+
+  /* 引擎归立项管。以前这边也是个能改的下拉，改了就往立项写——两个入口写同一列，
+     结果谁最后写谁说了算，页面上还可能一边显示 SD、库里存着 H3，人根本看不出该信哪个。
+     所以立项有值时这边只当显示用（按住不让改），真要换引擎回立项页；
+     立项还没填的新漫剧才放开让他选，选完写进立项，随即也按住。 */
+  var briefDramaId = 0;
+  function applyEngineLock(v, dramaId){
+    var sel = $('#promptType');
+    if (v){
+      /* 值不在选项里（多半是改版前存进去的整句显示文本「H3（MiniMax·本地 ComfyUI）」），
+         先补一个选项再选中：直接 .val() 设不进去，下拉会落回 SD 还被锁住，
+         看着就像立项锁了个错的，而实际 P4 用的是库里那个值。 */
+      var hit = false;
+      sel.find('option').each(function(){ if (this.value === v){ hit = true; return false; } });
+      if (!hit) sel.append($('<option>').val(v).text(v));
+      sel.val(v).prop('disabled', true);
+      $('#ptLockVal').text(v);
+      $('#ptLockLink').attr('href', dramaId ? 'project-manage.html?dramaId=' + dramaId : '#');
+      $('#ptLock').show();
+    } else {
+      sel.prop('disabled', false);       // 立项没定，交给这边选一次
+      $('#ptLock').hide();
+    }
+  }
+
+  /* 立项里存的值才作数：换台机器、清了缓存都能读回来，不再是页面上的临时状态。
+     表单本身没有记忆，光靠 localStorage 的话，「改一个字段不用重跑」就成了空话——
+     库里存着 9:16，页面上却显示默认值的 16:9，人一眼看去还以为改丢了。 */
+  function loadBrief(){
+    var pid = $('#proj').val();
+    if (!DRAMA_ID && !pid) return;
+    // 立项是漫剧级的：有 dramaId 直接读它，不必等下拉选好项目
+    var q = DRAMA_ID ? { dramaId: DRAMA_ID } : { projectId: pid };
+    $.get('/api/director-agent/brief', q, function(b){
+      // 这部漫剧还没立过项：把引擎放开让他选，别沿用上一部漫剧锁住的状态
+      if (!b || !b.exists){ briefDramaId = 0; applyEngineLock('', 0); return; }
+      briefDramaId = b.dramaId || 0;
+
+      // 立项表单字段 ← 立项表列。库里有值的才盖上去，没填过的保持默认值
+      var map = { aspect:'aspect', delivery:'delivery', genre:'genre', artStyle:'artStyleId',
+                  hook:'hook', premise:'premise', platform:'platform',
+                  episodeCount:'episodeCount', episodeDuration:'episodeDuration',
+                  characters:'charactersJson', promptEngine:'promptEngine' };
+      Object.keys(map).forEach(function(fk){
+        var v = b[map[fk]];
+        if (v == null || v === '') return;
+        var el = $('[data-fk="' + fk + '"]');
+        if (!el.length) return;
+        if (fk === 'characters'){
+          try { var arr = JSON.parse(v); if (arr && arr.length) el.val(arr.join('、')); } catch (e) {}
+        } else el.val(String(v));
+      });
+
+      applyEngineLock(b.promptEngine || '', briefDramaId);
+      if (b.promptEngine) say('提示词引擎已由立项锁定：' + b.promptEngine);
+    }, 'json');
+  }
+
   $(function(){
     $('#eps').html('<option value="">（先选项目）</option>');
     setIdle(true);
+
+    /* 立项还没定引擎时，这里选一次就算定下来：写进立项，随即按住。
+       立项已经定了的下拉是 disabled 的，change 根本不会触发。 */
+    $('#promptType').change(function(){
+      var v = $(this).val();
+      saveBrief({ promptEngine: v }, '提示词引擎已写进立项');
+      applyEngineLock(v, briefDramaId);
+    });
+    /* 音色是按项目绑的（不是按漫剧），所以入口取的是当前选中的项目。
+       配完必须重跑一次 P4 才会写进提示词——音色表是在生成那一刻才拼进指令的。 */
+    $('#btnVoiceRefs').click(function(){
+      VoiceRefs.open($('#proj').val());
+    });
+
+    $(document).on('change', '[data-fk="promptEngine"]', function(){
+      var v = $(this).val();
+      $('#promptType').val(v);
+      saveBrief({ promptEngine: v }, '提示词引擎已写进立项');
+      applyEngineLock(v, briefDramaId);
+    });
+
     // 等阶段列表落地再接上次运行：反过来一来那一刻的流程条是空的，
     // 而轮询会在同一时刻判定「没在跑」并停掉，画面就再也不更新了
     loadAll().then(function(){
-      var saved = localStorage.getItem('skillStudioRun');
-      if (!saved) return;
-      runId = +saved; say('接上上次运行 #' + runId);
-      runStartAt = +(localStorage.getItem('skillStudioStartAt') || 0);   // 计时接上，不要从 0 重来
-      startPoll();
+      loadBrief();                        // 下拉要显示立项里那份，不是默认的 SD
+      loadSharedStep($('#proj').val());   // 立项产出整部漫剧一份，本集没跑过也要显示
+      resumeRun();
     });
   });
+
+  /* 上次运行的编号记在浏览器里，一打开就自动接上——可那次可能是给另一集跑的。
+     一季连着做的时候最容易撞上：第 1 集跑完，切到第 2 集的页面，页面照旧接上
+     第 1 集那次运行。于是第 2 集的产出全写进第 1 集的运行里，上游产出取的也是
+     第 1 集的，连「本集提纲」都会照着旧项目取成第 1 集那一集——第 2 集等于白跑。
+     所以接上之前先问一次它绑的是哪个项目，对不上就当没这回事，点火时现开一次。 */
+  function resumeRun(){
+    var saved = localStorage.getItem('skillStudioRun');
+    var pid = $('#proj').val() ? +$('#proj').val() : 0;
+
+    if (saved){ resumeSaved(+saved, pid); return; }
+    if (!pid) return;
+
+    /* 浏览器里没记着编号：清过缓存、换过机器，或者干脆是从 ?projectId=57 这种链接
+       直接进来的。这时候不能急着判定「没跑过」——库里多半躺着一次跑过的运行，产出都在，
+       只是没人接上。按项目回问一次，接上了就把编号记回浏览器，后面刷新走老路。 */
+    $.get('/api/director-agent/runs/latest', { projectId: pid }, function(d){
+      if (!d || !d.runId) return;            // 这个项目真没跑过，保持「尚未开始」
+      adoptRun(d, '接上项目上次那次运行 #' + d.runId + '（' + (d.currentStage || '—') + '）');
+    });
+  }
+
+  function resumeSaved(saved, pid){
+    $.get('/api/director-agent/runs/' + saved, function(d){
+      if (!d || !d.runId){ forgetRun('上次记下的运行已经不在了'); return; }
+
+      // 手上挑了项目就必须完全对得上：绑了别的项目、或者压根没绑项目，都不接
+      if (pid && d.projectId !== pid){
+        localStorage.removeItem('skillStudioRun');
+        localStorage.removeItem('skillStudioStartAt');
+        say('上次运行 #' + saved + ' 是给别的项目跑的，不接了（点火时新开一次）');
+        return;
+      }
+
+      adoptRun(d, '接上上次运行 #' + d.runId);
+    }).fail(function(){ forgetRun('上次记下的运行已经不在了'); });
+  }
+
+  // 认下这次运行：记进浏览器、把计时接上（不从 0 重来）、开始轮询
+  function adoptRun(d, msg){
+    runId = d.runId; say(msg);
+    localStorage.setItem('skillStudioRun', String(runId));
+    runStartAt = +(localStorage.getItem('skillStudioStartAt') || 0);
+    startPoll();
+  }
   </script>
 </body>
 </html>

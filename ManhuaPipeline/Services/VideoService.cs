@@ -58,28 +58,20 @@ public class VideoService
         contentList.Add(new { type = "text", text = effectivePrompt });
         if (activeImgs.Count > 0)
             foreach (var img in activeImgs)
-            {
-                var url = img;
-                if (url.StartsWith("/uploads/") && !url.StartsWith("data:"))
-                {
-                    var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", url.TrimStart('/'));
-                    if (File.Exists(filePath))
-                    {
-                        var ext = Path.GetExtension(filePath).ToLower();
-                        var mime = ext == ".png" ? "image/png" : ext == ".jpg" || ext == ".jpeg" ? "image/jpeg" : ext == ".webp" ? "image/webp" : ext == ".gif" ? "image/gif" : "image/png";
-                        var bytes = File.ReadAllBytes(filePath);
-                        url = $"data:{mime};base64,{Convert.ToBase64String(bytes)}";
-                    }
-                }
-                contentList.Add(new { type = "image_url", image_url = new { url = url }, role = "reference_image" });
-            }
+                contentList.Add(new { type = "image_url", image_url = new { url = LocalToDataUrl(img) }, role = "reference_image" });
 
         if (refVideos != null)
             foreach (var vid in refVideos)
                 contentList.Add(new { type = "video_url", video_url = new { url = vid }, role = "reference_video" });
+        /* 音色参考音频：content 里 role=reference_audio，顺序即提示词里 @音频n 的编号顺序。
+           与参考图同理——库里存的是 /uploads/voices/xxx.wav 这种站内路径，方舟在公网取不到，
+           就地读成 data URI 带过去。空串跳过：多传一个空 url 会被接口整单拒。 */
         if (refAudio != null)
             foreach (var aud in refAudio)
-                contentList.Add(new { type = "audio_url", audio_url = new { url = aud }, role = "reference_audio" });
+            {
+                if (string.IsNullOrWhiteSpace(aud)) continue;
+                contentList.Add(new { type = "audio_url", audio_url = new { url = LocalToDataUrl(aud) }, role = "reference_audio" });
+            }
 
         var body = new
         {
@@ -136,6 +128,40 @@ public class VideoService
     }
 
         /// <summary>
+    /// 站内相对路径（/uploads/...）转 data URI。
+    ///
+    /// 参考图与音色音频都存在 wwwroot 下，库里记的是站内相对路径；火山方舟在公网，
+    /// 拿不到这个地址。就地读文件带过去——方舟的参考素材支持 data: 传法，参考图一直这么传。
+    /// 本来就是 http(s) 或已是 data: 的原样返回；文件不在了也原样返回，让接口自己报错，
+    /// 好过这里吞掉问题。
+    /// </summary>
+    private static string LocalToDataUrl(string url)
+    {
+        if (string.IsNullOrWhiteSpace(url) || !url.StartsWith("/uploads/") || url.StartsWith("data:")) return url;
+        try
+        {
+            var filePath = Path.Combine(Directory.GetCurrentDirectory(), "wwwroot", url.TrimStart('/'));
+            if (!File.Exists(filePath)) return url;
+            var mime = Path.GetExtension(filePath).ToLower() switch
+            {
+                ".png" => "image/png",
+                ".jpg" or ".jpeg" => "image/jpeg",
+                ".webp" => "image/webp",
+                ".gif" => "image/gif",
+                ".wav" => "audio/wav",
+                ".mp3" => "audio/mpeg",
+                ".m4a" => "audio/mp4",
+                ".aac" => "audio/aac",
+                ".ogg" => "audio/ogg",
+                ".flac" => "audio/flac",
+                _ => "application/octet-stream"
+            };
+            return $"data:{mime};base64,{Convert.ToBase64String(File.ReadAllBytes(filePath))}";
+        }
+        catch { return url; }
+    }
+
+    /// <summary>
     /// 失败时把该提示词使用的参考图文件名附加到错误信息，便于定位版权问题图片
     /// </summary>
     public static string? AppendRefImageInfo(string? error, string? refImagesJson)

@@ -36,17 +36,21 @@ ORDER BY SortOrder, DocId", conn);
     /// 存在的理由很实在：页面上一个「开始跑」点下去就是一次 LLM 调用，连点几下就多出几份 P0、几份剧本，
     /// 还都是 pending 在那没跑完的孤儿。开跑之前先问一句「上次那个完了吗」。
     /// </summary>
-    public int? FindUnfinishedSkillRun(int packId, int? projectId)
+    public int? FindUnfinishedSkillRun(int packId, int? projectId, int? dramaId = null)
     {
-        if (projectId == null) return null;
+        // 立项运行不绑项目（跑 P0 时还没有任何项目），只有漫剧。两个都没有就没什么可防的
+        if (projectId is not > 0 && dramaId is not > 0) return null;
         using var conn = GetConn(); conn.Open();
         using var cmd = new SqlCommand(@"
 SELECT TOP 1 RunId
 FROM DirectorSkillRuns
-WHERE PackId=@pk AND ProjectId=@pid AND Status IN ('running','await_confirm','blocked')
+WHERE PackId=@pk AND Status IN ('running','await_confirm','blocked')
+  AND ((@pid IS NOT NULL AND ProjectId=@pid)
+       OR (@pid IS NULL AND @did IS NOT NULL AND DramaId=@did))
 ORDER BY RunId DESC", conn);
         cmd.Parameters.AddWithValue("@pk", packId);
-        cmd.Parameters.AddWithValue("@pid", projectId);
+        cmd.Parameters.AddWithValue("@pid", (object?)projectId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@did", (object?)dramaId ?? DBNull.Value);
         var v = cmd.ExecuteScalar();
         return v == null ? null : Convert.ToInt32(v);
     }
@@ -65,16 +69,19 @@ WHERE RunId=@id AND Status IN ('running','await_confirm','blocked')", conn);
         cmd.ExecuteNonQuery();
     }
 
-    /// <summary>开一次运行。projectId/episodeId 决定产出往哪入库，不传就只跑文本不落业务表。</summary>
-    public int CreateSkillRun(int packId, int? projectId, int? episodeId, string? title, string? inputsJson)
+    /// <summary>开一次运行。projectId/episodeId 决定产出往哪入库，不传就只跑文本不落业务表。
+    /// dramaId 是立项运行的归属：P0 跑在漫剧上，那时一个项目都还没建。</summary>
+    public int CreateSkillRun(int packId, int? projectId, int? episodeId, string? title, string? inputsJson,
+                              int? dramaId = null)
     {
         using var conn = GetConn(); conn.Open();
         using var cmd = new SqlCommand(@"
-INSERT INTO DirectorSkillRuns(PackId, ProjectId, EpisodeId, Title, InputsJson, Status)
-VALUES(@pk, @pid, @eid, @t, @i, 'running'); SELECT SCOPE_IDENTITY();", conn);
+INSERT INTO DirectorSkillRuns(PackId, ProjectId, EpisodeId, DramaId, Title, InputsJson, Status)
+VALUES(@pk, @pid, @eid, @did, @t, @i, 'running'); SELECT SCOPE_IDENTITY();", conn);
         cmd.Parameters.AddWithValue("@pk", packId);
         cmd.Parameters.AddWithValue("@pid", (object?)projectId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@eid", (object?)episodeId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@did", (object?)dramaId ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@t", (object?)title ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@i", (object?)inputsJson ?? DBNull.Value);
         return Convert.ToInt32(cmd.ExecuteScalar());
@@ -212,23 +219,108 @@ SELECT StageKey, OutputText, OutputJson, DocsSummary FROM DirectorSkillRunSteps 
                 r.IsDBNull(2) ? null : r.GetString(2), r.IsDBNull(3) ? null : r.GetString(3));
     }
 
-    public sealed record SkillRunRow(int RunId, int PackId, int? ProjectId, string? Title,
-                                      string? CurrentStage, string Status, string? CreatedAt);
+    public sealed record SkillRunRow(int RunId, int PackId, int? ProjectId, int? DramaId, string? Title,
+                                      string? CurrentStage, string Status, string? CreatedAt,
+                                      string? InputsJson);
+
+    /// <summary>
+    /// 按项目取最近一次运行。
+    /// 「接上次运行」原本只认浏览器里记的编号：清过缓存、换台机器、或者直接从
+    /// ?projectId=57 这种链接进来，页面就退回「尚未开始」——跑过的产出其实都还在库里，
+    /// 只是没人去问。这里给一条按项目回查的路。
+    /// 作废掉的那次（abandoned）不接：接上去只会看到半截产出，不如让他重新点火。
+    /// </summary>
+    public SkillRunRow? GetLatestSkillRunByProject(int projectId)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+SELECT TOP 1 RunId, PackId, ProjectId, DramaId, Title, CurrentStage, Status,
+       CONVERT(varchar(16), CreatedAt, 120), InputsJson
+FROM DirectorSkillRuns
+WHERE ProjectId = @pid AND Status <> N'abandoned'
+ORDER BY RunId DESC", conn);
+        cmd.Parameters.AddWithValue("@pid", projectId);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return null;
+        return new SkillRunRow(r.GetInt32(0), r.GetInt32(1),
+            r.IsDBNull(2) ? null : r.GetInt32(2), r.IsDBNull(3) ? null : r.GetInt32(3),
+            r.IsDBNull(4) ? null : r.GetString(4),
+            r.IsDBNull(5) ? null : r.GetString(5), r.GetString(6), r.GetString(7),
+            r.IsDBNull(8) ? null : r.GetString(8));
+    }
+
+    /// <summary>
+    /// 取「整部漫剧共用」的阶段产出——目前就是立项 P0。
+    /// 产出挂在运行上，运行又是按集（项目）绑的：第 1 集跑完立项，第 2 集自己没跑过，
+    /// 就没有 P0 记录，页面上那一格空着，看着像立项没做。可立项本来就是漫剧级的，
+    /// 12 集共用一份。所以本集没有时，拿这部漫剧里集号最小的那集跑出来的那条。
+    /// 本集自己跑过就优先用本集的（重跑过的以新那份为准）。
+    /// </summary>
+    public (int StepId, int EpisodeNumber)? GetSharedStageStep(int projectId, string stageKey)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+SELECT TOP 1 s.StepId, ISNULL(p.EpisodeNumber, 999)
+FROM DirectorSkillRunSteps s
+JOIN DirectorSkillRuns r ON r.RunId = s.RunId
+JOIN Projects p ON p.ProjectId = r.ProjectId
+WHERE p.DramaId = (SELECT DramaId FROM Projects WHERE ProjectId = @pid)
+  AND s.StageKey = @sk
+  AND s.Status = N'done'
+  AND LEN(ISNULL(s.OutputText, '')) > 0
+ORDER BY CASE WHEN p.ProjectId = @pid THEN 0 ELSE 1 END,
+         ISNULL(p.EpisodeNumber, 999), s.StepId DESC", conn);
+        cmd.Parameters.AddWithValue("@pid", projectId);
+        cmd.Parameters.AddWithValue("@sk", stageKey);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return null;
+        return (r.GetInt32(0), r.GetInt32(1));
+    }
+
+    /// <summary>
+    /// 按漫剧直接取漫剧级阶段产出（立项 P0）。
+    /// 立项整部漫剧一份，本来就该按漫剧查。只有 projectId 时要先上溯 DramaId、再跨到别的集
+    /// 的运行里翻——那条路绕，还容易因为某一集的记录状态不对而整个查不到。
+    /// 页面 URL 上带了 dramaId（从项目管理页点进来的）就走这条直路。
+    /// </summary>
+    public (int StepId, int EpisodeNumber)? GetSharedStageStepByDrama(int dramaId, string stageKey)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+SELECT TOP 1 s.StepId, ISNULL(p.EpisodeNumber, 999)
+FROM DirectorSkillRunSteps s
+JOIN DirectorSkillRuns r ON r.RunId = s.RunId
+LEFT JOIN Projects p ON p.ProjectId = r.ProjectId
+WHERE s.StageKey = @sk
+  AND s.Status = N'done'
+  AND LEN(ISNULL(s.OutputText, '')) > 0
+  AND (r.DramaId = @did OR p.DramaId = @did)
+ORDER BY s.StepId DESC", conn);
+        cmd.Parameters.AddWithValue("@did", dramaId);
+        cmd.Parameters.AddWithValue("@sk", stageKey);
+        using var r = cmd.ExecuteReader();
+        if (!r.Read()) return null;
+        return (r.GetInt32(0), r.GetInt32(1));
+    }
 
     public List<SkillRunRow> GetSkillRuns(int packId)
     {
         using var conn = GetConn(); conn.Open();
         var list = new List<SkillRunRow>();
+        // InputsJson 里存着建运行时选定的提示词引擎（promptType）。页面接上上次运行要靠它
+        // 把下拉恢复成真正生效的值，不然每次刷新都显示默认的 SD，跟实际跑的那套对不上。
         using var cmd = new SqlCommand(@"
-SELECT RunId, PackId, ProjectId, Title, CurrentStage, Status, CONVERT(varchar(16), CreatedAt, 120)
+SELECT RunId, PackId, ProjectId, DramaId, Title, CurrentStage, Status, CONVERT(varchar(16), CreatedAt, 120), InputsJson
 FROM DirectorSkillRuns WHERE PackId = @pk ORDER BY RunId DESC", conn);
         cmd.Parameters.AddWithValue("@pk", packId);
         using var r = cmd.ExecuteReader();
         while (r.Read())
         {
             list.Add(new SkillRunRow(r.GetInt32(0), r.GetInt32(1),
-                r.IsDBNull(2) ? null : r.GetInt32(2), r.IsDBNull(3) ? null : r.GetString(3),
-                r.IsDBNull(4) ? null : r.GetString(4), r.GetString(5), r.GetString(6)));
+                r.IsDBNull(2) ? null : r.GetInt32(2), r.IsDBNull(3) ? null : r.GetInt32(3),
+                r.IsDBNull(4) ? null : r.GetString(4),
+                r.IsDBNull(5) ? null : r.GetString(5), r.GetString(6), r.GetString(7),
+                r.IsDBNull(8) ? null : r.GetString(8)));
         }
         return list;
     }

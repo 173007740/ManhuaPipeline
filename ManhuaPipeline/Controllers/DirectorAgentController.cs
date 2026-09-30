@@ -203,11 +203,73 @@ public class DirectorAgentController : ControllerBase
         var runs = _db.GetSkillRuns(_db.GetRunPackId(runId));
         var run = runs.FirstOrDefault(r => r.RunId == runId);
         if (run == null) return NotFound(new { message = "运行不存在" });
-        return Ok(new
+        return Ok(RunPayload(run));
+    }
+
+    /// <summary>
+    /// 取漫剧级阶段（立项 P0）的产出记录。
+    /// 立项整部漫剧一份：立完项按集数生成 N 个集项目，每一集打开都得看得到它，
+    /// 而不是只有跑过的那一集有——其余集没有自己的运行，那一格就空着。
+    ///
+    /// 立项结果就存在 Dramas 那一行上（画幅、集数那些立项字段也在那儿），
+    /// 所以按 dramaId 一次读出来即可：不用上溯项目、不用跨到别的集的运行里翻。
+    /// </summary>
+    [HttpGet("shared-step")]
+    public IActionResult GetSharedStep([FromQuery] int projectId, [FromQuery] string? stageKey,
+                                       [FromQuery] int dramaId = 0)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        if (string.IsNullOrWhiteSpace(stageKey))
+            return NotFound(new { message = "缺少 stageKey" });
+        // 立项是漫剧级的：给了 dramaId 就按漫剧直接查，不用从项目上溯
+        if (projectId <= 0 && dramaId <= 0)
+            return NotFound(new { message = "缺少 projectId 或 dramaId" });
+
+        var did = dramaId > 0 ? dramaId : _db.GetDramaIdByProject(projectId);
+
+        // 立项（P0）：读漫剧那一行上的立项结果
+        if (did > 0 && string.Equals(stageKey, "P0", StringComparison.OrdinalIgnoreCase))
+        {
+            var p0 = _db.GetDramaP0Result(did);
+            if (p0 != null)
+                return Ok(new { stepId = p0.StepId, stageKey, episodeNumber = 0,
+                                finishedAt = p0.FinishedAt, dramaId = did });
+        }
+
+        /* 走到这儿是两件事：还没回填进漫剧的老数据，或者查的不是立项。
+           这两种只能回到运行里找——产出挂在运行上，运行按集绑。 */
+        var f = dramaId > 0 ? _db.GetSharedStageStepByDrama(dramaId, stageKey)
+                            : _db.GetSharedStageStep(projectId, stageKey);
+        if (f == null) return NotFound(new { message = "这部漫剧还没跑过这一步" });
+        return Ok(new { stepId = f.Value.StepId, stageKey, episodeNumber = f.Value.EpisodeNumber });
+    }
+
+    /// <summary>
+    /// 按项目取最近一次运行，返回的东西跟 runs/{runId} 一模一样。
+    /// 页面「接上次运行」以前只查浏览器 localStorage，记着就接、没记着就当没跑过——
+    /// 于是换个浏览器打开 ?projectId=57 看到的是空页面，其实那次运行的产出都在库里。
+    /// </summary>
+    [HttpGet("runs/latest")]
+    public IActionResult GetLatestRun([FromQuery] int projectId)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        if (projectId <= 0) return NotFound(new { message = "缺少 projectId" });
+        var run = _db.GetLatestSkillRunByProject(projectId);
+        if (run == null) return NotFound(new { message = "这个项目还没跑过" });
+        return Ok(RunPayload(run));
+    }
+
+    /// <summary>一次运行画成给页面看的样子。两个「取运行」的接口共用，免得结构跑偏。</summary>
+    private object RunPayload(Services.DbService.SkillRunRow run)
+    {
+        return new
         {
             runId = run.RunId, packId = run.PackId, projectId = run.ProjectId, title = run.Title,
             currentStage = run.CurrentStage, status = run.Status, createdAt = run.CreatedAt,
-            steps = _db.GetSkillSteps(runId).Select(s => new
+            // 建运行时选定的「提示词引擎」存在这里。页面接上上次运行要靠它把下拉恢复成
+            // 真正生效的那个值——不回读的话下拉永远显示默认的 SD，人选了 H3 也会被当成没选。
+            inputsJson = run.InputsJson,
+            steps = _db.GetSkillSteps(run.RunId).Select(s => new
             {
                 stepId = s.StepId, stageKey = s.StageKey, name = s.Name, status = s.Status,
                 promptChars = s.PromptChars, gates = s.Gates, error = s.Error,
@@ -215,7 +277,70 @@ public class DirectorAgentController : ControllerBase
                 imported = s.ImportedCount, importError = s.ImportError,
                 hasOutput = !string.IsNullOrEmpty(s.OutputText)
             })
+        };
+    }
+
+    /// <summary>
+    /// 取立项。立项是漫剧级的：一部漫剧一份，画幅、集数、提示词引擎都在 Dramas 那一行里，
+    /// 改哪个字段都不用重跑流水线。P4 生成提示词时直接读它的 PromptEngine。
+    /// 传 projectId 时会先上溯到所属漫剧——流水线一次只跑一集，手里拿的是项目不是漫剧。
+    /// </summary>
+    [HttpGet("brief")]
+    public IActionResult GetBrief([FromQuery] int projectId = 0, [FromQuery] int dramaId = 0)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+
+        var did = dramaId > 0 ? dramaId : _db.GetDramaIdByProject(projectId);
+        if (did <= 0) return BadRequest(new { message = "缺少 projectId 或 dramaId" });
+
+        var b = _db.GetDramaBrief(did);
+        if (b == null) return Ok(new { exists = false });
+        return Ok(new
+        {
+            exists = true, dramaId = b.DramaId,
+            status = b.Status, aspect = b.Aspect, delivery = b.Delivery, genre = b.Genre,
+            artStyleId = b.ArtStyleId, hook = b.Hook, premise = b.Premise, platform = b.Platform,
+            episodeCount = b.EpisodeCount, episodeDuration = b.EpisodeDuration,
+            charactersJson = b.CharactersJson, promptEngine = b.PromptEngine
         });
+    }
+
+    /// <summary>
+    /// 存立项。只传要改的字段，没传的保持原样——
+    /// 所以只想换提示词引擎时，请求体里放一个 promptEngine 就够了，别的字段原样不动。
+    /// </summary>
+    [HttpPut("brief")]
+    public IActionResult SaveBrief([FromBody] BriefBody body)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        if (body == null) return BadRequest(new { message = "缺少请求体" });
+
+        var did = body.DramaId > 0 ? body.DramaId : _db.GetDramaIdByProject(body.ProjectId);
+        if (did <= 0) return BadRequest(new { message = "缺少 projectId 或 dramaId" });
+
+        var id = _db.UpsertDramaBrief(did, body.Status, body.Aspect, body.Delivery, body.Genre,
+            body.ArtStyleId, body.Hook, body.Premise, body.Platform, body.EpisodeCount,
+            body.EpisodeDuration, body.CharactersJson, body.PromptEngine);
+        return Ok(new { dramaId = id });
+    }
+
+    public sealed class BriefBody
+    {
+        public int DramaId { get; set; }
+        /// <summary>页面上拿到的是项目（一集一个），立项要按它上溯到漫剧。</summary>
+        public int ProjectId { get; set; }
+        public string? Status { get; set; }
+        public string? Aspect { get; set; }
+        public string? Delivery { get; set; }
+        public string? Genre { get; set; }
+        public int? ArtStyleId { get; set; }
+        public string? Hook { get; set; }
+        public string? Premise { get; set; }
+        public string? Platform { get; set; }
+        public int? EpisodeCount { get; set; }
+        public int? EpisodeDuration { get; set; }
+        public string? CharactersJson { get; set; }
+        public string? PromptEngine { get; set; }
     }
 
     /// <summary>取某一步的完整产出（原文 + 结构化结果 + 本次实际加载了哪些规则）。</summary>

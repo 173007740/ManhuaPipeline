@@ -1969,6 +1969,12 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
             foreach (var v in voiceRefs)
                 userMsg.AppendLine("<Audio " + v.AudioIndex + "> [" + v.CharacterName + "]");
             userMsg.AppendLine("表内角色在本镜头开口时，其说话句必须写成：<Subject N> (Sx) 以参考 <Audio M> 的音色和说话方式说道，<d>[Chinese] 台词原文</d>；台词内容仍以源文本为准，音频只提供音色与说话方式；未在表中开口的角色不写 <Audio M>；<Audio M> 仅可用于音色/说话方式参考，禁止写成音乐风格、节拍或配乐参考。");
+            /* <Audio M> 必须有对象：素材声明行 + audio_definitions 定义节。
+               以前只要求正文写 <Audio M>，【参考素材说明】里一张音频都没有，
+               H3 读到 <Audio 1> 无从对应，音色等于白配。 */
+            userMsg.AppendLine("【素材声明·必写】在【参考素材说明】的 @图片N 行之后，按本表编号续写声明行：@音频M [角色名]音色参考，保持音色与说话方式一致；音频与图片是两套编号，不占用 @图片N 的号，也不计入首行「共 N 个输入素材」。");
+            userMsg.AppendLine("【定义节·必写】在 subject_definitions: 之后输出 audio_definitions: 节，逐行写：<Audio M> is the voice of [角色名]（音色参考：只提供音色与说话方式，不复制参考音频里的原话）.；本镜无音色参考时整节省略。");
+            userMsg.AppendLine("【开口判定】只要该镜写了 <d> 标签就算开口，说话句必须带 <Audio M>——内心独白 OS、旁白、画外音都算；分镜 dialogue 为「无」但正文补出内心独白的同样按开口处理。只有全程沉默、不写 <d> 的角色才不引用。");
             userMsg.AppendLine();
         }
         // L3 关键帧锚定：与 Stage 9 同一套锚定，保证 H3 提示词的站位/道具状态/线索呈现不漂移

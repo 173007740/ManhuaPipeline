@@ -115,6 +115,35 @@ SELECT SCOPE_IDENTITY();", conn))
         }
     }
 
+    /// <summary>
+    /// 取指定集号那一集；没有就按「第N集」建一集再返回。
+    /// 分镜是跨集产出的（单元号「12.1」＝ 第 12 集第 1 单元），而流水线这一步没让选集——
+    /// 以前不管单元号写的是第几集，统统落到第一集，分镜页按集筛选、P4 按集投喂就全乱了套。
+    /// </summary>
+    public int EnsureEpisodeNumber(int projectId, int episodeNumber)
+    {
+        if (projectId <= 0 || episodeNumber <= 0) return 0;
+        using var conn = GetConn(); conn.Open();
+        using (var q = new SqlCommand(
+                   "SELECT TOP 1 EpisodeId FROM Episodes WHERE ProjectId=@p AND EpisodeNumber=@n ORDER BY EpisodeId", conn))
+        {
+            q.Parameters.AddWithValue("@p", projectId);
+            q.Parameters.AddWithValue("@n", episodeNumber);
+            var v = q.ExecuteScalar();
+            if (v is not null and not DBNull) return Convert.ToInt32(v);
+        }
+        using (var ins = new SqlCommand(@"
+INSERT INTO Episodes(ProjectId, UserId, EpisodeNumber, Title, SortOrder, CreatedAt, BatchNumber)
+SELECT @p, UserId, @n, N'第' + CONVERT(nvarchar(10), @n) + N'集', @n, SYSDATETIME(), 1 FROM Projects WHERE ProjectId=@p;
+SELECT SCOPE_IDENTITY();", conn))
+        {
+            ins.Parameters.AddWithValue("@p", projectId);
+            ins.Parameters.AddWithValue("@n", episodeNumber);
+            var v = ins.ExecuteScalar();
+            return v is null or DBNull ? 0 : Convert.ToInt32(v);
+        }
+    }
+
     /// <summary>资产类别前缀 → 表名。AUD（声音）不出图也没有表，返回空串由调用方跳过。</summary>
     public static string AssetTableOf(string? category) => (category ?? "").ToUpperInvariant() switch
     {

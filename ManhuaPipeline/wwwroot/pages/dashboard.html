@@ -254,7 +254,7 @@
             </div>
         </div>
         <div id="createDramaModal" class="modal-overlay" style="display:none;">
-            <div class="modal">
+            <div class="modal" style="width:760px;max-width:92%;max-height:90vh;overflow-y:auto;">
                 <header>
                     <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建漫剧</h3>
                     <button class="modal-close" onclick="$('#createDramaModal').hide()" title="关闭">&times;</button>
@@ -262,8 +262,49 @@
                 <label>漫剧名称</label>
                 <input id="dramaTitleInput" placeholder="输入漫剧名称">
                 <label>描述（选填）</label>
-                <textarea id="dramaDescInput" placeholder="输入描述" rows="3"></textarea>
-                <label>封面（选填）</label>
+                <textarea id="dramaDescInput" placeholder="输入描述" rows="2"></textarea>
+                <!-- 立项跟着漫剧一起建：一部漫剧一份，存进 Dramas 那一行。
+                     建完进漫剧页点「跑立项并生成分集」，就按这些参数跑 P0、按产出建单集项目。
+                     这几项是最常用的一批，交付形态 / 爽点 / 核心设定建完在漫剧页补。 -->
+                <div style="margin:14px 0 8px;font-size:12px;letter-spacing:1px;color:var(--primary-light);">立项参数（最常用几项，其余建完在漫剧页补）</div>
+                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;">
+                    <div>
+                        <label>画幅</label>
+                        <input type="text" data-fk="aspect" placeholder="16:9 横屏" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label>目标平台</label>
+                        <input type="text" data-fk="platform" placeholder="抖音" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label>题材</label>
+                        <input type="text" data-fk="genre" placeholder="如：宫崎骏自愈系" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label>画风</label>
+                        <select data-fk="artStyle" style="width:100%;box-sizing:border-box;"><option value="">未设置</option></select>
+                    </div>
+                    <div>
+                        <label>总集数</label>
+                        <input type="number" min="1" data-fk="episodeCount" placeholder="12" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label>单集时长（秒）</label>
+                        <input type="number" min="1" data-fk="episodeDuration" placeholder="180" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div>
+                        <label>提示词引擎</label>
+                        <select data-fk="promptEngine" style="width:100%;box-sizing:border-box;">
+                            <option value="SD">SD</option>
+                            <option value="H3">H3</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label>角色（逗号分隔）</label>
+                        <input type="text" data-fk="characters" placeholder="杨彦刚，刘如烟" style="width:100%;box-sizing:border-box;">
+                    </div>
+                </div>
+                <label style="margin-top:12px;">封面（选填）</label>
                 <input type="file" id="dramaCoverInput" accept="image/*" onchange="previewCover(this)">
                 <div id="coverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:200px;max-height:120px;border-radius:8px;object-fit:cover;"></div>
                 <div class="modal-actions">
@@ -412,12 +453,50 @@
                     $("#projectList").html(h);
                 });
             }
-            function showCreateDrama() { $("#dramaTitleInput").val(""); $("#dramaDescInput").val(""); $("#dramaCoverInput").val(""); $("#coverPreview").hide(); $("#createDramaModal").css("display", "flex") }
+            /* 画风下拉每次开弹窗都重拉一次：风格库是会长出来的，缓存一次就漏掉后加的 */
+            function loadDramaStyles() {
+                $.get("/api/image-style", function (list) {
+                    var sel = $('#createDramaModal [data-fk="artStyle"]').empty().append('<option value="">未设置</option>');
+                    (list || []).forEach(function (s) {
+                        sel.append('<option value="' + s.styleId + '">' + escHtml(s.styleName || s.name || '') + '</option>');
+                    });
+                });
+            }
+            function showCreateDrama() {
+                $("#dramaTitleInput").val(""); $("#dramaDescInput").val(""); $("#dramaCoverInput").val(""); $("#coverPreview").hide();
+                $('#createDramaModal [data-fk]').val("");      // 立项字段一并清掉，别留着上一部的集数
+                $('#createDramaModal [data-fk="promptEngine"]').val("SD");
+                $("#createDramaModal").css("display", "flex");
+                loadDramaStyles();
+            }
+            /* 立项字段 → 一条立项。数字转成数字（集数是字符串没法比大小），
+               角色在表单里是一段文本，进库存成 json 数组。 */
+            function dramaBriefFromForm() {
+                function num(v) { var n = parseInt(v, 10); return isNaN(n) ? null : n; }
+                var chars = String($('#createDramaModal [data-fk="characters"]').val() || '').split(/[,，、]/)
+                    .map(function (s) { return s.trim() }).filter(function (s) { return s });
+                return {
+                    aspect: $('#createDramaModal [data-fk="aspect"]').val() || null,
+                    platform: $('#createDramaModal [data-fk="platform"]').val() || null,
+                    genre: $('#createDramaModal [data-fk="genre"]').val() || null,
+                    artStyleId: $('#createDramaModal [data-fk="artStyle"]').val() ? +$('#createDramaModal [data-fk="artStyle"]').val() : null,
+                    episodeCount: num($('#createDramaModal [data-fk="episodeCount"]').val()),
+                    episodeDuration: num($('#createDramaModal [data-fk="episodeDuration"]').val()),
+                    charactersJson: chars.length ? JSON.stringify(chars) : null,
+                    promptEngine: $('#createDramaModal [data-fk="promptEngine"]').val() || null
+                };
+            }
             function createDrama() {
                 var t = $("#dramaTitleInput").val().trim(); if (!t) { alert("请输入名称"); return }
                 $.ajax({
                     url: "/api/drama", method: "POST", contentType: "application/json", data: JSON.stringify({ title: t, description: $("#dramaDescInput").val() }), success: function (r) {
                         var did = r.dramaId;
+                        /* 立项跟漫剧一起落库：立完项才谈得上跑 P0 出分集。
+                           没填的字段不传，那边的语义是「这次不改动」。 */
+                        $.ajax({
+                            url: "/api/director-agent/brief", method: "PUT", contentType: "application/json",
+                            data: JSON.stringify($.extend({ dramaId: did }, dramaBriefFromForm()))
+                        });
                         var file = $("#dramaCoverInput")[0].files[0];
                         if (file) { var fd = new FormData(); fd.append("file", file); $.ajax({ url: "/api/drama/" + did + "/cover", method: "POST", data: fd, processData: false, contentType: false, success: function () { $("#createDramaModal").hide(); loadDramas() } }) } else { $("#createDramaModal").hide(); loadDramas() }
                     }

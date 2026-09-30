@@ -236,7 +236,10 @@ public partial class DbService
     {
         var list = new List<Project>();
         using var conn = GetConn(); conn.Open();
-        using var cmd = new SqlCommand("SELECT * FROM Projects WHERE DramaId=@did AND UserId=@uid AND Status<>N'deleted' ORDER BY UpdatedAt DESC", conn);
+        // 按集号排：一集一个项目，列表得照剧情顺序来，不能按谁最后改过。
+        // 手工建的没集号，沉到最后面按时间倒序。
+        using var cmd = new SqlCommand(@"SELECT * FROM Projects WHERE DramaId=@did AND UserId=@uid AND Status<>N'deleted'
+ORDER BY CASE WHEN EpisodeNumber IS NULL THEN 1 ELSE 0 END, EpisodeNumber, ProjectId DESC", conn);
         cmd.Parameters.AddWithValue("@did", dramaId);
         cmd.Parameters.AddWithValue("@uid", userId);
         using var r = cmd.ExecuteReader();
@@ -611,6 +614,7 @@ WHERE ProjectId=@id AND UserId=@uid AND Status<>N'deleted'", conn);
         ScriptContent = r["ScriptContent"] == DBNull.Value ? null : (string)r["ScriptContent"],
         CurrentStage = (int)r["CurrentStage"],
         EpisodeCount = r["EpisodeCount"] == DBNull.Value ? 1 : (int)r["EpisodeCount"],
+        EpisodeNumber = r["EpisodeNumber"] == DBNull.Value ? null : (int)r["EpisodeNumber"],
         Status = (string)r["Status"],
         CreatedAt = (DateTime)r["CreatedAt"],
         UpdatedAt = (DateTime)r["UpdatedAt"],
@@ -1177,13 +1181,27 @@ WHERE ProjectId=@id AND UserId=@uid AND Status<>N'deleted'", conn);
         CreatedAt = (DateTime)r["CreatedAt"]
     };
 
-    // ========== �־� ==========
+    // ========== 分镜 ==========
+
+    /// <summary>
+    /// 分镜的自然排序：先按单元号「集.单元」的数值大小，再按镜内序号。
+    /// UnitNumber 是字符串，直接按它排会把 "10.1" 排到 "2.1" 前面；
+    /// 而 UnitOrder 是每个单元内各自从 1 重新数起的，拿它当第一排序键
+    /// 会把所有单元的第 1 镜挤在最前面（1.1-1、1.2-1、2.1-1…），看着就是乱的。
+    /// </summary>
+    private const string FrameNaturalOrder = @"
+CASE WHEN UnitNumber IS NULL OR LTRIM(RTRIM(UnitNumber)) = '' THEN 1 ELSE 0 END,
+TRY_CONVERT(int, PARSENAME(UnitNumber, 2)),
+TRY_CONVERT(int, PARSENAME(UnitNumber, 1)),
+UnitOrder, SortOrder";
+
     public List<StoryboardFrame> GetFrames(int episodeId)
     {
         var list = new List<StoryboardFrame>();
         using var conn = GetConn();
         conn.Open();
-        using var cmd = new SqlCommand("SELECT * FROM StoryboardFrames WHERE EpisodeId=@eid ORDER BY UnitOrder,SortOrder", conn);
+        using var cmd = new SqlCommand(
+            "SELECT * FROM StoryboardFrames WHERE EpisodeId=@eid ORDER BY " + FrameNaturalOrder, conn);
         cmd.Parameters.AddWithValue("@eid", episodeId);
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(ReadFrame(r));
@@ -1195,7 +1213,8 @@ WHERE ProjectId=@id AND UserId=@uid AND Status<>N'deleted'", conn);
         var list = new List<StoryboardFrame>();
         using var conn = GetConn();
         conn.Open();
-        using var cmd = new SqlCommand("SELECT * FROM StoryboardFrames WHERE ProjectId=@pid ORDER BY EpisodeId,UnitOrder,SortOrder", conn);
+        using var cmd = new SqlCommand(
+            "SELECT * FROM StoryboardFrames WHERE ProjectId=@pid ORDER BY EpisodeNumber, " + FrameNaturalOrder, conn);
         cmd.Parameters.AddWithValue("@pid", projectId);
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(ReadFrame(r));

@@ -152,15 +152,17 @@ public class VideoController : ControllerBase
         return list.OrderBy(x => x.N).Select(x => x.Name).ToList();
     }
 
-    /// <summary>解析该镜头要带的音色参考音频（ComfyUI 引擎专用）。
-    /// 顺序权威来自 VoiceRefResolver —— 与 H3 提示词里的 &lt;Audio 1..n&gt; 编号由同一函数产出，保证"编号 ↔ 音频"严格对应；
+    /// <summary>解析该镜头要带的音色参考音频（SD 与 H3 都走这里）。
+    /// 顺序权威来自 VoiceRefResolver —— 与提示词里的编号由同一函数产出，保证"编号 ↔ 音频"严格对应：
+    /// H3 写 &lt;Audio n&gt;、SD 写 @音频n，提交时音频入参的顺序就是那个 n。
     /// 没有角色配音色时回退到该提示词记录上手填的参考音频，行为与改动前一致。</summary>
-    private List<string>? ResolveVoiceAudios(int projectId, SeedancePrompt? prompt, string? engineText, List<string>? fallback)
+    private List<string>? ResolveVoiceAudios(int projectId, SeedancePrompt? prompt, string? engineText, List<string>? fallback,
+                                             int maxAudios = VoiceRefResolver.MaxRefAudios)
     {
         List<string> list;
         try
         {
-            list = VoiceRefResolver.Resolve(_db, projectId, prompt?.FrameId, ParseRefBindingNames(engineText))
+            list = VoiceRefResolver.Resolve(_db, projectId, prompt?.FrameId, ParseRefBindingNames(engineText), maxAudios)
                 .Select(r => r.AudioUrl)
                 .Where(u => !string.IsNullOrWhiteSpace(u))
                 .ToList();
@@ -175,9 +177,34 @@ public class VideoController : ControllerBase
         return list.Count > 0 ? list : null;
     }
 
-    // ---------- 角色音色参考音频（MiniMax H3 参考音频：提示词 <Audio n> ↔ ref_audios 槽位） ----------
+    /// <summary>
+    /// SD（火山方舟）这次提交要带哪几段音色参考。编号对上提示词里的 @音频n。
+    ///
+    /// 比 H3 多一层硬约束：SD 2.0 必须有参考图或参考视频，**不能只给音频**——
+    /// 纯音频请求会被接口整单拒掉。所以 2.0 且这一镜没有参考素材时，宁可不音色也不冒被拒的风险
+    /// （手填的参考音频这时也一并跳过，否则照样是纯音频）。
+    /// 2.5 允许纯音频，照带，且上限从 3 段放宽到 10 段。
+    /// </summary>
+    private List<string>? ResolveSdVoiceAudios(int projectId, SeedancePrompt? prompt, List<string>? refImgs,
+                                               List<string>? refVids, List<string>? refAud, string model)
+    {
+        var max = VoiceRefResolver.MaxAudiosForModel(model);
+        var hasVisualRef = (refImgs ?? new List<string>()).Any(x => !string.IsNullOrWhiteSpace(x))
+                        || (refVids ?? new List<string>()).Any(x => !string.IsNullOrWhiteSpace(x));
+        if (!hasVisualRef && max <= VoiceRefResolver.MaxRefAudios) return null;   // 2.0：没有画面参考就不带音频
+        return ResolveVoiceAudios(projectId, prompt, prompt?.PromptText, refAud, max);
+    }
 
-    /// <summary>返回该项目的音色参考列表，以及可绑定的角色名（分镜帧绑定里 Character 类资产去重）</summary>
+    // ---------- 角色音色参考音频（H3：提示词 <Audio n> ↔ ref_audios 槽位；SD：@音频n ↔ content 里的 reference_audio） ----------
+
+    /// <summary>
+    /// 返回该项目的音色参考列表，以及可绑定的角色名。
+    ///
+    /// 角色名的来源是「项目角色资产」（CharacterAssets）——那是这个项目定下来的角色台账，
+    /// 名字与分镜、提示词里用的是同一套，音色按它对上号才关联得到镜头。
+    /// 分镜帧绑定里的 Character 类资产名只作兜底：有些老项目角色还没进资产表，
+    /// 只有帧绑定里有，这时不能让下拉空着。
+    /// </summary>
     [HttpGet("voices")]
     public IActionResult GetVoices(int projectId)
     {
@@ -188,12 +215,20 @@ public class VideoController : ControllerBase
             var voices = _db.GetVoiceReferences(projectId)
                 .Select(v => new { voiceId = v.VoiceId, characterName = v.CharacterName, audioUrl = v.AudioUrl, originalFileName = v.OriginalFileName })
                 .ToList();
-            var characters = _db.GetFrameAssetBindings(projectId)
-                .Where(b => string.Equals(b.Category, "Character", StringComparison.OrdinalIgnoreCase))
-                .OrderBy(b => b.SortOrder)
-                .Select(b => b.Name)
+
+            var characters = _db.GetCharacterAssets(projectId)
+                .Select(a => (a.Name ?? "").Trim())
+                .Where(n => n.Length > 0)
                 .Distinct()
                 .ToList();
+            // 兜底：资产表里没有的角色，从分镜帧绑定的 Character 类资产名里补
+            foreach (var n in _db.GetFrameAssetBindings(projectId)
+                     .Where(b => string.Equals(b.Category, "Character", StringComparison.OrdinalIgnoreCase))
+                     .OrderBy(b => b.SortOrder)
+                     .Select(b => (b.Name ?? "").Trim()))
+            {
+                if (n.Length > 0 && !characters.Contains(n)) characters.Add(n);
+            }
             return Ok(new { voices, characters });
         }
         catch (Microsoft.Data.SqlClient.SqlException ex) when (ex.Number == 208)
@@ -395,7 +430,8 @@ public class VideoController : ControllerBase
             else
             {
                 var (apiUrl, apiKey, model) = GetVideoConfig();
-                result = await _video.SubmitTask(projectId, promptId, prompt.PromptText, apiKey, apiUrl, model, refImgs, ToPublicUrls(refVids), refAud, vs);
+                result = await _video.SubmitTask(projectId, promptId, prompt.PromptText, apiKey, apiUrl, model, refImgs, ToPublicUrls(refVids),
+                    ResolveSdVoiceAudios(projectId, prompt, refImgs, refVids, refAud, model), vs);
             }
             return Ok(new { taskId = result.TaskId, status = result.Status, engine });
         }
@@ -494,7 +530,8 @@ public class VideoController : ControllerBase
                     else
                     {
                         var (apiUrl, apiKey, model) = GetVideoConfig();
-                        result = await _video.SubmitTask(projectId, p.PromptId, p.PromptText, apiKey, apiUrl, model, refImgs, ToPublicUrls(refVids), refAud, vs);
+                        result = await _video.SubmitTask(projectId, p.PromptId, p.PromptText, apiKey, apiUrl, model, refImgs, ToPublicUrls(refVids),
+                            ResolveSdVoiceAudios(projectId, p, refImgs, refVids, refAud, model), vs);
                     }
                     tasks.Add(new { promptId = p.PromptId, taskId = result.TaskId, engine });
                 }
@@ -572,7 +609,8 @@ public class VideoController : ControllerBase
             {
                 var (apiUrl, apiKey, model) = GetVideoConfig();
                 result = await _video.SubmitTask(projectId, promptId, prompt.PromptText, apiKey, apiUrl, model,
-                    req.ReferenceImages, ToPublicUrls(req.ReferenceVideos), req.ReferenceAudio);
+                    req.ReferenceImages, ToPublicUrls(req.ReferenceVideos),
+                    ResolveSdVoiceAudios(projectId, prompt, req.ReferenceImages, req.ReferenceVideos, req.ReferenceAudio, model));
             }
             return Ok(new { taskId = result.TaskId, status = result.Status });
         }
