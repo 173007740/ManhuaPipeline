@@ -614,11 +614,12 @@
   var DRAMA_ID = +(new URLSearchParams(location.search).get('dramaId') || 0);
   // 图片风格库（立项「画风方向」下拉的数据源）与项目上已存的资产画风
   var IMG_STYLES = [], PROJ_IMG_STYLE = 0;
-  /* 立项里那份「画风方向」：它是整部漫剧的画风，存在 Dramas.ArtStyleId 上。
+  /* 立项里那份「画风方向」：整部漫剧的画风，存在 Dramas.ArtStyleId 上。
      项目级的资产画风（Projects.ImageStyleId）只有人在这一集手工选过才会有值——
-     第 1 集选过、第 2 集没选过，画风下拉就空着，出图退回视频画风，12 集画风是断的。
-     所以项目上没值时拿立项这份兜底，跟后端取画风的顺序一致。 */
+     第 1 集选过、第 2 集没选过，下拉就空着。所以：项目上没设，就用立项这份。 */
   var BRIEF_ART_STYLE = 0;
+  // 就这一句：项目那份优先，没有就用立项那份
+  function artStyleId(){ return PROJ_IMG_STYLE || BRIEF_ART_STYLE || 0; }
   var runStartAt = 0, tickTimer = null, seenStatus = {}, logLines = 0;
   var sawRunning = false;                 // 这次点火之后，轮询有没有亲眼看到 running
   var START_GRACE = 15000;                // 点火到后台落状态之间的宽限期
@@ -696,11 +697,10 @@
     PROJ_IMG_STYLE = 0;
     if (!pid){ if (stages.length) renderSteps(lastRun ? lastRun.steps : []); return; }
     $.get('/api/project/' + pid, function(p){
-      // 项目上没设过就退回立项那份（漫剧级），第 2 集起才不会画风空白
-      PROJ_IMG_STYLE = (p && p.imageStyleId) || BRIEF_ART_STYLE || 0;
+      PROJ_IMG_STYLE = (p && p.imageStyleId) || 0;   // 没设就是 0，交给 artStyleId() 用立项那份
       if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
     }).fail(function(){
-      PROJ_IMG_STYLE = BRIEF_ART_STYLE || 0;
+      PROJ_IMG_STYLE = 0;
       if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
     });
   }
@@ -1121,8 +1121,7 @@
         // 画风方向：选项从图片风格库（/api/image-style）拉，存的是 StyleId —— 出图时按它取风格描述。
         // value / 存 localStorage 的都是 id，所以历史上手填的风格名（非数字）直接忽略，别选中一个不存在的项
         var savedId = /^\d+$/.test(String(v || '')) ? String(v) : '';
-        // 项目上那一份优先，没有就用立项那份。两个请求谁先回来不一定，所以两个变量都看一眼
-        var cur = savedId || String(PROJ_IMG_STYLE || BRIEF_ART_STYLE || '');
+        var cur = savedId || String(artStyleId() || '');
         h += '<select' + k + ' data-fsid="1"><option value="">（不选，出图退回视频画风）</option>'
            + IMG_STYLES.map(function(s){
                return '<option value="' + s.styleId + '"'
@@ -1803,12 +1802,9 @@
 
       /* 立项的画风方向兜底项目上的资产画风。两个请求谁先回来不一定，
          所以读回来就补画一次——后到的那次也要生效。 */
+      // 立项读回来了：画风可能就靠它，重画一次
       BRIEF_ART_STYLE = b.artStyleId || 0;
-      // 立项那份要落进 PROJ_IMG_STYLE：重画读的是它，光记在 BRIEF_ART_STYLE 上下拉还是空的
-      if (!PROJ_IMG_STYLE && BRIEF_ART_STYLE){
-        PROJ_IMG_STYLE = BRIEF_ART_STYLE;
-        if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
-      }
+      if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
 
       applyEngineLock(b.promptEngine || '', briefDramaId);
       if (b.promptEngine) say('提示词引擎已由立项锁定：' + b.promptEngine);
