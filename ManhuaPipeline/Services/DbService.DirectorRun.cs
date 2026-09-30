@@ -9,6 +9,33 @@ namespace ManhuaPipeline.Services;
 /// </summary>
 public partial class DbService
 {
+    /// <summary>
+    /// 服务重启时收掉上次进程留下的「正在跑」。
+    ///
+    /// 流水线是后台任务在跑，状态写在库里。进程一停（改完代码重启、崩溃、被杀），
+    /// 那个后台任务就没了，可库里那条还写着 running——没有任何人会再去改它。
+    /// 页面读到 running 就一直显示「跑着呢…」，按钮全按住，看上去像流水线卡死，
+    /// 其实只是没人把状态收尾。这里在启动时统一收尾：
+    ///   步骤置 error 并写明是重启中断（这一步确实没产出）；
+    ///   运行置 step_done（跑到这一步边界停了，人可以接着点）。
+    /// 能这么做的底气是新进程刚起来，此刻不可能真有任务在跑。
+    /// </summary>
+    public int ResetOrphanRunning()
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+UPDATE DirectorSkillRunSteps
+SET Status='error', Error=N'服务重启时中断，这一步没有产出', UpdatedAt=SYSDATETIME()
+WHERE Status='running';
+
+UPDATE DirectorSkillRuns
+SET Status='step_done', UpdatedAt=SYSDATETIME()
+WHERE Status='running';
+
+SELECT @@ROWCOUNT;", conn);
+        return (int)cmd.ExecuteScalar()!;
+    }
+
     public sealed record SkillDocFull(int DocId, string Title, string Scope, string? ScopeValue, string Content);
 
     /// <summary>取包内全部文档正文（引擎拼 prompt 用，文档量在几十份级别，一次取全比多次往返划算）。</summary>

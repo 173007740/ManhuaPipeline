@@ -99,6 +99,15 @@ AppPaths.WebRoot = app.Environment.WebRootPath
 
 DatabaseSchemaValidator.Validate(app.Configuration);
 
+/* 流水线是后台任务，状态记在库里。上一次进程没了（重启、崩溃）时，
+   那条记录还写着 running，却再也没人去改它 —— 页面上就一直显示「跑着呢…」。
+   新进程刚起来，此刻不可能真有任务在跑，所以启动时统一把这些孤儿状态收尾。 */
+using (var scope = app.Services.CreateScope())
+{
+    var db = scope.ServiceProvider.GetRequiredService<DbService>();
+    db.ResetOrphanRunning();
+}
+
 // 静态资源缓存策略（原来完全没有 Cache-Control，浏览器只能靠启发式缓存，同一张参考图
 // 会被反复整份下载）：
 //   • /uploads/** —— 文件名一律带 GUID / 时间戳，重新出图必然换新名，旧文件永不复用，
