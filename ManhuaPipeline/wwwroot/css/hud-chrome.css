@@ -60,13 +60,17 @@
 .navbar.hc-topnav .nav-links>#navGuest,
 .navbar.hc-topnav .nav-inner>#navUser,
 .navbar.hc-topnav .nav-inner>#navGuest{display:flex;align-items:center;gap:6px;height:100%;
-  margin-left:14px;padding-left:14px;border-left:1px solid var(--hc-line)}
+  margin-left:14px;padding-left:14px;border-left:1px solid var(--hc-line);
+  /* 字号在这层定一次，用户名 / 退出 / 登录 / 注册全部 font:inherit ——
+     以前只有链接写了 10px，用户名那格没写、继承了顶栏的雅黑，看着比旁边大一圈 */
+  font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px}
 .navbar.hc-topnav #navUser a,.navbar.hc-topnav #navGuest a{display:inline-flex;align-items:center;gap:5px;
-  padding:0 7px;color:var(--hc-muted);text-decoration:none;
-  font:400 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;white-space:nowrap}
+  padding:7px;color:var(--hc-muted);text-decoration:none;font:inherit;white-space:nowrap}
 .navbar.hc-topnav #navUser a:hover,.navbar.hc-topnav #navGuest a:hover{color:var(--hc-cyan)}
+/* 登录 / 注册 之间一条竖线，跟导航项之间同一种线 */
+.navbar.hc-topnav #navGuest a + a{border-left:1px solid var(--hc-line);margin-left:4px}
 .navbar.hc-topnav #navUser #userName{display:inline-flex;align-items:center;color:var(--hc-cyan);
-  padding:0 7px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  padding:7px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:inherit}
 .navbar.hc-topnav #navUser #userName img{width:20px;height:20px;border-radius:50%;margin-right:5px;
   vertical-align:middle;object-fit:cover}
 .navbar.hc-topnav #navUser #btnLogout,.navbar.hc-topnav #navUser #btnLogout:hover{color:var(--hc-red)}
