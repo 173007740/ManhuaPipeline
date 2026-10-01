@@ -1021,11 +1021,9 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
             if (cat === "characters") {
                 h += "<button class='btn btn-small' onclick='showDeriveModal(" + a.assetId + ")' title='以这张角色图为基础，参考一张服装图重新生成角色图（真图生图），并记录派生血缘' style='font-size:11px;background:#0b8f99;color:#fff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-shirt' style='font-size:12px;'></i> 换装派生</button>";
             }
-            /* 跨集直接引图：同一部漫剧里同一个人 / 同一个场景本来就该是同一张图。
-               这里不出图 —— 挑前面几集已经出好的那张，直接拿过来用（跟「出图」按钮走自动锚定、重新生成一张是两条路）。 */
-            if (a.identityId) {
-                h += "<button class='btn btn-small' onclick='showReuseModal(\"" + cat + "\"," + a.assetId + ")' title='从同一身份（同一个人 / 同一个场景）在别的集已经出好的图里挑一张，直接用到这一集，不重新出图' style='font-size:11px;background:#4c1d95;color:#e9d5ff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-clone' style='font-size:12px;'></i> 引用别集的图</button>";
-            }
+            /* 跨集直接引图：从这部漫剧所有已经出好的图里挑一张，直接用到这一条资产上 —— 不出图。
+               不按名字 / 身份过滤：同一部剧出过的图全摆出来，挑哪张由人定。 */
+            h += "<button class='btn btn-small' onclick='showReuseModal(\"" + cat + "\"," + a.assetId + ")' title='从这部漫剧所有已经出好的图里挑一张，直接用到这一条资产上，不重新出图（跟「出图」是两条路）' style='font-size:11px;background:#4c1d95;color:#e9d5ff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-clone' style='font-size:12px;'></i> 引用剧里的图</button>";
             h += "<span id='assetImgState_" + a.assetId + "' style='font-size:11px;color:#789096;'></span>";
             h += "<button class='btn btn-small' onclick='showAssetPromptModal(\"" + cat + "\"," + a.assetId + ")' title='查看/编辑这条资产的出图提示词，并预览出图时会拼成的完整提示词' style='font-size:11px;background:#0369a1;color:#fff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-align-left' style='font-size:12px;'></i> 提示词</button>";
             h += "<button class='btn btn-small' id='assetRegenPrompt_" + a.assetId + "' onclick='regenAssetPrompt(this,\"" + cat + "\"," + a.assetId + ")' title='让大模型按「资产提示词模版」重新写这条提示词' style='font-size:11px;background:#b45309;color:#fff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-rotate' style='font-size:12px;'></i> 重生成</button>";
@@ -1056,25 +1054,37 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
                     $("#reuseBody").html("<p style='color:#789096;'>" + escHtml((d && d.message) || "这个身份在别的集还没有出好的图 —— 先到那一集出一张，或点「出图」让系统照着定妆图生成一张") + "</p>");
                     return;
                 }
-                var h = "<p style='color:#cbd5e1;font-size:13px;margin:0 0 12px;'>同一个身份在别的集已经出好的图（第几集都是同一个人 / 同一个场景），挑一张直接用到这一集 —— 不重新出图，用的就是这一张。</p><div style='display:flex;flex-wrap:wrap;gap:12px;'>";
+                /* 整部漫剧所有出过的图都摆出来：不按名字过滤（换个叫法的、想借另一张作参考的，
+                   按名字就选不到）。每张标清「第几集 · 哪一类 · 名字」，挑哪张由人定。 */
+                var kindName = { characters: "角色", environments: "环境", props: "道具", effects: "特效" };
+                var h = "<p style='color:#cbd5e1;font-size:13px;margin:0 0 12px;'>这部漫剧下已经出好的全部 " + d.items.length + " 张图（按集排列）。挑一张直接用到这一集 —— 不重新出图，用的就是这一张。</p>";
+                var lastEp = -1;
+                h += "<div style='display:flex;flex-wrap:wrap;gap:12px;'>";
                 d.items.forEach(function (it) {
-                    h += "<div style='width:200px;border:1px solid #183033;background:rgba(8,17,19,.7);padding:8px;'>"
+                    if (it.episode !== lastEp) {
+                        if (lastEp >= 0) h += "</div>";
+                        lastEp = it.episode;
+                        h += "<div style='width:100%;color:#6af7ff;font-size:12px;font-weight:600;margin-top:4px;'>第 " + it.episode + " 集" + (it.projectId === currentProjectId ? "（本集）" : "") + "</div><div style='display:flex;flex-wrap:wrap;gap:12px;width:100%;'>";
+                    }
+                    h += "<div style='width:180px;border:1px solid #183033;background:rgba(8,17,19,.7);padding:8px;'>"
                         + "<img src='" + escHtml(it.imageUrl) + "' style='width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#041017;'>"
-                        + "<p style='color:#e4fbff;font-size:12px;margin:6px 0 6px;font-weight:600;'>第 " + it.episode + " 集 · " + escHtml(it.name) + "</p>"
-                        + "<button onclick='doReuseImage(\"" + cat + "\"," + assetId + "," + it.projectId + "," + it.assetId + ")' style='width:100%;font-size:12px;background:#4c1d95;color:#e9d5ff;border:none;border-radius:4px;padding:6px 0;cursor:pointer;'>用这一张</button>"
+                        + "<p style='color:#e4fbff;font-size:12px;margin:6px 0 2px;font-weight:600;'>" + escHtml(it.name) + "</p>"
+                        + "<p style='color:#5c7078;font-size:11px;margin:0 0 6px;'>" + escHtml(kindName[it.category] || it.category) + "</p>"
+                        + "<button onclick='doReuseImage(\"" + cat + "\"," + assetId + "," + it.projectId + "," + it.assetId + ",\"" + it.category + "\")' style='width:100%;font-size:12px;background:#4c1d95;color:#e9d5ff;border:none;border-radius:4px;padding:6px 0;cursor:pointer;'>用这一张</button>"
                         + "</div>";
                 });
-                $("#reuseBody").html(h + "</div>");
+                h += "</div></div>";
+                $("#reuseBody").html(h);
             }).fail(function (x) {
                 $("#reuseBody").html("<p style='color:#ef4444;'>加载失败：" + escHtml((x.responseJSON && x.responseJSON.message) || x.statusText) + "</p>");
             });
         }
-        function doReuseImage(cat, assetId, srcProjectId, srcAssetId) {
-            if (!confirm("把那一集这张图直接用到这一集？\n（不重新出图，用的就是这一张，并同步进「我的资产」图库）")) return;
+        function doReuseImage(cat, assetId, srcProjectId, srcAssetId, srcCategory) {
+            if (!confirm("把这张图直接用到这一条资产？\n（不重新出图，用的就是这一张，并同步进「我的资产」图库）")) return;
             $.ajax({
                 url: "/api/project/" + currentProjectId + "/asset/" + cat + "/" + assetId + "/reuse-image",
                 method: "POST", contentType: "application/json",
-                data: JSON.stringify({ sourceProjectId: srcProjectId, sourceAssetId: srcAssetId }),
+                data: JSON.stringify({ sourceProjectId: srcProjectId, sourceAssetId: srcAssetId, sourceCategory: srcCategory }),
                 success: function (r) {
                     $("#reuseModal").remove();
                     alert(r.message || "已引用");

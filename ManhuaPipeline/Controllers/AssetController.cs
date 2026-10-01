@@ -227,7 +227,11 @@ public class AssetController : ControllerBase
     // 这里给的是另一条路：同一部漫剧里同一个人 / 同一个场景本来就该是同一张图，
     // 让人直接挑「用第几集那张」，不重新出图，直接把那张拿过来用，并同步进「我的资产」图库。
 
-    /// <summary>列出同一个身份在别的集已经出好的图，供人挑选。</summary>
+    /// <summary>
+    /// 列出**整部漫剧**下所有已经出好的图，供人挑选。
+    /// 不做名字匹配、也不限同一身份 —— 同一部剧出过的图全摆出来，挑哪张由人定。
+    /// 按名字过滤只覆盖「同名同身份」这一种情况，遇到换个叫法的、或想借另一张作参考的就选不到了。
+    /// </summary>
     [HttpGet("{category}/{assetId}/reuse-candidates")]
     public IActionResult ReuseCandidates(int projectId, string category, int assetId)
     {
@@ -237,23 +241,23 @@ public class AssetController : ControllerBase
         var table = AssetImageSupport.TableOf(category);
         if (string.IsNullOrEmpty(table)) return BadRequest(new { message = "类别不支持：" + category });
 
-        var identityId = _db.GetAssetIdentityId(table!, assetId);
-        if (identityId <= 0)
+        var dramaId = _db.GetDramaIdByProject(projectId);
+        if (dramaId <= 0)
             return Ok(new
             {
-                identityId = 0,
+                dramaId = 0,
                 items = Array.Empty<object>(),
-                message = "这条资产没有跨集身份（手工加的，或这一集还没认过人），没法从别的集引图"
+                message = "这个项目没挂在某部漫剧下，没有「整部剧的图」可以挑"
             });
 
-        var list = _db.GetIdentityImageCandidates(identityId, projectId, table!);
+        var list = _db.GetDramaImageCandidates(dramaId);
         return Ok(new
         {
-            identityId,
+            dramaId,
             items = list.Select(x => new
             {
                 assetId = x.AssetId, projectId = x.ProjectId, episode = x.Episode,
-                name = x.Name, imageUrl = x.ImageUrl
+                category = x.Category, name = x.Name, imageUrl = x.ImageUrl
             })
         });
     }
@@ -262,6 +266,8 @@ public class AssetController : ControllerBase
     {
         public int SourceProjectId { get; set; }
         public int SourceAssetId { get; set; }
+        /// <summary>来源那条资产属于哪一类（角色 / 环境 / 道具 / 特效）：现在是整部剧随便挑，类别可能跟本条不一样。</summary>
+        public string? SourceCategory { get; set; }
     }
 
     /// <summary>
@@ -283,13 +289,19 @@ public class AssetController : ControllerBase
         var asset = ResolveAssetForImage(projectId, category, assetId);
         if (asset == null) return NotFound(new { message = "资产不存在" });
 
-        var identityId = _db.GetAssetIdentityId(table!, assetId);
-        var srcIdentity = _db.GetAssetIdentityId(table!, req.SourceAssetId);
-        if (identityId <= 0 || srcIdentity <= 0 || identityId != srcIdentity)
-            return BadRequest(new { message = "选的那条跟这一条不是同一个身份（不是同一个人 / 同一个场景），不能互相引用" });
+        /* 现在是从整部漫剧里随便挑，所以不再要求「同一身份」——名字对不上也能引，挑哪张由人定。
+           唯一守住的底线是「同一部漫剧」：不能拿别的剧的图过来用。 */
+        var srcCategory = (req.SourceCategory ?? category).Trim().ToLowerInvariant();
+        var srcTable = AssetImageSupport.TableOf(srcCategory);
+        if (string.IsNullOrEmpty(srcTable)) return BadRequest(new { message = "来源类别不支持：" + req.SourceCategory });
 
-        var srcUrl = _db.GetAssetImageUrl(table!, req.SourceAssetId);
-        if (string.IsNullOrWhiteSpace(srcUrl)) return NotFound(new { message = "那一集那条资产没有图" });
+        var dramaId = _db.GetDramaIdByProject(projectId);
+        var srcDramaId = _db.GetDramaIdByProject(req.SourceProjectId);
+        if (dramaId <= 0 || srcDramaId <= 0 || dramaId != srcDramaId)
+            return BadRequest(new { message = "选的那张不属于这部漫剧，不能引到这一集" });
+
+        var srcUrl = _db.GetAssetImageUrl(srcTable!, req.SourceAssetId);
+        if (string.IsNullOrWhiteSpace(srcUrl)) return NotFound(new { message = "选的那条资产没有图" });
 
         var full = ManhuaPipeline.Services.AppPaths.ResolveUpload(srcUrl!);
         if (full == null || !System.IO.File.Exists(full))

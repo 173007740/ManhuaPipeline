@@ -229,6 +229,51 @@ ORDER BY ISNULL(p.EpisodeNumber,0), a.AssetId", conn);
     }
 
     /// <summary>
+    /// 整部漫剧下所有已经出好的图（四类资产一起，按集号排序）：给人手工挑「这一集用哪张」用。
+    /// 不做名字匹配、也不限同一身份 —— 同一部剧里出过的图就都摆出来，挑哪张由人定：
+    /// 同名只是多数情况，遇到「这一集换个叫法」「临时借另一位的图作参考」这类，按名字过滤就选不到了。
+    /// 只出 topN 条，避免一部长剧几百张图把弹窗拖垮。
+    /// </summary>
+    public List<(int AssetId, int ProjectId, int Episode, string Category, string Name, string ImageUrl)>
+        GetDramaImageCandidates(int dramaId, int topN = 300)
+    {
+        var list = new List<(int, int, int, string, string, string)>();
+        if (dramaId <= 0) return list;
+
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+SELECT TOP (@top) AssetId, ProjectId, Ep, Category, Name, ImageUrl FROM (
+    SELECT a.AssetId, a.ProjectId, ISNULL(p.EpisodeNumber,0) AS Ep,
+           'characters' AS Category, a.Name, a.ImageUrl
+    FROM CharacterAssets a JOIN Projects p ON p.ProjectId = a.ProjectId
+    WHERE p.DramaId=@did AND ISNULL(a.ImageUrl,'')<>''
+    UNION ALL
+    SELECT a.AssetId, a.ProjectId, ISNULL(p.EpisodeNumber,0),
+           'environments', a.Name, a.ImageUrl
+    FROM EnvironmentAssets a JOIN Projects p ON p.ProjectId = a.ProjectId
+    WHERE p.DramaId=@did AND ISNULL(a.ImageUrl,'')<>''
+    UNION ALL
+    SELECT a.AssetId, a.ProjectId, ISNULL(p.EpisodeNumber,0),
+           'props', a.Name, a.ImageUrl
+    FROM PropAssets a JOIN Projects p ON p.ProjectId = a.ProjectId
+    WHERE p.DramaId=@did AND ISNULL(a.ImageUrl,'')<>''
+    UNION ALL
+    SELECT a.AssetId, a.ProjectId, ISNULL(p.EpisodeNumber,0),
+           'effects', a.Name, a.ImageUrl
+    FROM EffectAssets a JOIN Projects p ON p.ProjectId = a.ProjectId
+    WHERE p.DramaId=@did AND ISNULL(a.ImageUrl,'')<>''
+) u
+ORDER BY Ep, Category, AssetId", conn);
+        cmd.Parameters.AddWithValue("@did", dramaId);
+        cmd.Parameters.AddWithValue("@top", topN);
+
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add((r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetString(3), r.GetString(4), r.GetString(5)));
+        return list;
+    }
+
+    /// <summary>
     /// 这一集这个身份的条目：给 P2c 注入用——「上一集已经出过图的同名角色 / 场景 / 道具」。
     /// 取最近一集有锚图的那些，按集号升序。
     /// </summary>
