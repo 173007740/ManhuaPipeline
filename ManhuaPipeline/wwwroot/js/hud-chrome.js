@@ -71,16 +71,16 @@
       return '<a href="' + it.href + '">' + icon(it.icon) + it.text + '</a>';
     }).join('');
 
-    /* 用户区内部：按规矩重写。
+    /* 用户区内部：按规矩重写。右侧只留文字，不带图标 —— 用户名本身就是头像 + 名字，
+       前面再摆个 material icon 反而显得拥挤（左侧三项的图标照旧保留）。
        id 一个都不能改 —— #userName 是 app.js 塞用户名的地方，
        #btnLogout 是它（document 上委托）绑退出的地方。 */
     if (userBox) {
-      userBox.innerHTML = '<span id="userName"></span>'
-        + '<a href="#" id="btnLogout">' + icon('logout') + '退出</a>';
+      userBox.innerHTML = '<span id="userName"></span><a href="#" id="btnLogout">退出</a>';
     }
     if (guestBox) {
-      guestBox.innerHTML = '<a href="' + P + 'login.html">' + icon('account_circle') + '登录</a>'
-        + '<a href="' + P + 'register.html">' + icon('person_add') + '注册</a>';
+      guestBox.innerHTML = '<a href="' + P + 'login.html">登录</a>'
+        + '<a href="' + P + 'register.html">注册</a>';
     }
 
     // 当前页高亮：只看文件名，?后面的参数不算
