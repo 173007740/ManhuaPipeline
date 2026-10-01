@@ -288,11 +288,7 @@
                             <option value="B站">B站</option>
                         </select>
                     </div>
-                    <div>
-                        <label>题材</label>
-                        <input type="text" data-fk="genre" placeholder="如：宫崎骏自愈系" style="width:100%;box-sizing:border-box;">
-                    </div>
-                    <!-- 两个风格库各管一段，名字要写清楚：
+                    <!-- 两个风格库各管一段，名字要写清楚、也要摆在一排（一个管图、一个管影像，挑的时候本就该一起看）：
                          图片风格（ImageStyles）—— 画面长什么样，资产出图时拼进提示词；
                          视觉风格（VideoStyles）—— 影像什么调子，一部剧定一次。 -->
                     <div>
@@ -302,6 +298,10 @@
                     <div>
                         <label>视觉风格</label>
                         <select data-fk="videoStyle" style="width:100%;box-sizing:border-box;"><option value="">未设置</option></select>
+                    </div>
+                    <div>
+                        <label>题材</label>
+                        <input type="text" data-fk="genre" placeholder="如：宫崎骏自愈系" style="width:100%;box-sizing:border-box;">
                     </div>
                     <div>
                         <label>总集数</label>
@@ -318,7 +318,8 @@
                             <option value="H3">H3</option>
                         </select>
                     </div>
-                    <div>
+                    <!-- 加了视觉风格之后共九项，两列排下来最后一行只剩它一个，让它占满整行 -->
+                    <div style="grid-column:1 / -1;">
                         <label>角色（逗号分隔）</label>
                         <input type="text" data-fk="characters" placeholder="杨彦刚，刘如烟" style="width:100%;box-sizing:border-box;">
                     </div>
