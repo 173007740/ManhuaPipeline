@@ -138,6 +138,16 @@ public class StageController : ControllerBase
         {
             var bindings = _db.GetFrameAssetBindings(projectId);
             var frames = _db.GetAllFrames(projectId);
+
+            /* 自愈：有分镜却一条绑定都没有，说明这批分镜是没经过绑定重算就进来的
+               （skill-studio 那条流水线在 P3 之前只写分镜不重算绑定）。
+               这里补算一次，人刷新页面就能看到引用资产，不用为此重跑一遍分镜。 */
+            if (bindings.Count == 0 && frames.Count > 0)
+            {
+                FrameBindingService.RebindFrames(_db, _logger, projectId);
+                bindings = _db.GetFrameAssetBindings(projectId);
+            }
+
             var byFrame = frames.ToDictionary(f => f.FrameId);
             var items = bindings.Select(b =>
             {
@@ -1229,42 +1239,7 @@ public class StageController : ControllerBase
     /// 每个镜头先继承其所属单元的 Stage 4 绑定（单元引用几个资产，该单元拆出的每个镜头就引用这几个），
     /// 再由本镜自身字段补充单元绑定未覆盖的资产。</summary>
     private void RebindFramesAfterStage5(int projectId)
-    {
-        try
-        {
-            var frames = _db.GetAllFrames(projectId);
-            if (frames.Count == 0) return;
-            // 先自愈历史错位编号（镜头号前缀 ≠ 单元号），再重算绑定，避免按错位编号去匹配单元资产
-            var normalized = 0;
-            try { normalized = _db.NormalizeFrameShotNumbers(projectId); }
-            catch (Exception ex) { _logger.LogWarning(ex, "[Stage5绑定] 镜头号规范化失败，按原编号继续。项目 {ProjectId}", projectId); }
-            if (normalized > 0)
-            {
-                _logger.LogWarning("[Stage5绑定] 项目 {ProjectId} 修正了 {Count} 条镜头号与单元号不一致的分镜帧", projectId, normalized);
-                frames = _db.GetAllFrames(projectId);
-            }
-            var characters = _db.GetCharacterAssets(projectId);
-            var environments = _db.GetEnvAssets(projectId);
-            var props = _db.GetPropAssets(projectId);
-            var effects = _db.GetEffectAssets(projectId);
-            var unitBindingsByUnit = LoadUnitBindingsByUnit(projectId);
-            var all = new List<FrameAssetBinding>();
-            foreach (var frame in frames)
-                all.AddRange(FrameAssetBindingResolver.Resolve(frame, characters, environments, props, effects, UnitBindingsForFrame(unitBindingsByUnit, frame)).Bindings);
-            _db.ReplaceFrameAssetBindings(projectId, all);
-            var catCount = string.Join(", ", all.GroupBy(b => b.Category).Select(g => $"{g.Key}={g.Count()}"));
-            _logger.LogInformation("[Stage5绑定] 项目 {ProjectId} 已按 {FrameCount} 个分镜帧重算资产绑定：共 {BindingCount} 条（有图 {ImageCount}）[{Category}]，继承 {UnitCount} 个单元的绑定",
-                projectId, frames.Count, all.Count, all.Count(b => b.HasImage), catCount, unitBindingsByUnit.Count);
-        }
-        catch (SqlException ex) when (ex.Number is 208 or 2812)
-        {
-            _logger.LogWarning(ex, "[Stage5绑定] FrameAssetBindings 表不存在，已跳过自动绑定。请先执行 ManhuaPipeline/Database/Upgrade_FrameAssetBindings.sql。项目 {ProjectId}", projectId);
-        }
-        catch (Exception ex)
-        {
-            _logger.LogWarning(ex, "[Stage5绑定] 重算帧资产绑定失败，不影响分镜结果。项目 {ProjectId}", projectId);
-        }
-    }
+        => FrameBindingService.RebindFrames(_db, _logger, projectId);   // 与 skill-studio 那条流水线共用同一套算法
 
     /// <summary>按单元号索引 Stage 4 落库的「单元↔资产」绑定（单元号形如 1.3，已含集号），供 Stage 5 逐镜头继承。
     /// 表缺失或读取失败时返回空字典，帧绑定自动退回「只按本镜字段解析」的旧行为。</summary>

@@ -97,11 +97,17 @@ public static class FrameAssetBindingResolver
                 (props ?? new List<PropAsset>()).Select(p => p.Name),
                 (effects ?? new List<EffectAsset>()).Select(e => e.Name));
 
+            /* 环境也走「全称 + 别名」：以前只比全称包含，而分镜正文里写的是台账上的简称
+               （Scene 字段是「@SCN-染工坊」，资产库里叫「刘如烟植物染工坊」），
+               一模一样比自然一条也命中不了 —— 场景这一格就永远空着，
+               偏偏道具 / 特效因为走 AssetAliasMatcher（带后缀核心词兜底）能绑上，
+               看着就像「场景坏了、道具没事」。别名同样要求在同类别里唯一命中，不唯一就跳过不绑。 */
+            var envScope = (environments ?? new List<EnvironmentAsset>())
+                           .Select(e => (e.Name ?? "").Trim()).Where(n => n.Length > 0).ToList();
             var matchedEnv = false;
             foreach (var e in environments ?? new List<EnvironmentAsset>())
             {
-                var n = HayNormalize(new[] { e.Name });
-                if (n.Length > 0 && hay.Contains(n, StringComparison.Ordinal))
+                if (AssetAliasMatcher.Hit(hay, e.Name, envScope))
                 {
                     matchedEnv = true;
                     Add("Environment", e.AssetId, e.Name, HasImage(e.ImageUrl));

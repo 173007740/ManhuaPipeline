@@ -728,6 +728,13 @@ public class DirectorAgentService
                                            inputText, runId, stepId, stage.StageKey);
                 imported = res.Count;
                 importError = res.Error;
+
+                /* 分镜入库之后要重算「帧 ↔ 资产」绑定，否则分镜页「引用资产」那一列是空的。
+                   这段以前只有老流水线（Stage 5 完成 / Stage 9 生成前）会做，
+                   而这一条（P3 导演分镜）只写 StoryboardFrames —— 资产其实都写了（@SCN- / @CHR- 都在帧字段上），
+                   只是没人按这些字段去把它们跟资产表对上并落进 FrameAssetBindings。 */
+                if (imported > 0 && string.Equals(stage.OutputTarget, "frames", StringComparison.OrdinalIgnoreCase))
+                    FrameBindingService.RebindFrames(_db, _log, ctx.ProjectId);
             }
 
             /* 救回来的 json 是截断版：得明说这批可能少收了末尾几条，
