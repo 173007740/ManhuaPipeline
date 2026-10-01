@@ -1184,9 +1184,31 @@
      流水线这一站要的是「看立项的结果」—— 这里改成只读摘要：
      立项参数一部剧一份，跑之前先核对一眼；剧本从哪来也说清楚，因为写剧本那一步吃的就是它。
      要改点右上那条链接过去，改完回来这一页刷新一次。 */
+  /* 这一页每 2.5 秒轮询一次、每次都要重画当前这张卡。卡片里的内容要是跟着每次都去拉一遍，
+     界面就一直抖、网络也没完没了（看着像页面在疯狂刷新）。
+     所以数据与 DOM 都缓存下来：项目 / 漫剧没换就直接套上次那份，一个请求都不发。 */
+  var BRIEF_CARD = { key: '', html: '', script: '', link: '' };
+  function paintBriefCard(){
+    $('#briefCardBody').html(BRIEF_CARD.html || '<div style="color:#4f655b;">载入中…</div>');
+    $('#briefScriptLine').html(BRIEF_CARD.script || '');
+    $('#briefEditLink').attr('href', BRIEF_CARD.link || 'project-editor.html');
+  }
   function renderBriefCard(i){
     var box = $('#sf' + i);
-    if (!box.length || box.find('#briefCard').length) return;
+    if (!box.length) return;
+    var pid = $('#proj').val() || 0;
+    var key = (DRAMA_ID || 0) + ':' + pid;
+
+    // 卡片已经画过（多半是轮询重画的）：套回缓存就走，别再发请求
+    if (box.find('#briefCard').length){
+      if (BRIEF_CARD.key !== key){ BRIEF_CARD.key = key; BRIEF_CARD.html = ''; fetchBriefCard(pid); }
+      else paintBriefCard();
+      return;
+    }
+
+    var fresh = BRIEF_CARD.key !== key;
+    BRIEF_CARD.key = key;
+    if (fresh){ BRIEF_CARD.html = ''; BRIEF_CARD.script = ''; }
     box.append('<div id="briefCard" style="border:1px solid #16383f;background:#04161b;padding:12px 14px;margin-top:4px;">'
       + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
       +   '<span style="font-size:12px;letter-spacing:.5px;color:#8fb3bd;">立项结果（漫剧级，一部填一次）</span>'
@@ -1196,19 +1218,24 @@
       + '<div id="briefScriptLine" style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(140,180,200,.22);font-size:12px;color:#7fa6b0;line-height:1.7;"></div>'
       + '</div>');
 
-    var pid = $('#proj').val();
+    fetchBriefCard(pid);
+  }
+
+  /* 拉一次立项结果与剧本来源，存进缓存再画 —— 之后轮询重画只是把缓存套回去 */
+  function fetchBriefCard(pid){
     var q = DRAMA_ID ? { dramaId: DRAMA_ID } : (pid ? { projectId: pid } : null);
-    if (!q){ $('#briefCardBody').html(briefRow('状态', '先在左上选项目')); return; }
-    $('#briefEditLink').attr('href', 'project-editor.html' + (DRAMA_ID ? ('?dramaId=' + DRAMA_ID) : ''));
+    if (!q){ BRIEF_CARD.html = briefRow('状态', '先在左上选项目'); paintBriefCard(); return; }
+    BRIEF_CARD.link = 'project-editor.html' + (DRAMA_ID ? ('?dramaId=' + DRAMA_ID) : '');
 
     $.get('/api/director-agent/brief', q, function(b){
       if (!b || !b.exists){
-        $('#briefCardBody').html(briefRow('状态', '这部漫剧还没立项 —— 去「项目设置」填一次'));
+        BRIEF_CARD.html = briefRow('状态', '这部漫剧还没立项 —— 去「项目设置」填一次');
+        paintBriefCard();
         return;
       }
-      $('#briefEditLink').attr('href', 'project-editor.html?dramaId=' + (b.dramaId || DRAMA_ID || 0));
+      BRIEF_CARD.link = 'project-editor.html?dramaId=' + (b.dramaId || DRAMA_ID || 0);
       videoStyleName(b.videoStyleId, function(vname){
-        $('#briefCardBody').html([
+        BRIEF_CARD.html = [
           briefRow('题材', b.genre), briefRow('画幅', b.aspect), briefRow('平台', b.platform),
           briefRow('交付形态', b.delivery),
           briefRow('图片风格', styleTitleOf(IMG_STYLES, b.artStyleId)), briefRow('视觉风格', vname),
@@ -1216,21 +1243,23 @@
           briefRow('单集时长', b.episodeDuration ? (b.episodeDuration + ' 秒') : ''),
           briefRow('提示词引擎', b.promptEngine),
           briefRow('核心爽点', b.hook), briefRow('核心设定', b.premise)
-        ].join(''));
+        ].join('');
+        paintBriefCard();
       });
-    }, 'json');
+    }, 'json').fail(function(){ BRIEF_CARD.html = briefRow('状态', '立项没读出来'); paintBriefCard(); });
 
     /* 剧本写清楚来源：写剧本那一步吃的就是它，来源不同走法也不同 */
     if (pid) $.get('/api/director-agent/script', { projectId: pid }, function(r){
       if (!r || !r.script){
-        $('#briefScriptLine').text('剧本：还没录 —— 点「写剧本」时让模型按核心设定从头写');
-        return;
+        BRIEF_CARD.script = '剧本：还没录 —— 点「写剧本」时让模型按核心设定从头写';
+      } else {
+        var how = r.source === 'user'  ? '你的终稿（不改写）'
+                : r.source === 'draft' ? '你给这一集的底本（照它整理成稿）'
+                : r.wholeDrama         ? '整部素材（按本集提纲从中取本集这一段）'
+                :                        '模型写的';
+        BRIEF_CARD.script = '剧本：<b style="color:#5ff8f3">' + how + '</b> · ' + r.chars + ' 字';
       }
-      var how = r.source === 'user'  ? '你的终稿（不改写）'
-              : r.source === 'draft' ? '你给这一集的底本（照它整理成稿）'
-              : r.wholeDrama         ? '整部素材（按本集提纲从中取本集这一段）'
-              :                        '模型写的';
-      $('#briefScriptLine').html('剧本：<b style="color:#5ff8f3">' + how + '</b> · ' + r.chars + ' 字');
+      paintBriefCard();
     });
   }
   function briefRow(k, v){
@@ -1294,17 +1323,19 @@
   // 主面板只摆「当前阶段」这一张卡。九个阶段靠左边菜单切，不铺九张卡占一屏
   function renderSteps(steps){
     if (!stages || !stages.length) return;
+    ensureBriefLoaded();                   // 立项只拉一次（也不再回过头来重画）
     // 立项那份是漫剧级的，本集没跑过也要算进去，不然第 2 集起那一格永远是空的
     var merged = withShared(steps);
     window.lastSteps = merged || window.lastSteps;  // 切阶段时要拿最近一次的状态重画
     STEP_STATE = calcSteps(merged);
     $('#stepList').html(stepCard(activeStep));
     if (STEPS[activeStep].form){
-      renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
-      // 表单画完才有元素可填：立项的值要等这一步切过来时才回填
-      if (STEPS[activeStep].form === 'P0') loadBrief();
-      // 立项那一格不摆表单，摆的是「立项结果」只读摘要（改立项去项目设置页）
-      if (STEPS[activeStep].form === 'P0') renderBriefCard(activeStep);
+      /* 立项那一格（P0）不画表单 —— 立项在项目设置页做，这里不摆另一套可编辑字段，
+         只把结果摊开给人核对。要改值就走右上角的链接去那一页改。 */
+      if (STEPS[activeStep].form === 'P0'){
+        renderBriefCard(activeStep);    // 只读摘要，不发请求（除非项目 / 漫剧换了）
+      }
+      else renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
     }
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
     renderWork();
@@ -1978,15 +2009,27 @@
       if (!b || !b.exists){ briefDramaId = 0; applyEngineLock('', 0); return; }
       briefDramaId = b.dramaId || 0;
 
-      // 立项读回来了：画风可能就靠它，重画一次
+      // 立项读回来了：画风可能就靠它
       BRIEF_ART_STYLE = b.artStyleId || 0;
-      BRIEF_VALS = b;                      // 表单重画时按它填，不按「上次填过的」
-      if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
-      applyBriefToForm();                  // 重画之后再盖一次：重画用的是 localStorage，得把库里那份补回去
+      BRIEF_VALS = b;                      // 别处（自动带入剧名、画风）按它取值
 
+      /* 以前这里有一句 renderSteps(...) —— 而 renderSteps 又会调 loadBrief()，
+         两边互相叫，形成死循环：一切到第 1 步就永不停歇地重画、刷网络（这一页看见的「一直在刷新」）。
+         P0 那格已经没有表单要回填了，这句连同下面那句 applyBriefToForm 一起去掉。 */
       applyEngineLock(b.promptEngine || '', briefDramaId);
       if (b.promptEngine) say('提示词引擎已由立项锁定：' + b.promptEngine);
     }, 'json');
+  }
+
+  /* 立项是漫剧级的，一次就够：这一页每 2.5 秒会把当前卡片重画一遍，
+     重画一次就去拉一次立项只是在给自己刷接口。漫剧 / 项目换了才重新拉。 */
+  var briefLoadedKey = '';
+  function ensureBriefLoaded(){
+    if (!stages.length) return;
+    var k = String(DRAMA_ID || 0) + ':' + ($('#proj').val() || 0);
+    if (briefLoadedKey === k) return;
+    briefLoadedKey = k;
+    loadBrief();
   }
 
   $(function(){
