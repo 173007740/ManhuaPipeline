@@ -6,7 +6,8 @@ namespace ManhuaPipeline.Services;
 /// 系统报告（出图 / 视频 / Token）的统计查询。
 ///
 /// 统计口径：
-///   出图  —— CanvasNodes（画布节点），按 BoardId → CanvasBoards.UserId 归到当前用户；
+///   出图  —— CanvasNodes（画布节点，按 BoardId → CanvasBoards.UserId 归到当前用户）
+///            + AssetImageTasks（资产卡上点的出图 / 批量出图，UserId 就在这张表上）；
 ///   视频  —— VideoGenerationTasks，按 ProjectId → Projects.UserId 归到当前用户；
 ///   Token —— 只统计视频任务回传的 ResponseUsageTokens（与 token-report.html 现有口径一致）；
 ///            大模型对话的 token 目前没有落库，所以不在这里体现。
@@ -18,6 +19,7 @@ public partial class DbService
 
     public sealed record DayStat(string Date, int Total, int Done, int Failed, long Tokens);
     public sealed record TypeStat(string NodeType, int Total, int Done, int Failed);
+    /// <summary>出图清单一行。BoardName 这一列是「来源」：画布 · 画板名 / 资产出图 · 项目名。</summary>
     public sealed record ImageRow(int Id, string Title, string NodeType, string Status, string ErrorMsg,
                                   string UpdatedAt, string BoardName);
     public sealed record VideoProjectRow(int ProjectId, string ProjectName, int Total, int Done, int Failed,
@@ -38,21 +40,50 @@ public partial class DbService
         p.Value = from == DateTime.MinValue ? (object)DBNull.Value : from;
     }
 
-    /// <summary>出图统计：节点成败与分布。Status：done / failed / running 类 / idle（还没跑）。</summary>
+    /* 出图统计：两处来源合在一起算。
+         CanvasNodes     —— 无限画布上的节点出图（BoardId → CanvasBoards.UserId 归到当前用户）；
+         AssetImageTasks —— 资产卡上点的「出图 / 批量出图」（UserId 就在这张表上）。
+       以前只算画布那一半：资产卡上出了几百张，报告里一条也没有，看着像没出过图。
+       两边状态口径不一样（画布 done/failed，资产 completed/failed），下面统一成
+       done / failed / running / idle 四档再统计。 */
+    private const string ImageSourceSql = @"
+FROM (
+    SELECT CASE WHEN n.Status = 'done'   THEN 'done'
+                WHEN n.Status = 'failed' THEN 'failed'
+                WHEN n.Status IN ('running','queued','pending','processing') THEN 'running'
+                ELSE 'idle' END                     AS St,
+           n.CreatedAt                              AS CreatedAt,
+           ISNULL(n.NodeType,'')                    AS Kind
+    FROM CanvasNodes n JOIN CanvasBoards b ON b.Id = n.BoardId
+    WHERE b.UserId = @uid AND (@from IS NULL OR n.CreatedAt >= @from)
+    UNION ALL
+    SELECT CASE WHEN t.Status IN ('completed','succeeded') THEN 'done'
+                WHEN t.Status = 'failed' THEN 'failed'
+                WHEN t.Status IN ('running','queued','pending','processing') THEN 'running'
+                ELSE 'idle' END,
+           t.CreatedAt,
+           CASE t.Category WHEN 'characters'   THEN '资产·角色'
+                           WHEN 'props'        THEN '资产·道具'
+                           WHEN 'environments' THEN '资产·环境'
+                           WHEN 'effects'      THEN '资产·特效'
+                           ELSE ISNULL(t.Category, '资产') END
+    FROM AssetImageTasks t
+    WHERE t.UserId = @uid AND (@from IS NULL OR t.CreatedAt >= @from)
+) x";
+
     public ImageStats GetImageStats(int userId, int days)
     {
         using var conn = GetConn(); conn.Open();
         var from = FromDate(days);
-        var where = " WHERE b.UserId = @uid AND (@from IS NULL OR n.CreatedAt >= @from)";
 
         int total = 0, done = 0, failed = 0, running = 0, idle = 0;
         using (var cmd = new SqlCommand(@"
 SELECT COUNT(*),
-       ISNULL(SUM(CASE WHEN n.Status = 'done'   THEN 1 ELSE 0 END),0),
-       ISNULL(SUM(CASE WHEN n.Status = 'failed' THEN 1 ELSE 0 END),0),
-       ISNULL(SUM(CASE WHEN n.Status IN ('running','queued','pending','processing') THEN 1 ELSE 0 END),0),
-       ISNULL(SUM(CASE WHEN n.Status IS NULL OR n.Status = '' OR n.Status = 'idle' THEN 1 ELSE 0 END),0)
-FROM CanvasNodes n JOIN CanvasBoards b ON b.Id = n.BoardId" + where, conn))
+       ISNULL(SUM(CASE WHEN x.St = 'done'   THEN 1 ELSE 0 END),0),
+       ISNULL(SUM(CASE WHEN x.St = 'failed' THEN 1 ELSE 0 END),0),
+       ISNULL(SUM(CASE WHEN x.St = 'running' THEN 1 ELSE 0 END),0),
+       ISNULL(SUM(CASE WHEN x.St = 'idle'   THEN 1 ELSE 0 END),0)
+" + ImageSourceSql, conn))
         {
             cmd.Parameters.AddWithValue("@uid", userId);
             AddFrom(cmd, from);
@@ -66,11 +97,11 @@ FROM CanvasNodes n JOIN CanvasBoards b ON b.Id = n.BoardId" + where, conn))
 
         var byDay = new List<DayStat>();
         using (var cmd = new SqlCommand(@"
-SELECT CONVERT(varchar(10), n.CreatedAt, 23) AS D, COUNT(*),
-       ISNULL(SUM(CASE WHEN n.Status = 'done'   THEN 1 ELSE 0 END),0),
-       ISNULL(SUM(CASE WHEN n.Status = 'failed' THEN 1 ELSE 0 END),0)
-FROM CanvasNodes n JOIN CanvasBoards b ON b.Id = n.BoardId" + where + @"
-GROUP BY CONVERT(varchar(10), n.CreatedAt, 23) ORDER BY D", conn))
+SELECT CONVERT(varchar(10), x.CreatedAt, 23) AS D, COUNT(*),
+       ISNULL(SUM(CASE WHEN x.St = 'done'   THEN 1 ELSE 0 END),0),
+       ISNULL(SUM(CASE WHEN x.St = 'failed' THEN 1 ELSE 0 END),0)
+" + ImageSourceSql + @"
+GROUP BY CONVERT(varchar(10), x.CreatedAt, 23) ORDER BY D", conn))
         {
             cmd.Parameters.AddWithValue("@uid", userId);
             AddFrom(cmd, from);
@@ -80,11 +111,11 @@ GROUP BY CONVERT(varchar(10), n.CreatedAt, 23) ORDER BY D", conn))
 
         var byType = new List<TypeStat>();
         using (var cmd = new SqlCommand(@"
-SELECT n.NodeType, COUNT(*),
-       ISNULL(SUM(CASE WHEN n.Status = 'done'   THEN 1 ELSE 0 END),0),
-       ISNULL(SUM(CASE WHEN n.Status = 'failed' THEN 1 ELSE 0 END),0)
-FROM CanvasNodes n JOIN CanvasBoards b ON b.Id = n.BoardId" + where + @"
-GROUP BY n.NodeType ORDER BY COUNT(*) DESC", conn))
+SELECT x.Kind, COUNT(*),
+       ISNULL(SUM(CASE WHEN x.St = 'done'   THEN 1 ELSE 0 END),0),
+       ISNULL(SUM(CASE WHEN x.St = 'failed' THEN 1 ELSE 0 END),0)
+" + ImageSourceSql + @"
+GROUP BY x.Kind ORDER BY COUNT(*) DESC", conn))
         {
             cmd.Parameters.AddWithValue("@uid", userId);
             AddFrom(cmd, from);
@@ -158,12 +189,43 @@ GROUP BY CONVERT(varchar(10), t.CreatedAt, 23) ORDER BY D", conn))
         using var conn = GetConn(); conn.Open();
         var from = FromDate(days);
         var list = new List<ImageRow>();
+        /* 画布节点与资产出图任务混在一张清单里，按时间倒序取最近这些条。
+           末列是「来源」：画布那条写「画布 · 画板名」，资产那条写「资产出图 · 项目名」，
+           一眼看出这张图是画布上出的还是资产卡上出的。 */
         using (var cmd = new SqlCommand(@"
-SELECT TOP (@lim) n.Id, ISNULL(n.Title,''), ISNULL(n.NodeType,''), ISNULL(n.Status,''),
-       ISNULL(n.ErrorMsg,''), CONVERT(varchar(19), ISNULL(n.UpdatedAt, n.CreatedAt), 120), ISNULL(b.Title,'')
-FROM CanvasNodes n JOIN CanvasBoards b ON b.Id = n.BoardId
-WHERE b.UserId = @uid AND (@from IS NULL OR n.CreatedAt >= @from)
-ORDER BY ISNULL(n.UpdatedAt, n.CreatedAt) DESC", conn))
+SELECT TOP (@lim) Id, Title, Kind, St, ErrorMsg, At, Src
+FROM (
+    SELECT n.Id                                     AS Id,
+           ISNULL(n.Title,'')                       AS Title,
+           ISNULL(n.NodeType,'')                    AS Kind,
+           CASE WHEN n.Status = 'done'   THEN 'done'
+                WHEN n.Status = 'failed' THEN 'failed'
+                WHEN n.Status IN ('running','queued','pending','processing') THEN 'running'
+                ELSE 'idle' END                     AS St,
+           ISNULL(n.ErrorMsg,'')                    AS ErrorMsg,
+           ISNULL(n.UpdatedAt, n.CreatedAt)         AS At,
+           N'画布 · ' + ISNULL(b.Title,'')          AS Src
+    FROM CanvasNodes n JOIN CanvasBoards b ON b.Id = n.BoardId
+    WHERE b.UserId = @uid AND (@from IS NULL OR n.CreatedAt >= @from)
+    UNION ALL
+    SELECT t.TaskId,
+           ISNULL(t.AssetName,''),
+           CASE t.Category WHEN 'characters'   THEN N'资产·角色'
+                           WHEN 'props'        THEN N'资产·道具'
+                           WHEN 'environments' THEN N'资产·环境'
+                           WHEN 'effects'      THEN N'资产·特效'
+                           ELSE ISNULL(t.Category, N'资产') END,
+           CASE WHEN t.Status IN ('completed','succeeded') THEN 'done'
+                WHEN t.Status = 'failed' THEN 'failed'
+                WHEN t.Status IN ('running','queued','pending','processing') THEN 'running'
+                ELSE 'idle' END,
+           ISNULL(t.ErrorMessage,''),
+           ISNULL(t.FinishedAt, t.CreatedAt),
+           N'资产出图 · ' + ISNULL(pr.Title, N'项目 ' + CAST(t.ProjectId AS nvarchar(20)))
+    FROM AssetImageTasks t LEFT JOIN Projects pr ON pr.ProjectId = t.ProjectId
+    WHERE t.UserId = @uid AND (@from IS NULL OR t.CreatedAt >= @from)
+) u
+ORDER BY At DESC", conn))
         {
             cmd.Parameters.AddWithValue("@uid", userId);
             cmd.Parameters.AddWithValue("@lim", limit);

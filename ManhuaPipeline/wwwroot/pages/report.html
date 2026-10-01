@@ -163,8 +163,10 @@
                 return [esc(r.nodeType), num(r.total), num(r.done), num(r.failed)];
             }));
 
-            h += '<div style="font-size:15px;font-weight:600;color:var(--text);margin:18px 0 10px;">出图清单（最近 100 条）</div>';
-            h += table(["节点", "标题", "类型", "状态", "所属画布", "更新时间", "报错"], (im.recent || []).map(function (r) {
+            /* 来源：画布上出的写「画布 · 画板名」，资产卡上点的出图写「资产出图 · 项目名」——
+               以前清单里只有画布节点，资产卡出的图一条也没有，看着像没出过。 */
+            h += '<div style="font-size:15px;font-weight:600;color:var(--text);margin:18px 0 10px;">出图清单（画布 + 资产出图，最近 100 条）</div>';
+            h += table(["编号", "标题", "类型", "状态", "来源", "更新时间", "报错"], (im.recent || []).map(function (r) {
                 return ["#" + r.id, esc(r.title), esc(r.nodeType), statusTag(r.status), esc(r.boardName),
                         esc(r.updatedAt), r.errorMsg ? '<span style="color:#ef4444;">' + esc(r.errorMsg) + "</span>" : ""];
             }));
