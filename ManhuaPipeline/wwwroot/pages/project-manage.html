@@ -128,6 +128,8 @@ progress::-moz-progress-bar { background: var(--accent); }
     border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-size: 13px; font-family: inherit;
 }
 .pm-brief-span { grid-column: 1 / -1; }
+  /* 立项标题条：整条可点（展开 / 收起），指上去要有反馈，不然看不出能点 */
+  #briefToggle:hover { background: rgba(106,247,255,.05); }
 </style>
 </head>
 <body>
@@ -181,13 +183,25 @@ progress::-moz-progress-bar { background: var(--accent); }
   </section>
   <!-- 立项：漫剧级，一部漫剧一份。跑一次立项（P0），产出里的「N 集分集卡点」表
        解析出来就是 N 个单集项目——一集一个，标题取集名，集号存 EpisodeNumber。 -->
-  <section id="briefPanel" class="hud-panel" style="display:none;margin:16px 0 0;padding:16px 18px;">
-    <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px;">
-      <div>
-        <span class="pm-eyebrow">PRODUCTION BRIEF</span>
-        <h2 style="font-size:20px;margin:6px 0 4px;">立项</h2>
-        <p style="margin:0;font-size:12px;color:var(--muted);line-height:1.7;">一部漫剧填一次。跑完立项，模型给出每集的标题、三幕骨架与卡点，按它直接建出单集项目。</p>
+  <section id="briefPanel" class="hud-panel" style="display:none;margin:16px 0 0;padding:0;">
+    <!-- 立项内容默认收起：这一页主要看的是下面的项目列表，而立项一部剧只填一次，
+         摊开着每次进来都先被它挡住。状态（存没存、跑到哪一步）同步写在标题条右侧，收起也看得见。 -->
+    <div id="briefToggle" onclick="toggleBrief()" title="展开 / 收起立项内容"
+         style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 18px;cursor:pointer;">
+      <div style="display:flex;align-items:center;gap:10px;">
+        <span class="material-icons" id="briefArrow" style="color:var(--primary-light);">expand_more</span>
+        <div>
+          <span class="pm-eyebrow">PRODUCTION BRIEF</span>
+          <h2 style="font-size:18px;margin:2px 0 0;">立项</h2>
+        </div>
       </div>
+      <div id="briefSummary" style="font-size:12px;color:var(--muted);text-align:right;line-height:1.6;">未填写</div>
+    </div>
+    <div id="briefBody" style="display:none;padding:4px 18px 16px;border-top:1px solid var(--border);">
+      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0;">
+        <div>
+          <p style="margin:0;font-size:12px;color:var(--muted);line-height:1.7;">一部漫剧填一次。跑完立项，模型给出每集的标题、三幕骨架与卡点，按它直接建出单集项目。</p>
+        </div>
       <div style="display:flex;gap:8px;flex-wrap:wrap;">
         <button class="pm-hud-button" onclick="saveBrief()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">save</span> 保存立项</button>
         <button class="pm-hud-button" onclick="parseEpisodes()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">table_rows</span> 解析分集表</button>
@@ -223,7 +237,8 @@ progress::-moz-progress-bar { background: var(--accent); }
       <div><label>提示词引擎</label><select data-fk="promptEngine"><option value="SD">SD</option><option value="H3">H3</option></select></div>
       <div class="pm-brief-span"><label>角色（逗号分隔）</label><input type="text" data-fk="characters" placeholder="杨彦刚，刘如烟"></div>
     </div>
-    <div id="briefState" style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;"></div>
+      <div id="briefState" style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;"></div>
+    </div>
   </section>
   <div id="durationStatDetail" class="pm-detail"></div>
   <header class="pm-section-title">
@@ -441,6 +456,22 @@ function setField(el, v){
 
 /* 库里存的值才作数：清了缓存、换了台机器读回来还是那份立项。
    只盖有值的字段，没填过的保持默认。 */
+/* 立项内容默认收起，点标题条展开 / 收起。
+   收起时箭头朝右，展开时朝下，一眼看出当前是哪一态。 */
+function toggleBrief(){
+  var $b = $('#briefBody');
+  var willOpen = !$b.is(':visible');
+  $b.stop(true, true).slideToggle(160);
+  $('#briefArrow').text(willOpen ? 'expand_less' : 'expand_more');
+}
+
+/* 立项的状态写两处：表单底部（展开时看）与标题条右侧（收起时也要看得见 ——
+   跑立项那几分钟要是把面板一收就看不见进度，人就只能一直开着它）。 */
+function briefSay(html){
+  $('#briefState').html(html);
+  $('#briefSummary').html(html);
+}
+
 function loadBrief(){
   if(!currentDramaId) return;
   $.get("/api/director-agent/brief", { dramaId: currentDramaId }, function(b){
@@ -458,9 +489,9 @@ function loadBrief(){
         try { var arr = JSON.parse(v); if(arr && arr.length) el.val(arr.join('、')); } catch(e){}
       } else setField(el, v);
     });
-    $('#briefState').text('已存立项：' + (b.episodeCount ? b.episodeCount + ' 集' : '集数未填')
-                          + ' · ' + (b.episodeDuration ? b.episodeDuration + ' 秒/集' : '时长未填')
-                          + ' · 引擎 ' + (b.promptEngine || '未选'));
+    briefSay('已存立项：' + (b.episodeCount ? b.episodeCount + ' 集' : '集数未填')
+             + ' · ' + (b.episodeDuration ? b.episodeDuration + ' 秒/集' : '时长未填')
+             + ' · 引擎 ' + (b.promptEngine || '未选'));
   }, 'json');
 }
 
@@ -469,7 +500,7 @@ function saveBrief(){
   var body = $.extend({ dramaId: +currentDramaId }, briefFromForm());
   $.ajax({ url:'/api/director-agent/brief', method:'PUT', contentType:'application/json',
            data: JSON.stringify(body) })
-   .done(function(){ $('#briefState').text('立项已保存 · ' + new Date().toLocaleTimeString()); })
+   .done(function(){ briefSay('立项已保存 · ' + new Date().toLocaleTimeString()); })
    .fail(function(xhr){
      alert('存立项失败：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status));
    });
@@ -480,7 +511,7 @@ function parseEpisodes(){
   if(!currentDramaId) return;
   $.post('/api/drama/' + currentDramaId + '/episodes/parse', function(r){
     var items = r.items || [];
-    $('#briefState').html('解析出 <b style="color:var(--accent)">' + items.length + '</b> 集：'
+    briefSay('解析出 <b style="color:var(--accent)">' + items.length + '</b> 集：'
       + items.map(function(e){ return escHtml(e.title); }).join(' · '));
   }, 'json').fail(function(xhr){
     alert(((xhr.responseJSON && xhr.responseJSON.message) || '解析失败'));
@@ -492,11 +523,11 @@ function generateEpisodes(){
   if(!confirm('跑一次立项：会调模型，要点几分钟。\n\n跑完按产出的分集表建单集项目，'
               + '已有同集号的项目会被更新标题与简介（不会重复建）。\n\n继续？')) return;
   var $btn = $('#btnGenEpisodes').prop('disabled', true);
-  $('#briefState').text('立项跑起来了，这一步要点几分钟……');
+  briefSay('立项跑起来了，这一步要点几分钟……');
 
   $.ajax({ url:'/api/drama/' + currentDramaId + '/episodes/generate', method:'POST' })
    .done(function(r){
-     if(!r.runId){ $('#briefState').text('没启动'); $btn.prop('disabled', false); return; }
+     if(!r.runId){ briefSay('没启动'); $btn.prop('disabled', false); return; }
      pollRun(r.runId, $btn);
    })
    .fail(function(xhr){
@@ -511,14 +542,14 @@ function pollRun(runId, $btn){
   clearInterval(genTimer);
   genTimer = setInterval(function(){
     $.get('/api/director-agent/runs/' + runId, function(r){
-      $('#briefState').text('立项状态：' + (r.status||'') + ' · ' + (r.currentStage||'P0'));
+      briefSay('立项状态：' + (r.status||'') + ' · ' + (r.currentStage||'P0'));
       if(r.status === 'running' || r.status === 'await_confirm') return;
 
       clearInterval(genTimer);
       $btn.prop('disabled', false);
 
       if(r.status !== 'done'){
-        $('#briefState').text('立项没跑成（状态 ' + r.status + '）。'
+        briefSay('立项没跑成（状态 ' + r.status + '）。'
           + '产出原文留在运行记录里——重跑一次，或点「解析分集表」手工再来一遍。');
         return;
       }
@@ -526,7 +557,7 @@ function pollRun(runId, $btn){
       loadAllProjects(currentDramaId);
       $.get('/api/drama/' + currentDramaId + '/episodes', function(e){
         var n = ((e && e.items) || []).length;
-        $('#briefState').text('立项完成：分集提纲 ' + n + ' 集，单集项目已按集名建好。');
+        briefSay('立项完成：分集提纲 ' + n + ' 集，单集项目已按集名建好。');
       });
     }).fail(function(){ /* 网络抖一下不算失败，下一轮再问 */ });
   }, 4000);
