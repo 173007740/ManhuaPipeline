@@ -42,6 +42,7 @@
       <a href="#story"><i>03</i><span><b>故事设定</b><small>爽点、设定与整部剧本</small></span></a>
       <a href="#visual"><i>04</i><span><b>视觉方向</b><small>图片风格与影像调性</small></span></a>
       <a href="#production"><i>05</i><span><b>生产配置</b><small>提示词引擎</small></span></a>
+      <a href="#episodes"><i>06</i><span><b>生成分集</b><small>跑立项并建单集项目</small></span></a>
     </nav>
     <div class="pe-completion"><span>配置完整度 <b id="completionText">0%</b></span>
       <div><i id="completionBar" style="width:0%"></i></div><small>名称与简介填了就能建项目</small></div>
@@ -129,6 +130,20 @@
         </div>
         <p class="pe-hint">底层用哪个模型不在这一部剧里定 —— 由「配置中心」统一控制，
           这一部剧真正要自己定的生产参数就是<b>提示词引擎</b>。</p>
+      </section>
+
+      <!-- 06 生成分集：从项目管理页搬过来的那条链路。
+           立项参数在这一页填完，紧跟一步就能把它跑成分集提纲 + 单集项目，
+           不用再跑到项目管理页去找那颗按钮。 -->
+      <section class="pe-section panel" id="episodes">
+        <header><span>06</span><div><small>EPISODE BUILD</small><h2>生成分集</h2></div></header>
+        <p class="pe-hint">按上面这些立项参数跑一次 P0，模型给出每一集的标题、三幕骨架与卡点，
+          再按提纲直接建出单集项目。<b>要点几分钟</b>。已有同集号的项目会被更新标题与简介，不会重复建。</p>
+        <div id="epState" class="pe-hint" style="margin:12px 0">—</div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center">
+          <button class="pe-primary" id="btnGenEpisodes" type="button">跑立项并生成分集</button>
+          <a class="pe-secondary" id="lnkProjects" href="/pages/project-manage.html" style="display:none;text-decoration:none">去看项目 →</a>
+        </div>
       </section>
     </form>
   </section>
@@ -395,6 +410,56 @@
       });
       toast('已恢复上次没提交的草稿');
     }
+  }
+
+  /* ---------- 06 生成分集：立项参数填完就能接着跑，不用再换页面 ---------- */
+  var genTimer = null;
+  function loadEpisodes(then) {
+    if (!editing) return;
+    $.get('/api/drama/' + dramaId + '/episodes', function (e) {
+      var n = ((e && e.items) || []).length;
+      $('#epState').html('当前已建 <b>' + n + '</b> 集' + (n ? '（重跑会按集号更新标题与简介，不会重复建）' : ''));
+      if (n) $('#lnkProjects').attr('href', '/pages/project-manage.html?dramaId=' + dramaId).show();
+      if (then) then();
+    }).fail(function () { $('#epState').text('集数没读出来'); if (then) then(); });
+  }
+
+  document.getElementById('btnGenEpisodes').onclick = function () {
+    if (!editing) { toast('先把这部漫剧创建出来，再跑立项'); return; }
+    if (!confirm('跑一次立项：会调模型，要点几分钟。\n\n跑完按产出的分集表建单集项目，'
+      + '已有同集号的项目会被更新标题与简介（不会重复建）。\n\n继续？')) return;
+    var btn = this; btn.disabled = true; btn.textContent = '跑着呢…';
+    $('#epState').text('立项跑起来了，这一步要点几分钟……');
+
+    $.ajax({ url: '/api/drama/' + dramaId + '/episodes/generate', method: 'POST' })
+      .done(function (r) {
+        if (!r.runId) { $('#epState').text('没启动'); btn.disabled = false; btn.textContent = '跑立项并生成分集'; return; }
+        /* 立项在后台跑，HTTP 不等它 —— 隔几秒问一次状态 */
+        clearInterval(genTimer);
+        genTimer = setInterval(function () {
+          $.get('/api/director-agent/runs/' + r.runId, function (rr) {
+            $('#epState').text('立项状态：' + (rr.status || '') + ' · ' + (rr.currentStage || 'P0'));
+            if (rr.status === 'running' || rr.status === 'await_confirm') return;
+            clearInterval(genTimer);
+            btn.disabled = false; btn.textContent = '跑立项并生成分集';
+            if (rr.status !== 'done') {
+              $('#epState').text('立项没跑成（状态 ' + rr.status + '）。产出原文留在运行记录里——重跑一次，或到流水线页手工再来一遍。');
+              return;
+            }
+            loadEpisodes(function () { toast('立项完成，单集项目已按集名建好'); });
+          }).fail(function () { /* 网络抖一下不算失败，下一轮再问 */ });
+        }, 4000);
+      })
+      .fail(function (x) {
+        $('#epState').text('启动失败：' + ((x.responseJSON && x.responseJSON.message) || x.status || ''));
+        btn.disabled = false; btn.textContent = '跑立项并生成分集';
+      });
+  };
+
+  if (editing) loadEpisodes();
+  else {
+    $('#epState').text('先创建这部漫剧，回来这里就能跑立项生成分集');
+    $('#btnGenEpisodes').prop('disabled', true);
   }
 
   /* 侧栏步骤高亮 */
