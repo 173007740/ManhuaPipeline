@@ -11,11 +11,17 @@ public partial class DbService
     /// 立项是漫剧级的：一部漫剧立一次项，立项完成后再往下长出多个项目（≈ 一集一个）。
     /// 所以这里没有 ProjectId / EpisodeId——那两个是项目层、集层的东西，比立项低一级。
     /// </summary>
+    /// <summary>
+    /// VideoStyleId = 这部漫剧的「视觉风格」（VideoStyles 里挑的那条：整部剧的影像调性）。
+    /// 跟 ArtStyleId（图片风格，资产出图用）是两回事，两个字段各管一段：
+    /// 一个定画面长什么样（图），一个定影像什么调子（视频）。
+    /// </summary>
     public sealed record DramaBriefRow(
         int DramaId, string Status,
         string? Aspect, string? Delivery, string? Genre, int? ArtStyleId,
         string? Hook, string? Premise, string? Platform,
-        int? EpisodeCount, int? EpisodeDuration, string? CharactersJson, string? PromptEngine);
+        int? EpisodeCount, int? EpisodeDuration, string? CharactersJson, string? PromptEngine,
+        int? VideoStyleId = null);
 
     /// <summary>
     /// 项目 → 所属漫剧。立项挂在漫剧层，可流水线和页面手里拿的都是 projectId
@@ -38,7 +44,7 @@ public partial class DbService
         using var conn = GetConn(); conn.Open();
         using var cmd = new SqlCommand(@"
 SELECT DramaId, Status, Aspect, Delivery, Genre, ArtStyleId, Hook, Premise, Platform,
-       EpisodeCount, EpisodeDuration, CharactersJson, PromptEngine
+       EpisodeCount, EpisodeDuration, CharactersJson, PromptEngine, VideoStyleId
 FROM Dramas WHERE DramaId = @did", conn);
         cmd.Parameters.AddWithValue("@did", dramaId);
 
@@ -51,7 +57,7 @@ FROM Dramas WHERE DramaId = @did", conn);
             r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetString(7),
             r.IsDBNull(8) ? null : r.GetString(8), r.IsDBNull(9) ? null : r.GetInt32(9),
             r.IsDBNull(10) ? null : r.GetInt32(10), r.IsDBNull(11) ? null : r.GetString(11),
-            r.IsDBNull(12) ? null : r.GetString(12));
+            r.IsDBNull(12) ? null : r.GetString(12), r.IsDBNull(13) ? null : r.GetInt32(13));
     }
 
     /// <summary>
@@ -63,7 +69,8 @@ FROM Dramas WHERE DramaId = @did", conn);
                                 string? aspect, string? delivery, string? genre, int? artStyleId,
                                 string? hook, string? premise, string? platform,
                                 int? episodeCount, int? episodeDuration,
-                                string? charactersJson, string? promptEngine)
+                                string? charactersJson, string? promptEngine,
+                                int? videoStyleId = null)
     {
         if (dramaId <= 0) return 0;
         using var conn = GetConn(); conn.Open();
@@ -81,6 +88,7 @@ UPDATE Dramas SET
     EpisodeDuration = COALESCE(@ed,     EpisodeDuration),
     CharactersJson  = COALESCE(@chars,  CharactersJson),
     PromptEngine    = COALESCE(@engine, PromptEngine),
+    VideoStyleId    = COALESCE(@vsid,   VideoStyleId),
     UpdatedAt       = SYSDATETIME()
 WHERE DramaId = @did", conn);
         cmd.Parameters.AddWithValue("@did", dramaId);
@@ -96,6 +104,7 @@ WHERE DramaId = @did", conn);
         cmd.Parameters.AddWithValue("@ed", (object?)episodeDuration ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@chars", (object?)charactersJson ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@engine", (object?)promptEngine ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@vsid", (object?)videoStyleId ?? DBNull.Value);
         cmd.ExecuteNonQuery();
         return dramaId;
     }

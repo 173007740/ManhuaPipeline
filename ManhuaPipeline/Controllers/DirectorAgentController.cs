@@ -306,7 +306,8 @@ public class DirectorAgentController : ControllerBase
             status = b.Status, aspect = b.Aspect, delivery = b.Delivery, genre = b.Genre,
             artStyleId = b.ArtStyleId, hook = b.Hook, premise = b.Premise, platform = b.Platform,
             episodeCount = b.EpisodeCount, episodeDuration = b.EpisodeDuration,
-            charactersJson = b.CharactersJson, promptEngine = b.PromptEngine
+            charactersJson = b.CharactersJson, promptEngine = b.PromptEngine,
+            videoStyleId = b.VideoStyleId
         });
     }
 
@@ -325,7 +326,7 @@ public class DirectorAgentController : ControllerBase
 
         var id = _db.UpsertDramaBrief(did, body.Status, body.Aspect, body.Delivery, body.Genre,
             body.ArtStyleId, body.Hook, body.Premise, body.Platform, body.EpisodeCount,
-            body.EpisodeDuration, body.CharactersJson, body.PromptEngine);
+            body.EpisodeDuration, body.CharactersJson, body.PromptEngine, body.VideoStyleId);
         return Ok(new { dramaId = id });
     }
 
@@ -346,6 +347,8 @@ public class DirectorAgentController : ControllerBase
         public int? EpisodeDuration { get; set; }
         public string? CharactersJson { get; set; }
         public string? PromptEngine { get; set; }
+        /// <summary>视觉风格（VideoStyles）：整部漫剧的影像调性。跟 ArtStyleId（图片风格）各管一段。</summary>
+        public int? VideoStyleId { get; set; }
     }
 
     /// <summary>取某一步的完整产出（原文 + 结构化结果 + 本次实际加载了哪些规则）。</summary>

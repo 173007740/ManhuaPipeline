@@ -268,21 +268,40 @@
                      这几项是最常用的一批，交付形态 / 爽点 / 核心设定建完在漫剧页补。 -->
                 <div style="margin:14px 0 8px;font-size:12px;letter-spacing:1px;color:var(--primary-light);">立项参数（最常用几项，其余建完在漫剧页补）</div>
                 <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;">
+                    <!-- 画幅 / 目标平台以前是手填文本框，同一个平台会被写成「抖音」「douyin」「抖音短视频」好几种，
+                         下游按值比对时一条也对不上。改成下拉，取值与立项页、流水线那套一致。 -->
                     <div>
                         <label>画幅</label>
-                        <input type="text" data-fk="aspect" placeholder="16:9 横屏" style="width:100%;box-sizing:border-box;">
+                        <select data-fk="aspect" style="width:100%;box-sizing:border-box;">
+                            <option value="16:9 横屏">16:9 横屏</option>
+                            <option value="9:16 竖屏">9:16 竖屏</option>
+                            <option value="21:9 超宽">21:9 超宽</option>
+                        </select>
                     </div>
                     <div>
                         <label>目标平台</label>
-                        <input type="text" data-fk="platform" placeholder="抖音" style="width:100%;box-sizing:border-box;">
+                        <select data-fk="platform" style="width:100%;box-sizing:border-box;">
+                            <option value="全平台">全平台</option>
+                            <option value="抖音">抖音</option>
+                            <option value="快手">快手</option>
+                            <option value="视频号">视频号</option>
+                            <option value="B站">B站</option>
+                        </select>
                     </div>
                     <div>
                         <label>题材</label>
                         <input type="text" data-fk="genre" placeholder="如：宫崎骏自愈系" style="width:100%;box-sizing:border-box;">
                     </div>
+                    <!-- 两个风格库各管一段，名字要写清楚：
+                         图片风格（ImageStyles）—— 画面长什么样，资产出图时拼进提示词；
+                         视觉风格（VideoStyles）—— 影像什么调子，一部剧定一次。 -->
                     <div>
-                        <label>画风</label>
+                        <label>图片风格</label>
                         <select data-fk="artStyle" style="width:100%;box-sizing:border-box;"><option value="">未设置</option></select>
+                    </div>
+                    <div>
+                        <label>视觉风格</label>
+                        <select data-fk="videoStyle" style="width:100%;box-sizing:border-box;"><option value="">未设置</option></select>
                     </div>
                     <div>
                         <label>总集数</label>
@@ -453,10 +472,17 @@
                     $("#projectList").html(h);
                 });
             }
-            /* 画风下拉每次开弹窗都重拉一次：风格库是会长出来的，缓存一次就漏掉后加的 */
+            /* 两个风格下拉每次开弹窗都重拉一次：风格库是会长出来的，缓存一次就漏掉后加的。
+               图片风格 = 画面长什么样（资产出图拼进提示词），视觉风格 = 影像什么调子（一部剧定一次）。 */
             function loadDramaStyles() {
                 $.get("/api/image-style", function (list) {
                     var sel = $('#createDramaModal [data-fk="artStyle"]').empty().append('<option value="">未设置</option>');
+                    (list || []).forEach(function (s) {
+                        sel.append('<option value="' + s.styleId + '">' + escHtml(s.styleName || s.name || '') + '</option>');
+                    });
+                });
+                $.get("/api/video-style", function (list) {
+                    var sel = $('#createDramaModal [data-fk="videoStyle"]').empty().append('<option value="">未设置</option>');
                     (list || []).forEach(function (s) {
                         sel.append('<option value="' + s.styleId + '">' + escHtml(s.styleName || s.name || '') + '</option>');
                     });
@@ -466,6 +492,9 @@
                 $("#dramaTitleInput").val(""); $("#dramaDescInput").val(""); $("#dramaCoverInput").val(""); $("#coverPreview").hide();
                 $('#createDramaModal [data-fk]').val("");      // 立项字段一并清掉，别留着上一部的集数
                 $('#createDramaModal [data-fk="promptEngine"]').val("SD");
+                // 画幅 / 平台改成下拉后没有占位符可提示，默认值得显式给（跟流水线那套一致）
+                $('#createDramaModal [data-fk="aspect"]').val("16:9 横屏");
+                $('#createDramaModal [data-fk="platform"]').val("抖音");
                 $("#createDramaModal").css("display", "flex");
                 loadDramaStyles();
             }
@@ -483,7 +512,9 @@
                     episodeCount: num($('#createDramaModal [data-fk="episodeCount"]').val()),
                     episodeDuration: num($('#createDramaModal [data-fk="episodeDuration"]').val()),
                     charactersJson: chars.length ? JSON.stringify(chars) : null,
-                    promptEngine: $('#createDramaModal [data-fk="promptEngine"]').val() || null
+                    promptEngine: $('#createDramaModal [data-fk="promptEngine"]').val() || null,
+                    videoStyleId: $('#createDramaModal [data-fk="videoStyle"]').val()
+                        ? +$('#createDramaModal [data-fk="videoStyle"]').val() : null
                 };
             }
             function createDrama() {
