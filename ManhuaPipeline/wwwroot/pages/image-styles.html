@@ -17,7 +17,9 @@
           --t1:#dce8e5;--t2:#819594;--t3:#5c7474;
           --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
     body{font:13px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--t1)}
-    .container{max-width:1440px;padding:28px 24px 60px}
+    /* 这一页铺满屏宽：风格表有七列、两段提示词都很长，收在 1440 里读着憋屈。
+       顶栏本来就是拉通的（admin-theme 里 .nav-inner 的 max-width:none），只有正文区跟着一起放开。 */
+    .container{max-width:none;margin:0;padding:24px 32px 60px}
 
     /* ── 按钮：整页统一成工作台那颗（40px 高、1px 描边、左上右下各切 8px） ── */
     .btn{height:40px;padding:0 16px;font-size:12px;border-radius:0;
