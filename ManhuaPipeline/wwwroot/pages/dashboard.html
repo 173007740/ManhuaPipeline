@@ -318,6 +318,18 @@
                             <option value="H3">H3</option>
                         </select>
                     </div>
+                    <!-- 核心爽点 / 核心设定本来只有漫剧页（project-manage）上有，建漫剧时填不了 ——
+                         于是新建出来的漫剧这两项是空的，进漫剧页还得再补一次。
+                         这两项正是立项里最要紧的（看什么、讲什么），建的时候就该填。 -->
+                    <div style="grid-column:1 / -1;">
+                        <label>核心爽点</label>
+                        <input type="text" data-fk="hook" placeholder="一句话说清看什么" style="width:100%;box-sizing:border-box;">
+                    </div>
+                    <div style="grid-column:1 / -1;">
+                        <label>核心设定</label>
+                        <textarea data-fk="premise" rows="3" placeholder="这个世界观 / 这一部讲的是什么，几句话说清"
+                                  style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                    </div>
                     <!-- 加了视觉风格之后共九项，两列排下来最后一行只剩它一个，让它占满整行 -->
                     <div style="grid-column:1 / -1;">
                         <label>角色（逗号分隔）</label>
@@ -513,6 +525,8 @@
                     episodeCount: num($('#createDramaModal [data-fk="episodeCount"]').val()),
                     episodeDuration: num($('#createDramaModal [data-fk="episodeDuration"]').val()),
                     charactersJson: chars.length ? JSON.stringify(chars) : null,
+                    hook: $('#createDramaModal [data-fk="hook"]').val() || null,
+                    premise: $('#createDramaModal [data-fk="premise"]').val() || null,
                     promptEngine: $('#createDramaModal [data-fk="promptEngine"]').val() || null,
                     videoStyleId: $('#createDramaModal [data-fk="videoStyle"]').val()
                         ? +$('#createDramaModal [data-fk="videoStyle"]').val() : null
