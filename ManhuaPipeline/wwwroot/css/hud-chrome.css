@@ -1,69 +1,90 @@
-/* 全站统一的顶部导航皮肤（照 project-editor.html 那一版）
+/* 全站统一的顶部导航（照 /pages/project-editor.html 那一版 1:1）
    ------------------------------------------------------------------
-   project-editor.html 是新做的页面，顶部是 HUD 风格：72px 高、等宽字导航、
-   青色 hover 与红色当前项下划线、右上角一个呼吸状态灯。
-   其它页面用的是旧 navbar（56/64px、普通无衬线），两套装在同一站点里，
-   来回换页时顶栏会跳一下。
+   project-editor.html 是新做的页面，顶栏是 HUD 那一套：
+     最左一个 40px 的青色切角方块，里面一个「幕」字；
+     右边双行标题 MANGA ENGINE / AI COMIC DIRECTOR OS；
+     中间等宽字的导航，hover 变青、当前项底部一条红线；
+     最右一个呼吸的圆点 + AUTOSAVE ONLINE。
+   其余页面还是旧 navbar（56/64px、微软雅黑），两套装在一起，换页时顶栏会跳一下。
 
-   这个文件只管「顶部外壳」，不碰页面内容，也不改 background 特效——
-   所以用独立前缀 --hc-* / .hc-*，免得跟各页自己的变量与样式打架。
+   所以这里不再「迁就」各页原来的 logo 结构（改成比起谁更像），
+   而是由脚本把品牌区整个换成跟 project-editor 同一个 HTML，右边补上同样的状态区。
+   导航链接本身一个字不动 —— 各页去哪儿还是去哪儿，只是长得一样了。
 
-   选择器统一写成 .navbar.hc-topnav：各页自己的 .navbar 定义跟这里是同权重，
-   压不住的话顶栏会半旧半新（高度变了颜色没变之类），多一个类把它抬起来。
+   不改的：页面主体、布局、原来的容 positioning（顶栏本来就是 sticky，
+   这里不强改成 fixed，免得没预留 padding 的页面被压住一块）。
 
-   用法：页面 head 里引这一个 css + js/hud-chrome.js。
-   js 会给页面里的 .navbar 套上这套皮肤：链接一个都不动，只是换个样子。 */
+   用法：head 里引这一个 css + js/hud-chrome.js。
+   页面里没有 .navbar 时什么都不做（project-editor.html 自己就是成品，不用管）。 */
 :root{
-  --hc-bg:#02090f;
-  --hc-line:rgba(5,232,240,.36);
   --hc-cyan:#05e8f0;
   --hc-red:#ff3852;
   --hc-text:#e1edef;
   --hc-muted:#789096;
+  --hc-line:rgba(14,47,56,.9);
 }
 
-/* 外壳：高度与 project-editor 一致（72px），位置维持各页原来的 sticky */
-.navbar.hc-topnav{position:sticky;top:0;z-index:100;height:72px;background:var(--hc-bg);
-  border-bottom:1px solid var(--hc-line);box-shadow:0 12px 35px rgba(0,0,0,.55)}
-.navbar.hc-topnav .nav-inner{margin:0;height:100%;display:flex;align-items:center;gap:18px;
-  padding:0 25px;max-width:none}
+/* 外壳：数值跟 project-editor 的 .topnav 一致（72px 高、半透明深色、底部青线） */
+.navbar.hc-topnav{position:sticky;top:0;z-index:100;height:72px;padding:0 25px;margin:0;
+  background:rgba(2,9,15,.95);border-bottom:1px solid rgba(5,232,240,.36);
+  box-shadow:0 12px 35px rgba(0,0,0,.55);display:flex;align-items:center}
+.navbar.hc-topnav .nav-inner{width:100%;height:100%;max-width:none;margin:0;padding:0;
+  display:flex;align-items:center;gap:0;justify-content:flex-start}
 
-/* 品牌：project-editor 那边是「方块 + 双行标题」，这里给 logo 同样的容器感 */
-.navbar.hc-topnav .logo{display:flex;align-items:center;gap:12px;padding:0 14px 0 0;text-decoration:none;
-  border:1px solid transparent}
-.navbar.hc-topnav .logo>span:first-child{display:flex;align-items:center;gap:8px;
-  font-size:14px;letter-spacing:2px;color:var(--hc-text)}
-.navbar.hc-topnav .logo>span:last-child{font:8px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
-  color:#668188;letter-spacing:.04em}
+/* 品牌：切角方块 + 双行标题 */
+.hc-brand{display:flex;align-items:center;gap:12px;width:275px;flex:0 0 auto;
+  color:var(--hc-text);text-decoration:none}
+.hc-brand i{width:40px;height:40px;flex:0 0 40px;display:grid;place-items:center;
+  border:1px solid var(--hc-cyan);color:var(--hc-cyan);font:400 20px/1 inherit;font-style:normal;
+  clip-path:polygon(12% 0,88% 0,100% 12%,100% 88%,88% 100%,12% 100%,0 88%,0 12%)}
+.hc-brand b{display:block;font-size:16px;font-weight:700;letter-spacing:2px;color:var(--hc-text)}
+.hc-brand small{display:block;margin-top:3px;font:8px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+  color:#668188;letter-spacing:.06em;white-space:nowrap}
 
-/* 导航项：等宽、左右细线分隔、hover 变青、当前项底部一条红线 */
-.navbar.hc-topnav .nav-links{display:flex;align-items:center;margin-left:auto;gap:0}
-.navbar.hc-topnav .nav-links>a{display:flex;align-items:center;height:72px;padding:0 18px;
-  color:var(--hc-muted);text-decoration:none;position:relative;
-  font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;
-  border-left:1px solid rgba(14,47,56,.9);transition:color .15s,background .15s;white-space:nowrap}
-.navbar.hc-topnav .nav-links>a:hover{color:var(--hc-cyan);background:#041821}
+/* 导航项：等宽字、左细线分隔、hover 变青、当前项底部红线 */
+.navbar.hc-topnav .nav-links{display:flex;align-items:center;height:100%;margin-left:auto;gap:0}
+.navbar.hc-topnav .nav-links>a{display:flex;align-items:center;height:100%;padding:0 20px;
+  border-left:1px solid var(--hc-line);color:var(--hc-muted);text-decoration:none;position:relative;
+  font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;white-space:nowrap;
+  transition:color .15s,background .15s}
+.navbar.hc-topnav .nav-links>a:hover,
 .navbar.hc-topnav .nav-links>a.hc-active{color:var(--hc-cyan);background:#041821}
 .navbar.hc-topnav .nav-links>a.hc-active:after{content:"";position:absolute;left:14px;right:14px;bottom:0;
   height:2px;background:var(--hc-red);box-shadow:0 0 12px var(--hc-red)}
 .navbar.hc-topnav .nav-links>a .material-icons{font-size:15px;margin-right:6px}
 
-/* 右上角状态灯：project-editor 上写着 AUTOSAVE ONLINE。
-   这里套在原本的用户区 / 登录区外面——里面的字一个不改，只给它一个统一的青色外框与呼吸点。 */
-.navbar.hc-topnav .hc-system{display:flex;align-items:center;gap:8px;height:72px;padding:0 0 0 16px;
-  margin-left:6px;border-left:1px solid rgba(14,47,56,.9);color:var(--hc-cyan);
-  font:10px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
-.navbar.hc-topnav .hc-system a{color:var(--hc-cyan);text-decoration:none}
-.navbar.hc-topnav .hc-system a:hover{text-decoration:underline}
-.navbar.hc-topnav .hc-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 7px;
-  background:var(--hc-cyan);box-shadow:0 0 10px var(--hc-cyan);animation:hc-pulse 2.4s ease-in-out infinite}
+/* 右上角状态：呼吸点 + AUTOSAVE ONLINE（跟 project-editor 同一句） */
+.hc-status{margin-left:16px;padding-left:16px;display:flex;align-items:center;height:100%;
+  border-left:1px solid var(--hc-line);color:var(--hc-cyan);white-space:nowrap;
+  font:9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
+.hc-status i{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 7px;
+  margin-right:7px;background:var(--hc-cyan);box-shadow:0 0 10px var(--hc-cyan);
+  animation:hc-pulse 2.4s ease-in-out infinite}
 @keyframes hc-pulse{0%,100%{opacity:.45}50%{opacity:1}}
-@media(prefers-reduced-motion:reduce){.navbar.hc-topnav .hc-dot{animation:none}}
+@media(prefers-reduced-motion:reduce){.hc-status i{animation:none}}
 
-@media(max-width:1000px){
-  .navbar.hc-topnav,.navbar.hc-topnav .nav-inner,
-  .navbar.hc-topnav .nav-links>a,.navbar.hc-topnav .hc-system{height:60px}
-  .navbar.hc-topnav .nav-inner{padding:0 12px;gap:10px}
-  .navbar.hc-topnav .nav-links>a{padding:0 10px;font-size:10px}
-  .navbar.hc-topnav .logo>span:last-child{display:none}
+/* 各页自己的用户区 / 登录区：放在导航项末尾，跟着换一等宽小字的皮，链接与功能不动 */
+.navbar.hc-topnav .nav-links>#navUser,
+.navbar.hc-topnav .nav-links>#navGuest,
+.navbar.hc-topnav .nav-inner>#navUser,
+.navbar.hc-topnav .nav-inner>#navGuest{display:flex;align-items:center;gap:6px;height:100%;
+  margin-left:14px;padding-left:14px;border-left:1px solid var(--hc-line)}
+.navbar.hc-topnav #navUser a,.navbar.hc-topnav #navGuest a{display:inline-flex;align-items:center;gap:5px;
+  padding:0 6px;color:var(--hc-muted);text-decoration:none;
+  font:400 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;white-space:nowrap}
+.navbar.hc-topnav #navUser a:hover,.navbar.hc-topnav #navGuest a:hover{color:var(--hc-cyan)}
+.navbar.hc-topnav #navUser #btnLogout,.navbar.hc-topnav #navUser #btnLogout:hover{color:var(--hc-red)}
+.navbar.hc-topnav #navUser #userName{color:var(--hc-cyan)}
+
+@media(max-width:1400px){
+  .navbar.hc-topnav .nav-links>a{padding:0 13px}
+  .hc-brand{width:250px;flex-basis:250px}
+}
+@media(max-width:1100px){
+  .navbar.hc-topnav{padding:0 12px}
+  .hc-brand{width:auto;flex-basis:auto;gap:9px}
+  .hc-brand small{display:none}
+  .navbar.hc-topnav .nav-links>a{padding:0 9px;font-size:10px}
+  .navbar.hc-topnav .nav-links>a .material-icons{display:none}
+  .hc-status{font-size:8px;margin-left:8px;padding-left:8px}
 }
