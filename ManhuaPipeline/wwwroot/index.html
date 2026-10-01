@@ -4,429 +4,155 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>漫创引擎 · AI 叙事导演工作台</title>
-    <link rel="stylesheet" href="css/style.css">
-<link rel="stylesheet" href="css/admin-theme.css">
-    <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
+    <title>漫创引擎｜首页</title>
     <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
-    <style>
-        /* ========== Landing Page 专用样式 ========== */
-        .landing-hero {
-            position: relative;
-            min-height: calc(100vh - 64px);
-            overflow: hidden;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            text-align: center;
-            padding: 60px 24px;
-        }
-
-            .landing-hero::before {
-                content: '';
-                position: absolute;
-                inset: 0;
-                background: radial-gradient(ellipse 60% 50% at 50% 40%, rgba(5,232,240,0.15) 0%, transparent 70%);
-            }
-
-        .landing-hero-content {
-            position: relative;
-            z-index: 1;
-            max-width: 800px;
-        }
-
-        .landing-badge {
-            display: inline-block;
-            padding: 6px 18px;
-            border-radius: 50px;
-            background: rgba(5,232,240,0.15);
-            border: 1px solid rgba(5,232,240,0.25);
-            color: var(--primary-light);
-            font-size: 13px;
-            font-weight: 600;
-            letter-spacing: 1px;
-            margin-bottom: 24px;
-        }
-
-        .landing-hero h1 {
-            font-size: clamp(36px,6vw,68px);
-            font-weight: 800;
-            line-height: 1.12;
-            background: linear-gradient(135deg, #f1f1f5 30%, #6af7ff 70%, #3b82f6);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-            margin-bottom: 20px;
-        }
-
-        .landing-hero p {
-            font-size: clamp(16px,2vw,20px);
-            color: var(--text-muted);
-            max-width: 600px;
-            margin: 0 auto 36px;
-            line-height: 1.7;
-        }
-
-        .landing-hero .btn-group {
-            display: flex;
-            gap: 14px;
-            justify-content: center;
-            flex-wrap: wrap;
-        }
-
-        .landing-hero .btn {
-            padding: 14px 36px;
-            font-size: 16px;
-            font-weight: 600;
-            border-radius: 50px;
-            text-decoration: none;
-            display: inline-flex;
-            align-items: center;
-            gap: 8px;
-            transition: all 0.25s;
-        }
-
-        .landing-hero .btn-primary {
-            background: var(--accent-gradient);
-            color: #fff;
-            box-shadow: 0 4px 24px var(--glow-purple);
-        }
-
-            .landing-hero .btn-primary:hover {
-                transform: translateY(-2px);
-                box-shadow: 0 8px 32px var(--glow-purple);
-            }
-
-        .landing-hero .btn-outline {
-            background: transparent;
-            color: var(--text);
-            border: 1px solid var(--border-light);
-        }
-
-            .landing-hero .btn-outline:hover {
-                background: var(--bg-card-hover);
-                border-color: var(--primary-light);
-            }
-
-        /* ===== 功能特性区 ===== */
-        .features-section {
-            padding: 80px 28px;
-            max-width: 1200px;
-            margin: 0 auto;
-        }
-
-        .features-header {
-            text-align: center;
-            margin-bottom: 56px;
-        }
-
-            .features-header h2 {
-                font-size: clamp(28px,3.5vw,40px);
-                font-weight: 700;
-                margin-bottom: 12px;
-            }
-
-            .features-header p {
-                color: var(--text-muted);
-                font-size: 16px;
-                max-width: 560px;
-                margin: 0 auto;
-            }
-
-        .features-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(260px,1fr));
-            gap: 20px;
-        }
-
-        .feature-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: var(--radius-lg);
-            padding: 32px 24px;
-            transition: all 0.3s;
-            cursor: default;
-        }
-
-            .feature-card:hover {
-                background: var(--bg-card-hover);
-                border-color: rgba(5,232,240,0.3);
-                transform: translateY(-4px);
-                box-shadow: var(--shadow-md);
-            }
-
-        .feature-icon {
-            width: 48px;
-            height: 48px;
-            border-radius: 14px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            font-size: 22px;
-            margin-bottom: 18px;
-        }
-
-        .feature-card h3 {
-            font-size: 17px;
-            font-weight: 700;
-            margin-bottom: 8px;
-        }
-
-        .feature-card p {
-            font-size: 14px;
-            color: var(--text-muted);
-            line-height: 1.6;
-        }
-
-        /* ===== Footer ===== */
-        .landing-footer {
-            border-top: 1px solid var(--border);
-            padding: 40px 28px;
-            text-align: center;
-            color: var(--text-dim);
-            font-size: 13px;
-        }
-
-            .landing-footer a {
-                color: var(--text-muted);
-                text-decoration: none;
-                margin: 0 12px;
-            }
-
-                .landing-footer a:hover {
-                    color: var(--primary-light);
-                }
-    </style>
-
+    <!-- 首页同样走 project-editor / dashboard 那套 HUD 皮肤：
+         hud-static 是底座（.page / .panel / .primary / .status），hero 与两块内容区用参考站的 home-hero-v* 三个样式表。
+         不再引 style.css / admin-theme.css —— 那两套是给旧的 landing 页做的，跟这一套混用会撞色。
+         顶栏还是由 hud-chrome 统一改造（全过程不碰页面里的链接）。 -->
+    <link rel="stylesheet" href="/css/hud-static.css?v=3">
+    <link rel="stylesheet" href="/css/home-hero-v2.css?v=1">
+    <link rel="stylesheet" href="/css/home-hero-v3.css?v=1">
+    <link rel="stylesheet" href="/css/home-hero-v3-fixes.css?v=1">
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
     <script src="/js/hud-chrome.js?v=10"></script>
+    <style>
+        /* hero 图是本地资源（2.6M 的 png，画质感感值这个尺寸），第一屏自己会裁切 */
+        .hero-v3 > img { object-fit: cover; }
+
+        /* 原型第一屏只有文案，这里补两个去处：进来的人多半就是想去工作台或起一部新剧 */
+        .hero-v3-actions { display: flex; gap: 10px; margin-top: 26px; flex-wrap: wrap; }
+        .hero-v3-actions a {
+            display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; text-decoration: none;
+            font: 400 11px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .5px;
+            border: 1px solid rgba(140, 180, 200, .3); color: #a9c1c6; background: rgba(4, 18, 28, .5); }
+        .hero-v3-actions a:hover { color: var(--cyan); border-color: var(--cyan); background: #041821; }
+        .hero-v3-actions a.primary { border-color: transparent; }
+
+        /* 轮播与漫剧卡：里面的内容是从接口拉的真数据（出图记录 / 漫剧），
+           所以封面图走内联 background-image；没有图时用 CSS 渐变兜底，不至于是个黑洞 */
+        .image-slide { background-size: cover; background-position: center; }
+        .image-slide > div { text-shadow: 0 2px 14px #000a; }
+        .video-card { cursor: pointer; }
+        .video-cover { background-size: cover; background-position: center; }
+        .video-card.empty { opacity: .72; }
+        @media (prefers-reduced-motion: reduce) { .hero-v3 > img { animation: none !important; } }
+    </style>
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-inner">
-            <a href="/" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;">
-                <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
-                <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
-            </a>
-            <div class="nav-links" id="navLinks">
-                <a href="/" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
-                <a href="pages/dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
-                <a href="pages/config.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
-                <span id="navUser" style="display:none;">
-                    <a href="pages/asset-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 我的资产</a>
-                    <a href="pages/profile.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">settings</span> 个人设置</a>
-                    <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
-                    <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
-                </span>
-                <span id="navGuest">
-                    <a href="pages/register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
-                    <a href="pages/login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
-                </span>
-            </div>
+            <a href="/index.html" class="logo" style="text-decoration:none;">MANGA ENGINE</a>
+            <div class="nav-links" id="navLinks"></div>
+            <span id="navUser" style="display:none;"></span>
+            <span id="navGuest"></span>
         </div>
     </nav>
 
-    <!-- Hero -->
-    <section class="landing-hero">
-        <div id="particleWrap" style="position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
-        <div class="landing-hero-content">
-            <div class="landing-badge">✦ MANGA ENGINE · AI 驱动漫创引擎 · 一站式漫剧创作平台</div>
-            <h1>创意无界<br>引擎驱动<br>让每一个念头，都成为作品</h1>
-            <p>捕捉那个还没有完全成形的念头，从剧本到分镜，从角色到提示词，一站式漫剧创作平台。</p>
-            <div class="btn-group">
-                <a href="pages/dashboard.html" class="btn btn-primary btn-start"><span class="material-icons" style="font-size:inherit;vertical-align:middle">rocket_launch</span> 开始创作</a>
-                <a href="#features" class="btn btn-outline"><span class="material-icons" style="font-size:inherit;vertical-align:middle">info</span> 了解更多</a>
-            </div>
-        </div>
-    </section>
-
-    <!-- 功能特性 -->
-    <section class="features-section" id="features">
-        <div class="features-header">
-            <h2>核心功能</h2>
-            <p>从灵感到成品，全流程 AI 辅助创作</p>
-        </div>
-        <div class="features-grid">
-            <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(5,232,240,0.15);color:#6af7ff;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">lightbulb</span></div>
-                <h3>灵感工作台</h3>
-                <p>从想法建立创作项目，与 AI 一起梳理创意</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(0,170,180,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">smart_toy</span></div>
-                <h3>AI 创意梳理</h3>
-                <p>与 AI 对话式探索，将碎片灵感转化为完整剧本</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(16,185,129,0.15);color:#34d399;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span></div>
-                <h3>角色与视觉</h3>
-                <p>探索角色设计、资产管理与视觉风格定义</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(245,158,11,0.15);color:#fbbf24;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">layers</span></div>
-                <h3>提示词模板</h3>
-                <p>复用成熟的提示词结构，高效生成 AI 创作内容</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(236,72,153,0.15);color:#f472b6;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">videocam</span></div>
-                <h3>分镜制作</h3>
-                <p>管理剧本与分镜制作，分集分单元精细编排</p>
-            </div>
-            <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(139,92,246,0.15);color:#6af7ff;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check_circle</span></div>
-                <h3>内容管理</h3>
-                <p>提交并管理原创内容，追踪每个项目的进度</p>
-            </div>
-            <a href="pages/asset-library.html" style="text-decoration:none;display:block;">
-                <div class="feature-card">
-                    <div class="feature-icon" style="background:rgba(0,170,180,0.15);color:#60a5fa;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span></div>
-                    <h3>我的资产</h3>
-                    <p>查找已保存的创作资产，快速复用历史资源</p>
+    <main class="page home-v2">
+        <section class="hero hero-v3">
+            <img src="/img/museframe-hero.png" alt="AI 漫剧创作世界">
+            <div class="hero-v3-shade"></div>
+            <div class="hero-v3-copy">
+                <span class="hero-v3-kicker">AI COMIC FILMMAKING SYSTEM</span>
+                <h1><small>让灵感</small><strong>直接开拍。</strong></h1>
+                <p>故事、角色、场景、分镜与成片，在同一套智能导演工作流里持续生长。</p>
+                <div class="hero-v3-actions">
+                    <a class="primary" href="/pages/dashboard.html">进入工作台 <b>→</b></a>
+                    <a href="/pages/project-editor.html"><b>＋</b> 新建漫剧</a>
                 </div>
-            </a>
-            <div class="feature-card">
-                <div class="feature-icon" style="background:rgba(236,72,153,0.15);color:#f472b6;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">workspace_premium</span></div>
-                <h3>账户与权益</h3>
-                <p>管理资料与配置，享受持续更新的创作能力</p>
             </div>
-        </div>
-    </section>
+        </section>
 
-    <footer class="landing-footer">
-        <div style="margin-bottom:12px;">
-            <a href="pages/login.html">登录</a>
-            <a href="pages/register.html">注册</a>
-            <a href="#">用户协议</a>
-            <a href="#">隐私政策</a>
-        </div>
-        <div>
-            © 2025 漫创引擎 · AI 叙事导演工作台 mangaengine.cn
-        </div>
+        <!-- 这一排原本是静态的四张示例图（雨夜信号 / 月下巡游…）。换成系统里真实的最近出图记录，
+             』标题、来源、时间都是真的；封面图有就用，没有就留原有那套渐变底。 -->
+        <header class="section-title image-title">
+            <div><span>IMAGE GALLERY</span><h2>最近出图</h2></div>
+            <div class="carousel-controls">
+                <button type="button" data-carousel-prev aria-label="上一张">←</button>
+                <button type="button" data-carousel-next aria-label="下一张">→</button>
+            </div>
+        </header>
+        <section class="image-carousel" aria-label="最近出图轮播">
+            <div class="image-carousel-track" id="slideTrack"></div>
+        </section>
+
+        <!-- 原型这里是四部示例漫剧。换成我自己库里的漫剧：标题、简介、封面都是真的，点进去是那一部的合集页。 -->
+        <header class="section-title" id="videos">
+            <div><span>NOW PLAYING</span><h2>我的漫剧</h2></div>
+        </header>
+        <section class="video-grid" id="dramaGrid"></section>
+    </main>
+
+    <footer class="status">
+        <span>● ALL SYSTEMS OPERATIONAL</span>
+        <b>NODE <i id="nodeId">042</i></b>
+        <em>LOCAL WORKSPACE</em>
     </footer>
 
     <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
-    <script src="js/app.js?v=2"></script>
+    <script src="/js/app.js?v=2"></script>
+    <script src="/js/home-carousel.js?v=1" defer></script>
     <script>
-        // 登录检测：我的工作台 & 开始创作
+        function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+        function fmt(d) { return d ? String(d).slice(0, 10) : ""; }
+
         $(function () {
-            function checkLogin(btn, url) {
-                $.get("/api/auth/me", function () {
-                    window.location.href = url;
-                }).fail(function () {
-                    if (confirm("请先登录后再进入工作台\n\n点击「确定」前往登录页面")) {
-                        window.location.href = "pages/login.html";
-                    }
-                });
-            }
-            $("#btnWorkspace, .btn-start").on("click", function (e) {
-                e.preventDefault();
-                checkLogin($(this), $(this).attr("href"));
-            });
+            loadDramas();
+            loadSlides();
         });
-    </script>
-    <script>
-        // ========== 粒子动效 ==========
-        (function () {
-            var canvas = document.getElementById("particleCanvas");
-            canvas.style.top = "0";
-            canvas.style.width = "100%";
-            canvas.style.pointerEvents = "none";
-            if (!canvas) return;
-            var ctx = canvas.getContext("2d");
-            var W, H;
-            function resize() {
-                W = canvas.width = canvas.parentElement.parentElement.offsetWidth;
-                H = canvas.height = canvas.parentElement.parentElement.offsetHeight;
-            }
-            resize();
-            window.addEventListener("resize", resize);
 
-            var particles = [];
-            var COUNT = 70;
-            var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
-
-            for (var i = 0; i < COUNT; i++) {
-                particles.push({
-                    x: Math.random() * W,
-                    y: Math.random() * H,
-                    r: Math.random() * 2 + 1.2,
-                    dx: (Math.random() - 0.5) * 0.4,
-                    dy: (Math.random() - 0.5) * 0.4 - 0.15,
-                    color: colors[Math.floor(Math.random() * colors.length)],
-                    alpha: Math.random() * 0.4 + 0.15
-                });
-            }
-
-            var CONNECT_DIST = 130;
-
-            function anim() {
-                ctx.clearRect(0, 0, W, H);
-
-                for (var i = 0; i < COUNT; i++) {
-                    var p = particles[i];
-                    p.x += p.dx;
-                    p.y += p.dy;
-
-                    if (p.x < 0 || p.x > W) p.dx *= -1;
-                    if (p.y < 0 || p.y > H) p.dy *= -1;
-
-                    ctx.beginPath();
-                    ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-                    ctx.fillStyle = p.color + p.alpha + ")";
-                    ctx.fill();
-
-                    for (var j = i + 1; j < COUNT; j++) {
-                        var q = particles[j];
-                        var dx = p.x - q.x;
-                        var dy = p.y - q.y;
-                        var dist = Math.sqrt(dx * dx + dy * dy);
-                        if (dist < CONNECT_DIST) {
-                            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
-                            ctx.beginPath();
-                            ctx.moveTo(p.x, p.y);
-                            ctx.lineTo(q.x, q.y);
-                            ctx.strokeStyle = "rgba(5,232,240," + alpha + ")";
-                            ctx.lineWidth = 0.6;
-                            ctx.stroke();
-                        }
-                    }
+        /* 我的漫剧：取前四部。没数据时给四张占位卡（提示去建一部），
+           而不是照原型摆四部假剧 —— 首页写着别人编的名字，点进去又不是它，最让人困惑。 */
+        function loadDramas() {
+            $.get("/api/drama", function (list) {
+                list = list || [];
+                $("#nodeId").text(String(list.length).padStart(3, "0"));
+                if (!list.length) {
+                    $("#dramaGrid").html(
+                        "<article class='video-card panel empty' data-new><div class='video-cover'><button>＋</button></div>"
+                        + "<h3>还没有漫剧</h3><p>点这里创建第一部：填世界观、剧本素材与交付规格。</p></article>");
+                    $("#dramaGrid [data-new]").click(function () { location.href = "/pages/project-editor.html"; });
+                    return;
                 }
-                requestAnimationFrame(anim);
-            }
-            anim();
-        })();
+                var h = "";
+                list.slice(0, 4).forEach(function (dr) {
+                    var cover = dr.coverImage ? "background-image:url(" + dr.coverImage + ")" : "";
+                    h += "<article class='video-card panel' data-id='" + dr.dramaId + "' data-title='" + esc(dr.title) + "'>"
+                        + "<div class='video-cover' style='" + cover + "'><button>▶</button></div>"
+                        + "<h3>" + esc(dr.title) + "</h3>"
+                        + "<p>" + esc(dr.description || "暂无描述") + "</p></article>";
+                });
+                $("#dramaGrid").html(h);
+                $("#dramaGrid [data-id]").click(function () {
+                    location.href = "/pages/project-manage.html?dramaId=" + $(this).data("id")
+                                  + "&title=" + encodeURIComponent($(this).data("title") || "");
+                });
+            }).fail(function () { });
+        }
+
+        /* 最近出图：报告接口里那份 recent 是真实记录（近 30 天出图任务），取头几条当轮播内容。
+           没有图片 URL 这一列，所以封面沿用 home-hero 自带的四张渐变场景（scene-a ~ d）。 */
+        function loadSlides() {
+            $.get("/api/dashboard/report?days=30", function (r) {
+                var rec = (r && r.images && r.images.recent) || [];
+                if (!rec.length) {
+                    $("#slideTrack").html("<article class='image-slide scene-a'><div><span>GALLERY / 000</span>"
+                        + "<h3>还没有出图记录</h3><p>在某一集里跑「角色资产 / 道具资产」后，这里会按时间排出来</p></div></article>");
+                    return;
+                }
+                var tones = ["scene-a", "scene-b", "scene-c", "scene-d"];
+                var h = "";
+                rec.slice(0, 8).forEach(function (t, i) {
+                    var st = t.st === "done" ? "已完成" : t.st === "failed" ? "失败" : "进行中";
+                    h += "<article class='image-slide " + tones[i % tones.length] + "'>"
+                        + "<div><span>" + esc(t.src || "IMAGE").toUpperCase() + " / " + String(i + 1).padStart(3, "0") + "</span>"
+                        + "<h3>" + esc(t.title || "未命名任务") + "</h3>"
+                        + "<p>" + esc(t.kind || "") + " · " + st + " · " + fmt(t.updatedAt) + "</p></div></article>";
+                });
+                $("#slideTrack").html(h);
+            }).fail(function () { });
+        }
     </script>
 </body>
 </html>
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-

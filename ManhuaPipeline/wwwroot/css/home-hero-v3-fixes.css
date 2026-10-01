@@ -1,0 +1,46 @@
+@media (min-width:651px) and (max-width:900px){
+  .creation-grid{top:48%;width:92%;height:410px;grid-template-columns:1fr 1fr;grid-template-rows:120px repeat(3,1fr)}
+  .creation-grid .creation-main{grid-column:1/3;grid-row:auto}
+  .creation-grid>a:last-child{grid-column:1/3}
+}
+
+/* Gallery-first hero: the homepage presents the world, the workspace handles tools. */
+.hero-v3-copy{top:43%;transform:translate(-50%,-50%)}
+.hero-v3-copy h1{margin:18px 0 16px}
+.hero-v3-copy h1 small,.hero-v3-copy h1 strong{font-size:clamp(58px,6.5vw,104px)}
+.hero-v3-copy p{font-size:12px;line-height:1.8;text-shadow:0 2px 12px #000}
+.hero-v3-shade{background:linear-gradient(180deg,#01070bd9 0%,#01070b18 32%,#01070b26 60%,#01070be8 100%),radial-gradient(ellipse at 50% 43%,transparent 0 28%,#01070b3d 62%,#01070b9e 100%)}
+
+/* Full-bleed, half-screen cinematic banner. */
+.home-v2{padding:72px 0 48px}
+.hero-v3{width:100%;height:52vh;min-height:470px;max-height:650px;border-left:0;border-right:0}
+.hero-v3>img{object-position:center 44%}
+.hero-v3-copy{top:45%}
+.hero-v3-copy h1{margin:10px 0 10px}
+.hero-v3-copy h1 small,.hero-v3-copy h1 strong{font-size:clamp(48px,5.4vw,86px)}
+.hero-v3-bottom{bottom:18px}
+.showcase-rail,.home-v2>.home-strip,.home-v2>.section-title,.home-v2>.gallery,.home-v2>.video-grid{margin-left:clamp(18px,2.4vw,46px);margin-right:clamp(18px,2.4vw,46px)}
+
+/* Borderless cinematic blend into the black page. */
+.hero-v3{border:0}
+.hero-v3-frame{display:none}
+.hero-v3-meta{border-bottom:0}
+.hero-v3:before{display:none}
+.hero-v3-shade{background:linear-gradient(rgba(2,8,14,.46) 0,transparent 150px),linear-gradient(90deg,rgba(2,8,14,.68),transparent 25%,transparent 75%,rgba(2,8,14,.68)),linear-gradient(transparent 55%,#02080e 100%)}
+.hero-v3-copy{text-shadow:0 3px 28px #000}
+
+/* 16:9 horizontal image carousel */
+.home-v2>.image-title,.home-v2>.image-carousel{margin-left:clamp(18px,2.4vw,46px);margin-right:clamp(18px,2.4vw,46px)}
+.image-title{align-items:flex-end}.carousel-controls{display:flex;gap:8px}.carousel-controls button{width:40px;height:34px;border:1px solid #24545b;background:#031016;color:#91eee4;font-size:16px;cursor:pointer;transition:.2s}.carousel-controls button:hover{border-color:#6ef8e8;background:#082026}.image-carousel{overflow:hidden}.image-carousel-track{display:flex;gap:12px;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;scrollbar-width:none}.image-carousel-track::-webkit-scrollbar{display:none}.image-slide{position:relative;flex:0 0:min(620px,58vw);aspect-ratio:16/9;scroll-snap-align:start;overflow:hidden;background-size:cover;background-position:center;border:1px solid #1b4147}.image-slide:before{content:"";position:absolute;inset:0;background:linear-gradient(180deg,transparent 42%,#02080edb 100%),linear-gradient(90deg,#02080e5c,transparent 55%);transition:.35s}.image-slide:hover:before{background:linear-gradient(180deg,transparent 52%,#02080ee8 100%)}.image-slide>div{position:absolute;z-index:1;left:22px;right:22px;bottom:18px}.image-slide span{font:7px ui-monospace,monospace;letter-spacing:1.6px;color:#73dcd2}.image-slide h3{margin:6px 0 5px;font-size:22px}.image-slide p{margin:0;color:#829694;font-size:9px}.image-slide.scene-a{background-image:url('/museframe-hero.png');background-position:center 45%}.image-slide.scene-b{background-image:linear-gradient(110deg,#123b4a44,#491d3244),url('/binary-character-reference.png')}.image-slide.scene-c{background-image:linear-gradient(135deg,#123e51,#040b12 62%,#201331)}.image-slide.scene-d{background-image:linear-gradient(135deg,#56431d,#071017 58%,#1c4050)}
+@media(max-width:650px){.image-slide{flex-basis:84vw}.image-slide h3{font-size:18px}.carousel-controls button{width:36px}}
+
+@media(max-width:650px){
+  .home-v2{padding-top:72px}
+  .hero-v3{height:56vh;min-height:480px}
+  .hero-v3-copy{top:40%}
+  .hero-v3-copy h1 small,.hero-v3-copy h1 strong{font-size:52px}
+}
+
+/* Keep carousel cards from shrinking into thumbnails. */
+.image-slide{flex:0 0 58vw;max-width:620px}
+@media(max-width:650px){.image-slide{flex:0 0 84vw;max-width:none}}
