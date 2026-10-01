@@ -57,9 +57,10 @@
         .dv3-art > i { text-shadow: 0 0 30px #26e9e866; }
         #dramaEmpty a { text-decoration: none; }
 
-        /* 工作台顶部的工具 shortcut：一排描边小方块（资产库 / 无限画布 / …），
-           样子跟「编辑设置」那类链接同源，一组八个排一行，窄了自动折。 */
-        .dv3-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+        /* 这一排回到标题右下角：八个 tool shortcut 在上，「新建漫剧」在下，整体右对齐。
+           一行放得下就一行，放不下往下折（.dv3-quick 本身也 flex-wrap）。 */
+        .dv3-head-side { display: flex; flex-direction: column; align-items: flex-end; gap: 12px; }
+        .dv3-quick { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
         .dv3-quick a {
             display: inline-flex; align-items: center; gap: 6px; padding: 9px 13px; text-decoration: none;
             color: #a9c1c6; background: rgba(4, 18, 28, .5); border: 1px solid rgba(140, 180, 200, .28);
@@ -74,6 +75,13 @@
             color:#a9c1c6;border:1px solid rgba(140,180,200,.32);background:transparent;
             font:10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;white-space:nowrap}
         a.dv3-edit:hover, #btnEditDrama:hover{color:var(--cyan);border-color:var(--cyan)}
+
+        /* 窄屏时 dv3-head 自己会折成上下两行（dv3 自带这条），右边这坨跟着左对齐，
+           不然八个块还会吊在右侧、跟标题各行其道 */
+        @media (max-width: 1000px) {
+            .dv3-head-side { align-items: flex-start; width: 100%; }
+            .dv3-quick { justify-content: flex-start; }
+        }
 
         /* 列表里的过滤 / 排序按钮属于 dv3 的那排，但没有 hover，补一下 */
         .dv3-registry > header button:hover { color: #8afff2; border-color: #28716f; }
@@ -101,22 +109,25 @@
                     <h1 id="greet">继续创造你的世界。</h1>
                     <p>项目进度、生产任务和最近动态，都集中在这里。</p>
                 </div>
-                <button class="primary" id="btnCreate"><b>＋</b> 新建漫剧</button>
+                <!-- 右侧：工具 shortcut + 主按钮。原来这排是放在标题下面横贯整行的，
+                     用户要回到旧版的位置（跟以前 .head-actions 一样在右上角）。 -->
+                <div class="dv3-head-side">
+                    <!-- 原来那一排快捷入口（v1.30.4 换版时漏了）：资产库 / 无限画布 / 技能库 / 打斗库 /
+                         运镜原子库 / 系统报告 / 音色库 / 作品展示。它们跟顶栏那三项是两回事 ——
+                         顶栏定的是「只放三个」，这些是工作台自己的工具 shortcut，照旧新标签页打开。 -->
+                    <nav class="dv3-quick">
+                        <a href="asset-library.html" target="_blank"><span class="material-icons">folder_open</span>资产库</a>
+                        <a href="canvas.html" target="_blank"><span class="material-icons">gesture</span>无限画布</a>
+                        <a href="skill-library.html" target="_blank"><span class="material-icons">bolt</span>技能库</a>
+                        <a href="fight-library.html" target="_blank"><span class="material-icons">sports_martial_arts</span>打斗库</a>
+                        <a href="camera-atom-library.html" target="_blank"><span class="material-icons">movie_filter</span>运镜原子库</a>
+                        <a href="report.html" target="_blank"><span class="material-icons">assessment</span>系统报告</a>
+                        <a href="voice-library.html" target="_blank"><span class="material-icons">mic</span>音色库</a>
+                        <a href="works.html" target="_blank"><span class="material-icons">palette</span>作品展示</a>
+                    </nav>
+                    <button class="primary" id="btnCreate"><b>＋</b> 新建漫剧</button>
+                </div>
             </header>
-
-            <!-- 原来那一排快捷入口（v1.30.4 换版时漏了）：资产库 / 无限画布 / 技能库 / 打斗库 /
-                 运镜原子库 / 系统报告 / 音色库 / 作品展示。它们跟顶栏那三项是两回事 ——
-                 顶栏定的是「只放三个」，这些是工作台自己的工具 shortcut，照旧新标签页打开。 -->
-            <nav class="dv3-quick">
-                <a href="asset-library.html" target="_blank"><span class="material-icons">folder_open</span>资产库</a>
-                <a href="canvas.html" target="_blank"><span class="material-icons">gesture</span>无限画布</a>
-                <a href="skill-library.html" target="_blank"><span class="material-icons">bolt</span>技能库</a>
-                <a href="fight-library.html" target="_blank"><span class="material-icons">sports_martial_arts</span>打斗库</a>
-                <a href="camera-atom-library.html" target="_blank"><span class="material-icons">movie_filter</span>运镜原子库</a>
-                <a href="report.html" target="_blank"><span class="material-icons">assessment</span>系统报告</a>
-                <a href="voice-library.html" target="_blank"><span class="material-icons">mic</span>音色库</a>
-                <a href="works.html" target="_blank"><span class="material-icons">palette</span>作品展示</a>
-            </nav>
 
             <section class="dv3-overview">
                 <article class="dv3-feature panel" id="featureCard">
