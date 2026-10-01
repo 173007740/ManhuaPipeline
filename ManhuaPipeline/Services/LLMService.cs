@@ -717,13 +717,12 @@ public class LLMService
            .Append(AssetPromptTemplate.CategoryName(category))
            .Append("」资产写一条可直接交给文生图模型的中文提示词。\n");
         sys.Append("输出要求：只输出这一条提示词本身，不要编号、不要标题、不要解释、不要 Markdown、不要引号。\n");
-        /* 字数：接了流水线依据（projectContext）时放宽到 150~320 字。
-           写死 60~160 字时，台账上定好的规格根本写不下 —— 实测「外婆旧木铁皮工具箱」补出来 163 字，
-           把「箱盖半开可见内部工具 / 箱底拖行刮痕 / 磕地弹开状态」全丢了，
-           跟流水线那批（同集其他道具 237~283 字）明显不是一个口径。 */
+        /* 不设字数：写死上限（先是 60~160，放宽到 150~320）都在逼模型砍细节 ——
+           实测「外婆旧木铁皮工具箱」被砍到只剩笼统外形，「箱盖半开可见内部工具 /
+           箱底拖行刮痕 / 磕地弹开状态」全丢了，跟流水线那批（同集其他道具 237~283 字）对不上。
+           该多长由这条资产本身有多少可写决定：把台账点到的每一条都写全为准。 */
         sys.Append("提示词只描述该资产本体的视觉信息（外形、结构、材质、颜色、光泽、细节与关键特征），")
-           .Append(string.IsNullOrWhiteSpace(projectContext) ? "60~160 字" : "150~320 字")
-           .Append("，一条连贯中文。\n");
+           .Append("字数不限，以写全为准，但仍是一条连贯中文，不要写成编号条目。\n");
         if (!string.IsNullOrWhiteSpace(template.RuleText))
             sys.Append("必须遵守的类别规则：\n").Append(template.RuleText.Trim()).Append('\n');
         if (!string.IsNullOrWhiteSpace(template.StyleLock))
