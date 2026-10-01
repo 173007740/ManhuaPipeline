@@ -97,6 +97,38 @@ WHERE p.ProjectId = @pid
     }
 
     /// <summary>存分集提纲（覆盖式）。传空列表即清空。</summary>
+    /// <summary>立项里填的总集数（Dramas.EpisodeCount）。没填或列不存在返回 0 —— 0 表示不限。</summary>
+    public int GetDramaEpisodeCount(int dramaId)
+    {
+        if (dramaId <= 0) return 0;
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("SELECT EpisodeCount FROM Dramas WHERE DramaId=@did", conn);
+        cmd.Parameters.AddWithValue("@did", dramaId);
+        try
+        {
+            var v = cmd.ExecuteScalar();
+            return v == null || v == DBNull.Value ? 0 : Convert.ToInt32(v);
+        }
+        catch (Microsoft.Data.SqlClient.SqlException) { return 0; }
+    }
+
+    /// <summary>
+    /// 按立项填的总集数截断提纲：人在立项里写「1 集」，解析出来五条就只留第一条。
+    ///
+    /// 为什么必须有这道闸：解析器再聪明也只是读模型写的东西，模型完全可能心里按十二集写。
+    /// 「总集数」是人在立项表单里亲手填的硬值，它该压过模型的发挥 ——
+    /// 否则人看到的就是「我明明写的 1 集，怎么长出 5 集」（dramaId=27 那次）。
+    ///
+    /// 存提纲之前就要截断：那份 JSON 是「解析分集表」再建项目时的输入，
+    /// 留着多余的条目，下一次点那颗按钮又会长回来。
+    /// </summary>
+    public List<EpisodeOutline> ClampEpisodeOutline(int dramaId, List<EpisodeOutline> outlines)
+    {
+        if (outlines == null || outlines.Count == 0) return new List<EpisodeOutline>();
+        var limit = GetDramaEpisodeCount(dramaId);
+        return limit > 0 && outlines.Count > limit ? outlines.Take(limit).ToList() : outlines;
+    }
+
     public void SaveEpisodeOutline(int dramaId, IReadOnlyList<EpisodeOutline> outlines)
     {
         if (dramaId <= 0) return;

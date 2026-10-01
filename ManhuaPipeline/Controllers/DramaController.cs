@@ -154,7 +154,7 @@ public class DramaController : ControllerBase
         // 立项产出归漫剧：解析的同一份原文也写进 Dramas，每一集按 dramaId 就能读到它
         _db.SaveDramaP0Result(id, step.StepId, step.OutputText);
 
-        var list = EpisodeOutlineParser.Parse(step.OutputText);
+        var list = _db.ClampEpisodeOutline(id, EpisodeOutlineParser.Parse(step.OutputText));
         if (list.Count == 0)
             return BadRequest(new { message = "这次 P0 产出里没找到分集表。重跑一次立项，或在项目里手工建" });
 
@@ -172,6 +172,9 @@ public class DramaController : ControllerBase
         var list = _db.GetEpisodeOutline(id);
         if (list.Count == 0)
             return BadRequest(new { message = "还没有分集提纲：先跑立项，或点「解析分集表」" });
+
+        // 按立项里填的总集数截一刀：填 1 集就只该有 1 集
+        list = _db.ClampEpisodeOutline(id, list);
 
         var (created, updated) = _db.BuildEpisodeProjects(uid, id, list);
         return Ok(new { created, updated, total = list.Count });
@@ -224,6 +227,9 @@ public class DramaController : ControllerBase
                     _db.UpdateSkillRun(runId, "P0", "error");
                     return;
                 }
+
+                // 按立项里填的总集数截断：这份产出万一写了更多集，也不该越过人填的那个数
+                list = _db.ClampEpisodeOutline(id, list);
 
                 _db.SaveEpisodeOutline(id, list);
                 _db.BuildEpisodeProjects(uid, id, list);
