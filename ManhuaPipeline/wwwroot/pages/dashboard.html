@@ -57,6 +57,14 @@
         .dv3-art > i { text-shadow: 0 0 30px #26e9e866; }
         #dramaEmpty a { text-decoration: none; }
 
+        /* 「编辑设置」：卡片 footer 里那条链接给个描边小小的样子，跟旁边的实心按钮分得开；
+           大卡里那一个同款。 */
+        a.dv3-edit, #btnEditDrama{
+            display:inline-flex;align-items:center;padding:10px 14px;text-decoration:none;
+            color:#a9c1c6;border:1px solid rgba(140,180,200,.32);background:transparent;
+            font:10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em;white-space:nowrap}
+        a.dv3-edit:hover, #btnEditDrama:hover{color:var(--cyan);border-color:var(--cyan)}
+
         /* 列表里的过滤 / 排序按钮属于 dv3 的那排，但没有 hover，补一下 */
         .dv3-registry > header button:hover { color: #8afff2; border-color: #28716f; }
         #dramaEmpty { margin-top: 20px; }
@@ -106,6 +114,7 @@
                         <div class="dv3-progress"><i id="featureBar" style="width:0"></i><b id="featurePct">0%</b></div>
                         <footer>
                             <button class="primary" id="btnContinue">继续制作 <b>→</b></button>
+                            <a id="btnEditDrama" href="#">编辑设置</a>
                             <span id="featureFoot"></span>
                         </footer>
                     </div>
@@ -248,6 +257,7 @@
                 $("#featureBar").css("width", "0"); $("#featurePct").text("0%");
                 $("#btnContinue").off("click").click(function () { location.href = "/pages/project-editor.html"; });
                 $("#featureFoot").text("");
+                $("#btnEditDrama").hide().attr("href", "#");
                 return;
             }
             var ps = projs[dr.dramaId] || [];
@@ -272,6 +282,8 @@
             $("#btnContinue").off("click").click(function () {
                 location.href = "project-manage.html?dramaId=" + dr.dramaId + "&title=" + encodeURIComponent(dr.title);
             });
+            // 编辑设置 → 新建 / 编辑漫剧那页（改名称、立项、整部剧本素材）
+            $("#btnEditDrama").show().attr("href", "project-editor.html?dramaId=" + dr.dramaId);
             $("#featureFoot").text((dr.updatedAt ? "更新于 " + fmt(dr.updatedAt) : "刚刚创建") + " · " + (ps.length ? ps.length + " 个单集在推" : "还没有单集"));
         }
 
@@ -297,6 +309,7 @@
                     + "<p>" + esc(dr.description || "暂无描述") + "</p>"
                     + "<div><i style='width:" + pct + "%'></i></div>"
                     + "<footer><small>DRAMA #" + dr.dramaId + "</small>"
+                    + "<a class='dv3-edit' href='project-editor.html?dramaId=" + dr.dramaId + "' title='改名称 / 立项 / 剧本素材'>编辑设置</a>"
                     + "<button data-open='" + dr.dramaId + "'>打开项目 →</button></footer>"
                     + "</div></article>";
             });
