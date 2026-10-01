@@ -29,7 +29,9 @@ public class VideoStyleController : ControllerBase
             return BadRequest(new { message = "风格名称不能为空" });
         if (string.IsNullOrWhiteSpace(req.StylePrompt))
             return BadRequest(new { message = "风格提示词不能为空" });
-        var id = _db.SaveVideoStyle(req.StyleId, req.StyleName.Trim(), req.StylePrompt.Trim());
+        var id = _db.SaveVideoStyle(req.StyleId, req.StyleName.Trim(), req.StylePrompt.Trim(),
+                                    string.IsNullOrWhiteSpace(req.StyleNegative) ? null : req.StyleNegative!.Trim(),
+                                    string.IsNullOrWhiteSpace(req.Category) ? null : req.Category!.Trim());
         return Ok(new { styleId = id, message = "保存成功" });
     }
 
@@ -48,4 +50,8 @@ public class SaveVideoStyleRequest
     public int? StyleId { get; set; }
     public string StyleName { get; set; } = "";
     public string StylePrompt { get; set; } = "";
+    /// <summary>分类（可空）：只用来分组显示，不进提示词。</summary>
+    public string? Category { get; set; }
+    /// <summary>这条风格自带的反向提示词（可空：老风格没有，出图时负面词照旧）。</summary>
+    public string? StyleNegative { get; set; }
 }

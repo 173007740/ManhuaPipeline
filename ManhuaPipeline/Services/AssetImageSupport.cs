@@ -100,6 +100,29 @@ public static class AssetImageSupport
     }
 
     /// <summary>
+    /// 取项目画风自带的反向提示词（Projects.StyleId → VideoStyles.StyleNegative）。
+    /// 项目没单独设「资产画风」时，出图用的画风就是这条视频风格（见 GetProjectStylePrompt），
+    /// 反向也得跟着从同一条上取，不然项目用的是「苔岬映画体」这类视频风格时，反向词永远取不到。
+    /// </summary>
+    public static string? GetProjectStyleNegative(DbService db, ILogger logger, int projectId)
+    {
+        try
+        {
+            var project = db.GetProjectById(projectId);
+            if (project?.StyleId is int styleId)
+            {
+                var style = db.GetVideoStyle(styleId);
+                if (!string.IsNullOrWhiteSpace(style?.StyleNegative)) return style!.StyleNegative!.Trim();
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[AssetImage] 取项目画风反向提示词失败 projectId={ProjectId}", projectId);
+        }
+        return null;
+    }
+
+    /// <summary>
     /// 取项目「资产画风」自带的反向提示词（ImageStyles.StyleNegative），取法与正向那条完全一致。
     /// 风格预设里每段正向都配了段反向（该避开什么：真人照片 / 蜡像皮肤 / 塑料材质 / 错误肢体 / 水印…），
     /// 只把正向拼进去、反向留在库里等于丢一半。老风格没有这一列，返回 null，负面词照旧。
@@ -131,7 +154,8 @@ public static class AssetImageSupport
         {
             logger.LogWarning(ex, "[AssetImage] 取项目资产画风反向提示词失败 projectId={ProjectId}", projectId);
         }
-        return null;
+        // 项目没设资产画风时，出图用的画风就是那条视频风格，反向词也该从它身上取
+        return GetProjectStyleNegative(db, logger, projectId);
     }
 
     /// <summary>

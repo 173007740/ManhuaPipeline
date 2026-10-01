@@ -10,18 +10,72 @@
   <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
   <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
   <style>
-    .container{max-width:100%;padding:32px 24px;}
-    .page-title{font-size:24px;font-weight:700;margin-bottom:24px;color:var(--primary-light);}
-    .action-bar{display:flex;gap:12px;align-items:center;}
-    .btn-grad{background:linear-gradient(135deg,#6af7ff,#0b8f99);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
-    .btn-grad:hover{opacity:0.9;}
-    .style-table{width:100%;border-collapse:collapse;background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;}
-    .style-table th{background:rgba(5,232,240,0.25);color:#c4b5fd;font-size:13px;font-weight:600;padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);}
-    .style-table td{padding:10px 14px;color:#e2e8f0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:middle;}
-    .style-table tr:hover td{background:rgba(255,255,255,0.03);}
-    .tag-default{background:rgba(16,185,129,0.15);color:#34d399;border:1px solid rgba(16,185,129,0.3);border-radius:4px;padding:2px 8px;font-size:12px;}
-    .btn-edit{background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;}
-    .btn-del{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;margin-left:6px;}
+    /* 样式跟「图片风格管理」那一页同一套（工作台 HUD：切角按钮 + 切角表格 + 等宽小标签），
+       两页并排看是一个系统里的两个表，不是两个各自为政的页面。 */
+    :root{--hud-cyan:#05e8f0;--hud-red:#ff3852;--hud-btn:#06313b;--hud-line:#183033;
+          --t1:#dce8e5;--t2:#819594;--t3:#5c7474;
+          --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    body{font:13px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--t1)}
+    /* 铺满屏宽：七列 + 两段长提示词，收着看憋屈 */
+    .container{max-width:none;margin:0;padding:24px 32px 60px}
+
+    .btn{height:40px;padding:0 16px;font-size:12px;border-radius:0;
+         border:1px solid #49626a;background:transparent;color:#dbe7e8;
+         clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+         display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+    .btn:hover{border-color:var(--hud-cyan);color:var(--hud-cyan);background:#06313b80}
+    .btn-primary{border-color:var(--hud-cyan);background:var(--hud-btn);color:var(--hud-cyan);font-weight:700}
+    .btn-primary:hover{border-color:var(--hud-cyan);color:var(--hud-cyan);background:#08424f}
+    .btn-danger{border-color:var(--hud-red);background:transparent;color:var(--hud-red)}
+    .btn-danger:hover{border-color:var(--hud-red);color:#fff;background:#3a0d14}
+    .btn-sm{height:30px;padding:0 10px;font-size:11px}
+
+    .vss-head{border-left:2px solid var(--hud-cyan);padding-left:12px}
+    .vss-head h1{font-size:20px;font-weight:700;letter-spacing:.5px;margin:0;color:#e4fbff}
+    .vss-head small{display:block;margin-top:4px;font:9px var(--mono);letter-spacing:1.6px;color:var(--t3)}
+    .vss-head p{margin:8px 0 0;font-size:12px;color:var(--t2)}
+    .vss-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .vss-count{font:10px var(--mono);color:var(--t3);letter-spacing:1px;text-align:right}
+
+    .vss-table{width:100%;border-collapse:separate;border-spacing:0;background:rgba(8,17,19,.72);
+               border:1px solid var(--hud-line);
+               clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+    .vss-table th{background:rgba(6,49,59,.55);color:#8da6ad;font:10px var(--mono);letter-spacing:1.2px;
+                  padding:11px 14px;text-align:left;border-bottom:1px solid var(--hud-line);white-space:nowrap}
+    .vss-table td{padding:11px 14px;font-size:12.5px;color:#cfe0df;
+                  border-bottom:1px solid rgba(24,48,51,.6);vertical-align:middle}
+    .vss-table tbody tr:hover td{background:rgba(5,232,240,.045)}
+    .vss-table tbody tr:last-child td{border-bottom:0}
+    .vss-id{font:11px var(--mono);color:var(--t3)}
+    .vss-name{font-weight:700;color:#e4fbff}
+    .vss-prompt{color:#9fb3b3;font-size:12px;line-height:1.55}
+    .vss-neg{color:#7e9494;font-size:12px}
+    .vss-empty{color:#5c7078;font-size:12px}
+    .vss-chip{display:inline-block;padding:3px 9px;border:1px solid #1d5f68;background:rgba(6,49,59,.5);
+              color:var(--hud-cyan);font-size:11px;letter-spacing:.5px;white-space:nowrap}
+    .vss-chip-none{border-color:#2a3b3d;background:transparent;color:#6d8484}
+    /* 默认标记：绿色小徽章，跟分类徽章同一形状 */
+    .vss-chip-def{border-color:#2f6b53;background:rgba(16,185,129,.12);color:#34d399}
+    .vss-group{background:rgba(6,49,59,.3);vertical-align:top}
+    .vss-group small{display:block;margin-top:2px;color:var(--t3);font:10px var(--mono);font-weight:400}
+    .vss-act{white-space:nowrap}
+    .vss-act .btn+.btn{margin-left:8px}
+
+    .modal-overlay{background:#000c;padding:20px;backdrop-filter:none}
+    .modal{width:min(580px,96vw);max-width:none;padding:25px;border-radius:0;border-color:var(--hud-line);
+           box-shadow:0 0 80px #10dce633;
+           clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px))}
+    .modal>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .modal h3{font-size:16px;letter-spacing:1px;margin-bottom:0;color:#e4fbff}
+    .modal h3 .material-icons{color:var(--hud-cyan)}
+    .modal-close{border:0;background:none;color:#8ea7ae;font-size:26px;line-height:1;padding:0 4px;cursor:pointer}
+    .modal-close:hover{color:var(--hud-cyan)}
+    .modal label{display:block;color:#8da6ad;font-size:12px;font-weight:400;margin-top:16px}
+    .modal input,.modal textarea,.modal select{width:100%;margin-top:7px;padding:12px;
+           border:1px solid #18505c;border-radius:0;background:#020b11;color:#e4fbff;font-size:13px}
+    .modal input:focus,.modal textarea:focus,.modal select:focus{border-color:var(--hud-cyan);box-shadow:none;outline:0}
+    .modal-actions{margin-top:24px;display:flex;justify-content:flex-end;gap:10px}
+    .vss-hint{color:#5c7078;font-size:12px;margin-top:6px}
   </style>
 </head>
 <body>
@@ -50,38 +104,55 @@
   </nav>
 
   <div class="container">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-      <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 视频风格管理<span style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;">用于“提示词生成”时注入视频风格，可增删改</span></div>
-      <div class="action-bar">
-        <button class="btn-grad" onclick="openStyleModal()"><i class="fas fa-plus"></i> 新增风格</button>
+    <div class="vss-bar">
+      <div class="vss-head">
+        <h1><span class="material-icons" style="font-size:20px;vertical-align:-3px;color:#05e8f0">movie</span> 视频风格管理</h1>
+        <small>VIDEO STYLE LIBRARY</small>
+        <p>用于「提示词生成」时注入视频风格；项目没单设「资产画风」时，出图也用这一条</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="vss-count" id="vssCount">—</div>
+        <button class="btn btn-primary" onclick="openStyleModal()"><i class="fas fa-plus"></i> 新增风格</button>
       </div>
     </div>
 
-    <table class="style-table" id="styleTable">
+    <table class="vss-table" id="styleTable">
       <thead>
-        <tr><th style="width:60px;">ID</th><th style="width:180px;">风格名称</th><th>风格提示词（注入模板）</th><th style="width:80px;">默认</th><th style="width:160px;">操作</th></tr>
+        <tr><th style="width:60px;">ID</th><th style="width:120px;">分类</th><th style="width:170px;">风格名称</th>
+            <th>正向提示词（注入模板）</th><th>反向提示词（并入负面词）</th><th style="width:80px;">默认</th><th style="width:170px;">操作</th></tr>
       </thead>
-      <tbody id="styleBody"><tr><td colspan="5" style="text-align:center;color:#789096;padding:24px;">加载中...</td></tr></tbody>
+      <tbody id="styleBody"><tr><td colspan="7" style="text-align:center;color:#789096;padding:24px;">加载中...</td></tr></tbody>
     </table>
   </div>
 
-  <div id="styleModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;" onclick="if(event.target===this)closeStyleModal()">
-    <div style="background:#061923;border-radius:12px;padding:24px;max-width:520px;width:90%;border:1px solid rgba(255,255,255,0.1);">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h3 style="color:#f1f1f5;font-size:16px;margin:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#6af7ff">palette</span> <span id="styleModalTitle">新增风格</span></h3>
-        <button onclick="closeStyleModal()" style="background:none;border:none;color:#789096;font-size:20px;cursor:pointer;">&times;</button>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格名称</label>
-        <input id="styleName" type="text" placeholder="如：米哈游二次元、写实风格、赛博朋克" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;">
-      </div>
-      <div style="margin-bottom:20px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格提示词（生成提示词时注入）</label>
-        <textarea id="stylePrompt" rows="4" placeholder="如：米哈游二次元风格，画面色彩高饱和，柔光遍布，角色面部细节及表情刻画细腻" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;resize:vertical;"></textarea>
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;">
-        <button onclick="closeStyleModal()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;">取消</button>
-        <button onclick="saveStyle()" style="background:linear-gradient(135deg,#6af7ff,#0b8f99);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;font-weight:600;">保存</button>
+  <div id="styleModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;justify-content:center;align-items:center;" onclick="if(event.target===this)closeStyleModal()">
+    <div class="modal" style="background:#061923;max-height:88vh;overflow:auto;">
+      <header>
+        <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie</span> <span id="styleModalTitle">新增风格</span></h3>
+        <button class="modal-close" onclick="closeStyleModal()">&times;</button>
+      </header>
+      <label>风格名称</label>
+      <input id="styleName" type="text" placeholder="如：米哈游二次元、写实风格、赛博朋克">
+
+      <label>分类（只用来分组显示，不进提示词）</label>
+      <select id="styleCategory">
+        <option value="">未分类</option>
+        <option value="2D动画">2D动画</option>
+        <option value="3D动画">3D动画</option>
+        <option value="真人影视">真人影视</option>
+        <option value="漫画与插画">漫画与插画</option>
+      </select>
+
+      <label>正向提示词（生成提示词时注入）</label>
+      <textarea id="stylePrompt" rows="5" placeholder="如：电影级日系动画电影质感，厚涂插画与精致渲染结合…"></textarea>
+
+      <label>反向提示词（这一路影像语言该避开什么）</label>
+      <textarea id="styleNegative" rows="3" placeholder="如：真人摄影，三维塑料人物，线条闪烁，五官漂移，镜头抖动，随机文字，水印"></textarea>
+      <div class="vss-hint">不填也行 —— 那时只按资产卡上那条与模版里的通用负面词出图</div>
+
+      <div class="modal-actions">
+        <button class="btn" onclick="closeStyleModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveStyle()">保存</button>
       </div>
     </div>
   </div>
@@ -96,21 +167,56 @@ function loadStyles() {
   $.get("/api/video-style", function (list) {
     var h = "";
     if (!list || list.length === 0) {
-      h = '<tr><td colspan="5" style="text-align:center;color:#789096;padding:24px;">暂无风格，请先新增</td></tr>';
+      h = '<tr><td colspan="7" style="text-align:center;color:#789096;padding:24px;">暂无风格，请先新增</td></tr>';
+      $("#vssCount").text("共 0 条");
     } else {
-      for (var i = 0; i < list.length; i++) {
-        var s = list[i];
-        h += "<tr><td>" + s.styleId + "</td><td style='font-weight:600;color:#f1f1f5;'>" + escHtml(s.styleName) + "</td><td>" + escHtml(s.stylePrompt) + "</td><td>" + (s.isDefault ? "<span class='tag-default'>默认</span>" : "") + "</td><td><button class='btn-edit' onclick='openStyleModal(" + s.styleId + ")'><i class='fas fa-pen'></i> 编辑</button><button class='btn-del' onclick='deleteStyle(" + s.styleId + ")'><i class='fas fa-trash'></i> 删除</button></td></tr>";
-      }
+      /* 按分类分组：默认的那几条（系统自带、没有分类）单独归到「未分类」并排在最后，
+         新增的 16 种按 2D动画 / 3D动画 / 真人影视 / 漫画与插画 四组摆。 */
+      var groups = {}, order = [];
+      list.forEach(function (s) {
+        var k = s.category || "未分类";
+        if (!groups[k]) { groups[k] = []; order.push(k); }
+        groups[k].push(s);
+      });
+      order.sort(function (a, b) {
+        if (a === "未分类") return 1;
+        if (b === "未分类") return -1;
+        return a.localeCompare(b, "zh");
+      });
+      var real = order.filter(function (k) { return k !== "未分类"; }).length;
+      $("#vssCount").text("共 " + list.length + " 条 · " + real + " 个分类");
+
+      order.forEach(function (k) {
+        var rows = groups[k];
+        rows.forEach(function (s, idx) {
+          var pos = (s.stylePrompt || "").length > 90 ? (s.stylePrompt || "").slice(0, 90) + "…" : (s.stylePrompt || "");
+          var neg = (s.styleNegative || "").length > 60 ? (s.styleNegative || "").slice(0, 60) + "…" : (s.styleNegative || "");
+          var chip = k === "未分类"
+            ? '<span class="vss-chip vss-chip-none">未分类</span>'
+            : '<span class="vss-chip">' + escHtml(k) + "</span>";
+          h += "<tr><td class='vss-id'>" + s.styleId + "</td>"
+            + (idx === 0 ? "<td class='vss-group' rowspan='" + rows.length + "'>" + chip
+                          + "<small>共 " + rows.length + " 条</small></td>" : "")
+            + "<td class='vss-name'>" + escHtml(s.styleName) + "</td>"
+            + "<td class='vss-prompt' title='" + escHtml(s.stylePrompt) + "'>" + escHtml(pos) + "</td>"
+            + (neg ? "<td class='vss-neg' title='" + escHtml(s.styleNegative) + "'>" + escHtml(neg) + "</td>"
+                   : "<td class='vss-empty'>（无）</td>")
+            + "<td>" + (s.isDefault ? "<span class='vss-chip vss-chip-def'>默认</span>" : "") + "</td>"
+            + "<td class='vss-act'><button class='btn btn-sm' onclick='openStyleModal(" + s.styleId + ")'><i class='fas fa-pen'></i> 编辑</button>"
+            + "<button class='btn btn-sm btn-danger' onclick='deleteStyle(" + s.styleId + ")'><i class='fas fa-trash'></i> 删除</button></td></tr>";
+        });
+      });
     }
     $("#styleBody").html(h);
-  }).fail(function () { $("#styleBody").html('<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:24px;">加载失败</td></tr>'); });
+  }).fail(function () { $("#styleBody").html('<tr><td colspan="7" style="text-align:center;color:#ef4444;padding:24px;">加载失败</td></tr>'); });
 }
 
 function openStyleModal(styleId) {
   editingStyleId = styleId || null;
   $("#styleName").val("");
   $("#stylePrompt").val("");
+  $("#styleNegative").val("");
+  $("#styleCategory").val("");
   if (editingStyleId) {
     $("#styleModalTitle").text("编辑风格");
     $.get("/api/video-style", function (list) {
@@ -118,6 +224,8 @@ function openStyleModal(styleId) {
         if (list[i].styleId === editingStyleId) {
           $("#styleName").val(list[i].styleName);
           $("#stylePrompt").val(list[i].stylePrompt);
+          $("#styleNegative").val(list[i].styleNegative || "");
+          $("#styleCategory").val(list[i].category || "");
           break;
         }
       }
@@ -133,15 +241,18 @@ function closeStyleModal() { $("#styleModal").hide(); }
 function saveStyle() {
   var name = $("#styleName").val().trim();
   var prompt = $("#stylePrompt").val().trim();
+  var neg = $("#styleNegative").val().trim();
+  var cat = $("#styleCategory").val();
   if (!name) { alert("请输入风格名称"); return; }
-  if (!prompt) { alert("请输入风格提示词"); return; }
+  if (!prompt) { alert("请输入正向提示词"); return; }
   $.ajax({
     url: "/api/video-style",
     method: "POST",
     contentType: "application/json",
-    data: JSON.stringify({ styleId: editingStyleId, styleName: name, stylePrompt: prompt }),
+    data: JSON.stringify({ styleId: editingStyleId, styleName: name, stylePrompt: prompt,
+                           styleNegative: neg, category: cat }),
     success: function () { closeStyleModal(); loadStyles(); },
-    error: function (x) { alert("保存失败: " + (x.responseJSON?.message || x.statusText)); }
+    error: function (x) { alert("保存失败: " + ((x.responseJSON && x.responseJSON.message) || x.statusText)); }
   });
 }
 
@@ -151,7 +262,7 @@ function deleteStyle(styleId) {
     url: "/api/video-style/" + styleId,
     method: "DELETE",
     success: function () { loadStyles(); },
-    error: function (x) { alert("删除失败: " + (x.responseJSON?.message || x.statusText)); }
+    error: function (x) { alert("删除失败: " + ((x.responseJSON && x.responseJSON.message) || x.statusText)); }
   });
 }
 

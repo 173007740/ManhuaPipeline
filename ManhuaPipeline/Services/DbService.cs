@@ -3381,21 +3381,28 @@ WHERE p.Status = 'completed'
         return null;
     }
 
-    public int SaveVideoStyle(int? styleId, string styleName, string stylePrompt)
+    public int SaveVideoStyle(int? styleId, string styleName, string stylePrompt,
+                              string? styleNegative = null, string? category = null)
     {
         using var conn = GetConn(); conn.Open();
         if (styleId.HasValue && styleId.Value > 0)
         {
-            using var cmd = new SqlCommand("UPDATE VideoStyles SET StyleName=@n, StylePrompt=@p, UpdatedAt=GETDATE() WHERE StyleId=@id", conn);
+            using var cmd = new SqlCommand(
+                "UPDATE VideoStyles SET StyleName=@n, StylePrompt=@p, StyleNegative=@g, Category=@c, UpdatedAt=GETDATE() WHERE StyleId=@id", conn);
             cmd.Parameters.AddWithValue("@n", styleName);
             cmd.Parameters.AddWithValue("@p", stylePrompt);
+            cmd.Parameters.AddWithValue("@g", (object?)styleNegative ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@c", (object?)category ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@id", styleId.Value);
             cmd.ExecuteNonQuery();
             return styleId.Value;
         }
-        using var ins = new SqlCommand("INSERT INTO VideoStyles(StyleName,StylePrompt,IsDefault) OUTPUT INSERTED.StyleId VALUES(@n,@p,0)", conn);
+        using var ins = new SqlCommand(
+            "INSERT INTO VideoStyles(StyleName,StylePrompt,StyleNegative,Category,IsDefault) OUTPUT INSERTED.StyleId VALUES(@n,@p,@g,@c,0)", conn);
         ins.Parameters.AddWithValue("@n", styleName);
         ins.Parameters.AddWithValue("@p", stylePrompt);
+        ins.Parameters.AddWithValue("@g", (object?)styleNegative ?? DBNull.Value);
+        ins.Parameters.AddWithValue("@c", (object?)category ?? DBNull.Value);
         return (int)ins.ExecuteScalar();
     }
 
@@ -3461,6 +3468,8 @@ WHERE p.Status = 'completed'
         StyleId = (int)r["StyleId"],
         StyleName = (string)r["StyleName"],
         StylePrompt = (string)r["StylePrompt"],
+        Category = r["Category"] == DBNull.Value ? null : (string?)r["Category"],
+        StyleNegative = r["StyleNegative"] == DBNull.Value ? null : (string?)r["StyleNegative"],
         IsDefault = r["IsDefault"] == DBNull.Value ? false : (bool)r["IsDefault"],
         CreatedAt = (DateTime)r["CreatedAt"],
         UpdatedAt = (DateTime)r["UpdatedAt"]
