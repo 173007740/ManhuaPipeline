@@ -717,7 +717,13 @@ public class LLMService
            .Append(AssetPromptTemplate.CategoryName(category))
            .Append("」资产写一条可直接交给文生图模型的中文提示词。\n");
         sys.Append("输出要求：只输出这一条提示词本身，不要编号、不要标题、不要解释、不要 Markdown、不要引号。\n");
-        sys.Append("提示词只描述该资产本体的视觉信息（外形、结构、材质、颜色、光泽、细节与关键特征），60~160 字，一条连贯中文。\n");
+        /* 字数：接了流水线依据（projectContext）时放宽到 150~320 字。
+           写死 60~160 字时，台账上定好的规格根本写不下 —— 实测「外婆旧木铁皮工具箱」补出来 163 字，
+           把「箱盖半开可见内部工具 / 箱底拖行刮痕 / 磕地弹开状态」全丢了，
+           跟流水线那批（同集其他道具 237~283 字）明显不是一个口径。 */
+        sys.Append("提示词只描述该资产本体的视觉信息（外形、结构、材质、颜色、光泽、细节与关键特征），")
+           .Append(string.IsNullOrWhiteSpace(projectContext) ? "60~160 字" : "150~320 字")
+           .Append("，一条连贯中文。\n");
         if (!string.IsNullOrWhiteSpace(template.RuleText))
             sys.Append("必须遵守的类别规则：\n").Append(template.RuleText.Trim()).Append('\n');
         if (!string.IsNullOrWhiteSpace(template.StyleLock))
@@ -727,7 +733,11 @@ public class LLMService
             sys.Append("\n下面会给出这部剧与本集已有的依据（立项锁定参数 / 资产台账 / 本集剧本 / 跨集复用锚点）。")
                .Append("它们是对这条资产已经定好的结论，优先级高于你自己的推断：")
                .Append("跟你的想法冲突时以它们为准，不要另起一套画幅、风格、材质或造型；")
-               .Append("台账里写明「不出图 / C 级一次性」之类的也照着办，不用替它写得更好。");
+               .Append("台账里写明「不出图 / C 级一次性」之类的也照着办，不用替它写得更好。")
+               /* 台账「出图规格」那一列必须落进正文：它写的是这一条要出成什么样
+                  （开合状态、内含什么、有没有使用痕迹），正是最容易漏、漏了就跟别的版本对不上的部分。 */
+               .Append("台账行里若有「出图规格 / 状态参考」这一列，把里面点到的东西逐条写进正文")
+               .Append("（例如箱盖半开可见内部工具、箱底拖行刮痕），不要只写个笼统外形。");
 
         var user = new System.Text.StringBuilder();
         user.Append("资产名：").Append(name).Append('\n');

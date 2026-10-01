@@ -209,17 +209,52 @@ ORDER BY s.StepId DESC", conn);
         var text = cmd.ExecuteScalar() as string;
         if (string.IsNullOrWhiteSpace(text)) return null;
 
+        /* 台账行要双向比才能认出来。
+           台账上写的是「旧木铁皮工具箱（杨彦刚拖行）」，资产表里叫「外婆旧木铁皮工具箱」——
+           行里并不包含全名，只做「行包含资产名」就命中不了，模型拿不到台账上这条定好的规格，
+           写出来的提示词自然跟流水线那批不是一个说法（实测漏掉「箱内工具轮廓 / 磕地弹开状态参考」）。
+           长的一端包含短的那一端就算同一条：先把资产名/行名两头都剥掉括号与空白再比。 */
+        var key = Norm(assetName);
         var lines = text!.Split('\n');
         var hits = new List<string>();
         for (int i = 0; i < lines.Length; i++)
         {
-            if (!lines[i].Contains(assetName, StringComparison.OrdinalIgnoreCase)) continue;
+            var line = lines[i];
+            var lineKey = Norm(line.Replace("|", " "));
+            bool hit = !string.IsNullOrEmpty(key)
+                    && (lineKey.Contains(key, StringComparison.OrdinalIgnoreCase)
+                        || (key.Length >= 3 && LineNamesOf(line).Any(n => key.Contains(n, StringComparison.OrdinalIgnoreCase))));
+            if (!hit) continue;
             if (hits.Count == 0 && i > 0 && lines[i - 1].TrimStart().StartsWith("|") && !lines[i - 1].Contains("---"))
                 hits.Add(lines[i - 1].Trim());      // 表头：编码 / 名称 / 分级 / 出图 / 出图规格
-            hits.Add(lines[i].Trim());
+            hits.Add(line.Trim());
             if (hits.Count >= 3) break;
         }
         return hits.Count == 0 ? null : string.Join("\n", hits);
+    }
+
+    /// <summary>归一化：剥掉括号内容与各类空白、分隔符，只剩可比对的字。</summary>
+    private static string Norm(string s)
+    {
+        if (string.IsNullOrWhiteSpace(s)) return "";
+        s = Regex.Replace(s, @"[（(][^（()）]*[)）]", "");      // 「旧木铁皮工具箱（杨彦刚拖行）」→「旧木铁皮工具箱」
+        s = Regex.Replace(s, @"[\s|｜\-—_·、,，。.:：/\\]+", "");
+        return s.Trim();
+    }
+
+    /// <summary>台账表格行里可能的资产名（每个单元格都算，取长度够的），用于反向包含比对。</summary>
+    private static IEnumerable<string> LineNamesOf(string line)
+    {
+        if (!line.Contains('|')) yield break;
+        foreach (var cell in line.Split('|'))
+        {
+            var n = Norm(cell);
+            if (n.Length >= 3 && !n.StartsWith("PRP", StringComparison.OrdinalIgnoreCase)
+                              && !n.StartsWith("SCN", StringComparison.OrdinalIgnoreCase)
+                              && !n.StartsWith("CHR", StringComparison.OrdinalIgnoreCase)
+                              && !n.StartsWith("VFX", StringComparison.OrdinalIgnoreCase))
+                yield return n;
+        }
     }
 
     /// <summary>
