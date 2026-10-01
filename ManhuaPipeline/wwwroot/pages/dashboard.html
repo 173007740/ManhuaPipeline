@@ -4,149 +4,21 @@
     <link rel="icon" type="image/x-icon" href="/favicon.ico?v=2">
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>工作台 - 漫创引擎</title>
+    <title>我的工作台 - 漫创引擎</title>
     <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
-    <link rel="stylesheet" href="../css/style.css">
-    <link rel="stylesheet" href="../css/admin-theme.css">
+    <!-- 这一页走的是 project-editor.html 那套 HUD 皮肤（hud-static 供 .panel / .primary / .eyebrow / .status 这些底座，
+         dashboard-v3 是工作台自己的版式，fullscreen 是把这一屏在宽屏上撑开的补丁），
+         不再引 style.css / admin-theme.css —— 两套皮肤混在一页上，卡片颜色和描边会对不上。 -->
+    <link rel="stylesheet" href="/css/hud-static.css?v=2">
+    <link rel="stylesheet" href="/css/dashboard-v3.css?v=2">
+    <link rel="stylesheet" href="/css/dashboard-fullscreen.css?v=2">
+    <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
+    <script src="/js/hud-chrome.js?v=10"></script>
     <style>
-        /* dashboard 特有：封面按 16:9 走，不再写死 180px——
-           参考站也是这么改的（它新加了 dashboard-ratio.css：width:100%;height:auto;aspect-ratio:16/9）。
-           写死高度时列宽一变，封面就跟着变形；用宽高比则四列三列两列都是同一个比例。 */
-        .drama-cover { height: auto; aspect-ratio: 16 / 9; background: linear-gradient(135deg, rgba(5,232,240,0.10), rgba(109,230,238,0.07)); }
+        /* 动画背景：hud-static 自带一层同心圆（.page::before），我们原来还给这一页打了三层
+           （右上刻度环 / 左下同心圆 / 斜向扫光）。两套一起开会重影，这里把 hud-static 那层关掉。 */
+        .page::before { display: none; }
 
-        /* ---- 方块：形状 + 线色照抄参考站 /dashboard.html ----
-           形状三件事：切角面板（右上切 13px）、右上角双色角标、4 列网格。
-           尺寸层级照它：封面 180px、标题 14px、副文 11px、角标链接 10px、metric 数字 32px。
-           线色也照它：面板描边 #164b56、分隔线 #17434d、强调青 #05e8f0、角标另半截红 #ff3852。
-           这一页因此是 HUD 青红，跟其他页的紫罗兰不是一套——要换回去改下面这四个变量即可。 */
-        :root {
-            --hud-cyan: #05e8f0;
-            --hud-red: #ff3852;
-            --hud-line: #164b56;
-            --hud-rule: #17434d;
-            --hud-btn: #06313b;
-        }
-        .hud-panel {
-            border-radius: 0;
-            border-color: var(--hud-line);
-            /* 卡片做成半透明——参考站 .panel 的 #031017dd 就是这个意思：后两位 dd 是 alpha，
-               221/255 ≈ 87% 不透明，所以背景那道光带和圆环能透过卡片看见，卡片像是浮在特效上。
-               我们的面板色是 --panel #111218 = rgb(17,18,24)，按同样的 87% 给。 */
-            background: rgba(17, 18, 24, .87);
-            clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
-            position: relative;
-        }
-        .hud-panel::before {
-            content: ""; position: absolute; right: 8px; top: 8px; z-index: 2;
-            width: 30px; height: 8px;
-            border-top: 1px solid var(--hud-cyan); border-right: 1px solid var(--hud-red);
-        }
-        /* 顶部四个数字块 = 它的 .metrics / .metric */
-        .hud-metrics { display: grid; grid-template-columns: repeat(4, 1fr); gap: 14px; margin-bottom: 20px; }
-        .hud-metric { padding: 18px; min-height: 105px; }
-        .hud-metric .m-label { display: block; font-size: 9px; letter-spacing: 2px; color: var(--hud-cyan); }
-        .hud-metric .m-value { display: block; font-size: 32px; font-weight: 600; line-height: 1.1; margin-top: 10px; color: var(--text); }
-        .hud-metric .m-sub { display: block; font-size: 10px; color: var(--muted); margin-top: 6px; }
-        /* 卡片网格 = 它的 .card-grid：四列 */
-        #dramaList, #projectList { grid-template-columns: repeat(4, 1fr); gap: 14px; }
-        #dramaList .drama-card, #projectList .project-card { padding: 14px; cursor: pointer; border-color: var(--hud-line); }
-        /* hover 也要保持半透明，不然一悬停卡片就变成实心，透出来的特效突然消失 */
-        #dramaList .drama-card:hover, #projectList .project-card:hover { border-color: var(--hud-cyan); background: rgba(22, 23, 30, .87); }
-        #dramaList .drama-info, #projectList .project-info { padding: 0; }
-        #dramaList .drama-title, #projectList .project-title { font-size: 14px; margin: 12px 0 4px; }
-        #dramaList .drama-desc, #projectList .project-desc { font-size: 11px; line-height: 1.7; }
-        #projectList .project-actions { padding: 0; }
-        #projectList .project-cover { height: auto; aspect-ratio: 16 / 9; }
-        /* 没图的封面：显示标题前两个字 + 一套固定底色，不再是那个 🎬 emoji。
-           参考站也是这个做法——它 .project-cover b 就是 34px 大字配渐变底。
-           三套底色按 id 取模分配，所以同一张卡每次刷新颜色都一样，不会乱跳。 */
-        .cover-text { font-size: 34px; font-weight: 600; letter-spacing: 6px; color: #dffcff; }
-        .cover-tone-a { background: linear-gradient(145deg, #155361, #07151c); }
-        .cover-tone-b { background: radial-gradient(circle, #174f79, #06131f 66%); }
-        .cover-tone-c { background: radial-gradient(circle, #843246, #1d0911 66%); }
-        .card-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-top: 12px; }
-        /* 按你给的值：20px / 700。等宽和字距撤掉了——20px 粗体下等宽字体的中文会发虚，
-           大字距也没意义了。青色保留。还要等宽的话把 font-family 加回来就行。 */
-        .card-enter { font-size: 20px; font-weight: 700; color: var(--hud-cyan); }
-        .drama-meta { margin-top: 0 !important; font-size: 11px; }
-        /* 页头 = 它的 .page-head：眉标 + 大标题 + 一行说明，底下压一条分隔线 */
-        .page-head { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap;
-                     margin-bottom: 18px; padding-bottom: 16px; border-bottom: 1px solid var(--hud-rule); }
-        .eyebrow { display: block; font-size: 9px; letter-spacing: 2px; color: var(--hud-cyan); margin-bottom: 6px; }
-        .page-head .head-desc { margin: 6px 0 0; font-size: 12px; color: var(--muted); }
-        /* 页头右側那一排：nowrap 保证始终是一排；屏幕实在放不下时整排沉到第二行，不拆散 */
-        .head-actions { display: flex; align-items: center; gap: 8px; flex-wrap: nowrap; }
-        .head-actions .btn { padding: 0 12px; font-size: 12px; white-space: nowrap; }
-
-        /* ---- 按钮：整页统一成参考站那颗 ----
-           40px 高、1px 描边、左上和右下各切 8px；主按钮是青边青字压深青底，其余是空心的。
-           切角用 clip-path，所以 hover 别用 box-shadow（会被裁掉），只改底色和描边色。 */
-        .btn {
-            height: 40px; padding: 0 16px; font-size: 12px;
-            border-radius: 0; border: 1px solid #49626a; background: transparent; color: #dbe7e8;
-            clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
-        }
-        .btn:hover { border-color: var(--hud-cyan); color: var(--hud-cyan); background: #06313b80; }
-        .btn-primary { border-color: var(--hud-cyan); background: var(--hud-btn); color: var(--hud-cyan); }
-        .btn-primary:hover { border-color: var(--hud-cyan); color: var(--hud-cyan); background: #08424f; }
-        .btn-danger { border-color: var(--hud-red); background: transparent; color: var(--hud-red); }
-        .btn-danger:hover { border-color: var(--hud-red); color: #fff; background: #3a0d14; }
-        .btn-sm { height: 30px; padding: 0 10px; font-size: 11px; }
-
-        /* ---- 弹窗：照参考站 dashboard-interactions.css 的 .modal / .modal-card ----
-           它那颗弹窗就这几样：切角卡片（同面板那个右上切 13px）、25px 内距、外发光、
-           右上角 ×、label 12px 灰、输入框 1px #18505c 描边压 #020b11 底、底部按钮右对齐。
-           注意它跟我们类名是反的——它的 .modal 是遮罩、.modal-card 才是卡片；
-           我们是 .modal-overlay 遮罩、.modal 卡片，别照类名抄。
-           角标不加：右上角已经放了 ×，再压一条青红角标会打架。 */
-        .modal-overlay { background: #000c; padding: 20px; backdrop-filter: none; }
-        .modal {
-            width: min(580px, 96vw); max-width: none; padding: 25px;
-            border-radius: 0; border-color: var(--hud-line);
-            box-shadow: 0 0 80px #10dce633;
-            clip-path: polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
-        }
-        .modal > header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 6px; }
-        .modal h3 { font-size: 16px; letter-spacing: 1px; margin-bottom: 0; }
-        .modal h3 .material-icons { color: var(--hud-cyan); }
-        .modal-close { border: 0; background: none; color: #8ea7ae; font-size: 26px; line-height: 1; padding: 0 4px; cursor: pointer; }
-        .modal-close:hover { color: var(--hud-cyan); }
-        .modal label { display: block; color: #8da6ad; font-size: 12px; font-weight: 400; margin-top: 16px; }
-        .modal input, .modal textarea, .modal select {
-            width: 100%; margin-top: 7px; padding: 12px;
-            border: 1px solid #18505c; border-radius: 0; background: #020b11; color: #e4fbff; font-size: 13px;
-        }
-        .modal input:focus, .modal textarea:focus, .modal select:focus { border-color: var(--hud-cyan); box-shadow: none; }
-        .modal textarea { height: 90px; min-height: 90px; }
-        /* 弹窗里的封面上传区：原来那圈紫虚线跟 HUD 不对付，改成同款描边色，hover 转青 */
-        .modal .cover-upload-area { border: 1px dashed #18505c; border-radius: 0; }
-        .modal .cover-upload-area:hover { border-color: var(--hud-cyan); background: #06212a55; }
-        .modal-actions { margin-top: 24px; }
-        @media (max-width: 1400px) { #dramaList, #projectList { grid-template-columns: repeat(3, 1fr); } }
-        @media (max-width: 1000px) { #dramaList, #projectList { grid-template-columns: repeat(2, 1fr); } .hud-metrics { grid-template-columns: repeat(2, 1fr); } }
-        @media (max-width: 650px) { #dramaList, #projectList, .hud-metrics { grid-template-columns: 1fr; } }
-        /* 全屏工作台：顶栏固定 56px，下面那块铺满剩余高度自己滚，整页不再出现外层滚动条。
-           参照的是参考站 skill-studio 的 fullscreen 做法。
-           窄屏（≤760px）不做固定高度——手机上这么切会把内容截掉，还是让页面正常滚。 */
-        @media (min-width: 761px) {
-            html, body { height: 100%; overflow: hidden; }
-            .container { max-width: none; height: calc(100vh - 56px); overflow-y: auto; padding: 10px 10px 40px; }
-            /* 标题行吸顶：列表滚起来之后还看得见自己在哪一层。
-               top 要跟 .container 的 padding-top 对齐（现在是 10px），不然吸顶时标题上方会空出一条缝 */
-            #dramaView > div:first-child, #projectView > .page-title {
-                position: sticky; top: -10px; z-index: 5; padding: 10px 0 12px;
-                background: linear-gradient(var(--bg) 72%, transparent);
-            }
-            #dramaView > div:first-child { margin-bottom: 8px; }
-            #dramaEmpty { min-height: 60vh; }
-        }
-
-        /* ---- 背景特效：照搬参考站 hud-static.css 新增的那组 ----
-           它在源码里叫 "Shared animated command-center background"，三层：
-           右上一个缓慢自转的刻度圆环、左下一圈同心圆、一道斜着扫过去的光带。
-           两处按我们的版式改了：它顶栏 72px 且底部还有 24px 状态条，我们是 56px 顶栏、没有底条，
-           所以扫描带的 inset 换成 top:56px / bottom:0。
-           另外它尊重系统的「减少动态效果」设置，开了就停——这个也照搬了。 */
         body::after {
             content: ""; position: fixed; z-index: 0; pointer-events: none;
             width: min(74vw, 980px); aspect-ratio: 1; right: -20vw; top: 8vh; border-radius: 50%; opacity: .42;
@@ -174,210 +46,296 @@
         @keyframes hud-orbit-reverse { to { transform: rotate(-360deg) } }
         @keyframes hud-scan { 0%, 18% { background-position: 180% 0 } 75%, 100% { background-position: -80% 0 } }
         @media (prefers-reduced-motion: reduce) { body::after, #hudFx::before, #hudFx::after { animation: none } }
-    </style>
 
-    <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
-    <script src="/js/hud-chrome.js?v=10"></script>
+        /* 内容层要在特效之上：背景是 fixed + z-index 0，这里给 1 */
+        main.page, #shell { position: relative; z-index: 1; }
+
+        /* 封面：dv3 的美术块是给「首字 + 渐变底」设计的，有封面图时铺满即可。
+           铺了图就把那个首字藏掉 —— 照片上再压一个汉字反而看不清两边。 */
+        .dv3-art.has-cover, .dv3-project-art.has-cover { background-size: cover; background-position: center; }
+        .dv3-art.has-cover > i, .dv3-project-art.has-cover > b { display: none; }
+        .dv3-art > i { text-shadow: 0 0 30px #26e9e866; }
+        #dramaEmpty a { text-decoration: none; }
+
+        /* 列表里的过滤 / 排序按钮属于 dv3 的那排，但没有 hover，补一下 */
+        .dv3-registry > header button:hover { color: #8afff2; border-color: #28716f; }
+        #dramaEmpty { margin-top: 20px; }
+        #dramaEmpty .icon { font-size: 42px; }
+    </style>
 </head>
 <body>
     <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
     <div id="hudFx" aria-hidden="true"></div>
-    <div style="position:relative;z-index:1;">
+    <div id="shell">
         <nav class="navbar">
             <div class="nav-inner">
-                <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
-                    <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
-                    <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
-                </a>
-                <div class="nav-links" id="navLinks">
-                    <a href="../index.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">home</span> 首页</a>
-                    <a href="dashboard.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">grid_view</span> 我的工作台</a>
-                <a href="skill-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
-                <a href="camera-atom-library.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
-                <a href="skill-studio.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">auto_awesome</span> 导演流水线</a>
-                    <span id="navUser" style="display:none;">
-                        <a href="system-config.html" style="margin-left:8px;color:var(--primary-light);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">tune</span> 系统配置</a>
-                        <span id="userName" style="margin-left:8px;color:var(--primary-light);font-size:14px;"></span>
-                        <a href="#" id="btnLogout" style="margin-left:8px;color:var(--danger);font-size:14px;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">logout</span> 退出</a>
-                    </span>
-                    <span id="navGuest">
-                        <a href="login.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_circle</span> 登录</a>
-                        <a href="register.html" style="color:var(--primary-light);text-decoration:none;padding:8px 16px;font-size:14px;font-weight:500;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">person_add</span> 注册</a>
-                    </span>
-                </div>
+                <a href="../index.html" class="logo" style="text-decoration:none;">MANGA ENGINE</a>
+                <div class="nav-links" id="navLinks"></div>
+                <span id="navUser" style="display:none;"></span>
+                <span id="navGuest"></span>
             </div>
         </nav>
-        <div class="container">
-            <div id="breadcrumb" style="display:none;" class="breadcrumb">
-                <a onclick="showDramas()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">arrow_back</span> 返回漫剧列表</a>
-            </div>
-            <div id="dramaView">
-                <div class="page-head">
-                    <div>
-                        <span class="eyebrow">// PRODUCTION CENTER</span>
-                        <div class="page-title" style="margin-bottom:0;">我的漫剧<span class="drama-count" style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;"></span></div>
-                        <p class="head-desc">创建漫剧合集，按集推进完整制作流水线。</p>
+
+        <main class="page dashboard-v3" id="dashboardView">
+            <header class="dv3-head">
+                <div>
+                    <span class="eyebrow">// CREATOR WORKSPACE · <b id="collectionCount">00</b> COLLECTIONS</span>
+                    <h1 id="greet">继续创造你的世界。</h1>
+                    <p>项目进度、生产任务和最近动态，都集中在这里。</p>
+                </div>
+                <button class="primary" id="btnCreate"><b>＋</b> 新建漫剧</button>
+            </header>
+
+            <section class="dv3-overview">
+                <article class="dv3-feature panel" id="featureCard">
+                    <div class="dv3-art" id="featureArt">
+                        <span>ACTIVE COLLECTION / 01</span>
+                        <i id="featureSigil">—</i>
+                        <div class="dv3-orbit one"></div>
+                        <div class="dv3-orbit two"></div>
                     </div>
-                    <div class="head-actions">
-                        <a href="asset-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">folder_open</span> 资产库</a>
-                        <a href="canvas.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">gesture</span> 无限画布</a>
-                        <a href="skill-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">bolt</span> 技能库</a>
-                        <a href="fight-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sports_martial_arts</span> 打斗库</a>
-                        <a href="camera-atom-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">movie_filter</span> 运镜原子库</a>
-                        <a href="report.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</a>
-                        <a href="voice-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</a>
-                        <a href="works.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
-                        <button class="btn btn-primary" onclick="location.href='/pages/project-editor.html'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 创建漫剧</button>
-                        <button class="btn btn-outline" id="btnDramaSort" onclick="toggleDramaSort()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="dramaSortLabel">最新优先</span></button>
+                    <div class="dv3-feature-copy">
+                        <div class="dv3-live"><i></i><span id="featureState">加载中</span></div>
+                        <small id="featureMeta">正在读取…</small>
+                        <h2 id="featureTitle">—</h2>
+                        <p id="featureDesc"></p>
+                        <div class="dv3-current">
+                            <span><em>当前进度</em><b id="featureEp">—</b></span>
+                            <span><em>制作阶段</em><b id="featureStage">—</b></span>
+                        </div>
+                        <div class="dv3-progress"><i id="featureBar" style="width:0"></i><b id="featurePct">0%</b></div>
+                        <footer>
+                            <button class="primary" id="btnContinue">继续制作 <b>→</b></button>
+                            <span id="featureFoot"></span>
+                        </footer>
                     </div>
-                </div>
-                <div class="hud-metrics">
-                    <div class="hud-metric hud-panel"><span class="m-label">01 / 漫剧合集</span><b class="m-value" id="mDrama">–</b><span class="m-sub" id="mDramaSub">合集总数</span></div>
-                    <div class="hud-metric hud-panel"><span class="m-label">02 / 单集项目</span><b class="m-value" id="mProject">–</b><span class="m-sub" id="mProjectSub">所有合集下的项目</span></div>
-                    <div class="hud-metric hud-panel"><span class="m-label">03 / 出图任务</span><b class="m-value" id="mImage">–</b><span class="m-sub" id="mImageSub">近 7 天</span></div>
-                    <div class="hud-metric hud-panel"><span class="m-label">04 / 运行中任务</span><b class="m-value" id="mRunning">–</b><span class="m-sub" id="mRunningSub">出图 + 视频</span></div>
-                </div>
-                <div id="dramaList" class="drama-grid"></div>
-                <div id="dramaEmpty" class="empty-state" style="display:none;">
-                    <div class="icon">🎬</div>
-                    <p>还没有漫剧</p>
-                    <p style="margin-top:8px;"><a href="/pages/project-editor.html" style="color:var(--primary-light);">创建你的第一个漫剧</a></p>
-                </div>
-            </div>
-            <div id="projectView" style="display:none;">
-                <div class="page-title"><span class="material-icons" style="font-size:inherit;vertical-align:middle">account_tree</span> <span id="currentDramaTitle"></span></div>
-                <div class="action-bar">
-                    <button class="btn btn-primary" onclick="showCreateProject()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</button>
-                </div>
-                <div id="projectList" class="project-grid"></div>
-                <div id="projectEmpty" class="empty-state" style="display:none;">
-                    <div class="icon">📂</div>
-                    <p>还没有项目</p>
-                </div>
-            </div>
-        </div>
-        <div id="createProjectModal" class="modal-overlay" style="display:none;">
-            <div class="modal">
+                </article>
+
+                <aside class="dv3-side">
+                    <div class="dv3-metrics panel">
+                        <article><span>DRAMAS</span><b id="mDrama">–</b><small>漫剧合集</small></article>
+                        <article><span>EPISODES</span><b id="mProject">–</b><small>已建单集</small></article>
+                        <article><span>TASKS</span><b id="mImage">–</b><small>近 7 天出图</small></article>
+                        <article class="alert"><span>RUNNING</span><b id="mRunning">–</b><small>运行中任务</small></article>
+                    </div>
+                    <section class="dv3-queue panel">
+                        <header><span>最近出图</span><b id="queueCount">0 TASKS</b></header>
+                        <div id="queueList"></div>
+                    </section>
+                </aside>
+            </section>
+
+            <section class="dv3-registry">
                 <header>
-                    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建项目</h3>
-                    <button class="modal-close" onclick="$('#createProjectModal').hide()" title="关闭">&times;</button>
+                    <div><span>COLLECTION REGISTRY</span><h2>全部漫剧</h2></div>
+                    <div>
+                        <button class="active-filter" data-filter="all">全部</button>
+                        <button data-filter="active">已开拍</button>
+                        <button data-filter="empty">草稿</button>
+                        <button id="filterButton">最近更新 ↓</button>
+                    </div>
                 </header>
-                <label>项目名称</label>
-                <input id="projectTitleInput" placeholder="输入项目名称">
-                <label>描述（选填）</label>
-                <textarea id="projectDescInput" placeholder="输入描述" rows="3"></textarea>
-                <label>项目类型</label>
-                <select id="projectTypeInput">
-                    <option value="drama">短剧（默认）</option>
-                    <option value="ad">广告</option>
-                    <option value="mv">MV（歌曲）</option>
-                </select>
-                <div class="modal-actions">
-                    <button class="btn btn-outline" onclick="$('#createProjectModal').hide()">取消</button>
-                    <button class="btn btn-primary" onclick="createProject()">创建</button>
+                <div class="dv3-projects" id="projectGrid">
+                    <button class="dv3-create panel" id="btnCreateCard"><i>＋</i><b>创建新漫剧</b><small>从世界观与故事设定开始</small></button>
                 </div>
-            </div>
-        </div>
-        <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
-        <script src="../js/app.js?v=2"></script>
-        <script>
-            var currentDramaId = 0;
-            $(function () { $.get("/api/auth/me", function (u) { if (u && u.userId) { loadDramas(); loadMetrics(); } else window.location.href = "login.html" }).fail(function () { window.location.href = "login.html" }) });
-            var dramaSortOrder = "desc";
-            function toggleDramaSort() {
-                dramaSortOrder = dramaSortOrder === "desc" ? "asc" : "desc";
-                $("#dramaSortLabel").text(dramaSortOrder === "desc" ? "最新优先" : "最早优先");
-                loadDramas();
-            }
-            /* 封面：有图就用图铺满，没图就显示标题前两个字 + 一套底色。
-               底色按 id 取模，同一张卡颜色固定，不会因为排序变化而换来换去。 */
-            var COVER_TONES = ["cover-tone-a", "cover-tone-b", "cover-tone-c"];
-            function coverBlock(cls, id, title, img) {
-                var t = String(title || "").trim();
-                if (img) return "<div class='" + cls + "' style='background-image:url(" + img + ");background-size:cover;background-position:center;'></div>";
-                var tone = COVER_TONES[(Number(id) || t.length) % COVER_TONES.length];
-                return "<div class='" + cls + " cover-text " + tone + "'>" + escHtml(t.slice(0, 2) || "·") + "</div>";
-            }
-            function loadDramas() {
-                $.get("/api/drama", function (d) {
-                    if (!d || d.length === 0) { $("#dramaList").empty(); $("#dramaEmpty").show(); return }
-                    $("#dramaEmpty").hide();
-                    d.sort(function (a, b) {
-                        var da = a.createdAt || a.updatedAt || "";
-                        var db = b.createdAt || b.updatedAt || "";
-                        if (dramaSortOrder === "desc") return da < db ? 1 : da > db ? -1 : 0;
-                        return da < db ? -1 : da > db ? 1 : 0;
-                    });
-                    var h = "";
-                    for (var i = 0; i < d.length; i++) {
-                        var dr = d[i];
-                        h += "<div class='drama-card hud-panel' onclick=\"openDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">";
-                        h += coverBlock("drama-cover", dr.dramaId, dr.title, dr.coverImage);
-                        h += "<div class='drama-info'>";
-                        h += "<div class='drama-title'>" + escHtml(dr.title) + "</div>";
-                        h += "<div class='drama-desc'>" + (dr.description ? escHtml(dr.description) : "暂无描述") + "</div>";
-                        h += "<div class='card-foot'><span class='card-enter'>进入合集 →</span>" +
-                            "<span style='display:flex;align-items:center;gap:8px;'><span class='drama-meta' id='dramaMeta" + dr.dramaId + "'>加载中...</span>" +
-                            "<a class='btn btn-outline btn-sm' href='/pages/project-editor.html?dramaId=" + dr.dramaId + "' onclick='event.stopPropagation()'>编辑</a></span></div>";
-                        h += "</div></div>";
-                    }
-                    $("#dramaList").html(h);
-                    $(".drama-count").text("共 " + d.length + " 个漫剧");
-                    $("#mDrama").text(d.length);
-                    var projTotal = 0, done = 0;
-                    for (var i = 0; i < d.length; i++) {
-                        (function (id) {
-                            $.get("/api/drama/" + id + "/projects", function (ps) {
-                                var n = (ps || []).length;
-                                $("#dramaMeta" + id).text("项目 " + n);
-                                projTotal += n; done++;
-                                $("#mProject").text(projTotal);
-                                $("#mProjectSub").text("已汇总 " + done + "/" + d.length + " 个合集");
-                            });
-                        })(d[i].dramaId)
-                    }
-                });
-            }
-            /* 顶部四个数字块的后两个：出图 / 运行中，直接取系统报告那份统计（近 7 天）。
-               取不到就留 –，不编数字。 */
-            function loadMetrics() {
-                $.get("/api/dashboard/report?days=7", function (r) {
-                    var img = r.images || {}, vid = r.videos || {};
-                    $("#mImage").text(img.total || 0);
-                    $("#mImageSub").text("近 7 天 · 完成 " + (img.done || 0) + " · 失败 " + (img.failed || 0));
-                    $("#mRunning").text((img.running || 0) + (vid.running || 0));
-                    $("#mRunningSub").text("出图 " + (img.running || 0) + " · 视频 " + (vid.running || 0));
-                });
-            }
-            function openDrama(id, title) { window.location.href = "project-manage.html?dramaId=" + id + "&title=" + encodeURIComponent(title) }
-            function showDramas() { $("#projectView").hide(); $("#breadcrumb").hide(); $("#dramaView").show(); loadDramas() }
-            function loadProjects() {
-                $.get("/api/drama/" + currentDramaId + "/projects", function (d) {
-                    if (!d || d.length === 0) { $("#projectList").empty(); $("#projectEmpty").show(); return }
-                    $("#projectEmpty").hide();
-                    var h = "";
-                    for (var i = 0; i < d.length; i++) {
-                        var p = d[i];
-                        var st = ["草稿", "创意构思", "故事分析", "全局蓝图", "分集细化", "分镜脚本", "角色资产", "道具资产", "环境资产", "提示词生成", "衔接检查", "已完成"];
-                        var label = st[p.currentStage] || "草稿";
-                        h += "<div class='project-card hud-panel'>";
-                        h += coverBlock("project-cover", p.projectId, p.title, p.coverImage);
-                        h += "<div class='project-info'><div class='project-title'>" + escHtml(p.title) + "</div>";
-                        h += "<div class='project-desc'>" + (p.description ? escHtml(p.description) : "暂无描述") + "</div>";
-                        h += "<div class='card-foot'><span class='card-enter'>状态: " + label + "</span>";
-                        h += "<div class='project-actions'><a href='project.html?id=" + p.projectId + "' class='btn btn-primary btn-sm'>进入</a>";
-                        h += "<button class='btn btn-outline btn-sm' onclick=\"editProject('" + p.projectId + "','" + escAttr(p.title) + "')\">编辑</button>";
-                        h += "<button class='btn btn-danger btn-sm' onclick='deleteProject(" + p.projectId + ")'>删除</button></div></div></div></div>"
-                    }
-                    $("#projectList").html(h);
-                });
-            }
-            function escHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") }
-            function escAttr(s) { return String(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;") }
+                <!-- 空状态也用 dv3 那块虚线卡的样式：这一页不再引 style.css，
+                     原来的 .empty-state 没有定义了，另写一版又跟旁边不对付 -->
+                <div id="dramaEmpty" class="dv3-create panel" style="height:190px;display:none;">
+                    <i>🎬</i><b>还没有漫剧</b><small><a href="/pages/project-editor.html" style="color:#7ffff3;">创建你的第一个漫剧</a></small>
+                </div>
+            </section>
+        </main>
 
-        </script>
-
+        <footer class="status">
+            <span>● ALL SYSTEMS OPERATIONAL</span>
+            <b>PROJECTS <i id="statusCount">00</i></b>
+            <em>LOCAL WORKSPACE</em>
+        </footer>
     </div>
+
+    <script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+    <script src="../js/app.js?v=2"></script>
+    <script>
+        /* 每一张卡上的百分比是算出来的，不是写死的：某部漫剧下所有单集的阶段平均值。
+           单个项目跑到的阶段决定它在 pipeline 里走了多远，12 段是全部流程（草稿到已完成）。 */
+        var STAGES = ["草稿", "创意构思", "故事分析", "全局蓝图", "分集细化", "分镜脚本",
+                      "角色资产", "道具资产", "环境资产", "提示词生成", "衔接检查", "已完成"];
+        function stagePct(cur) {
+            var n = Number(cur) || 0;
+            return Math.round(Math.min(n, STAGES.length - 1) / (STAGES.length - 1) * 100);
+        }
+
+        var dramas = [];            // 漫剧列表
+        var projs = {};             // dramaId -> 单集数组
+        var sortDesc = true;        // 最近更新 ↓ / 最早更新 ↑
+        var filter = "all";
+
+        function esc(s) { return String(s == null ? "" : s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;"); }
+        function first2(t) { var s = String(t || "").trim(); return s ? s.slice(0, 2) : "·"; }
+        function tone(i) { return ["teal", "blue", "amber"][Math.abs(i) % 3]; }
+        function fmt(d) { return d ? String(d).slice(0, 10) : ""; }
+
+        $(function () {
+            $("#btnCreate, #btnCreateCard").click(function () { location.href = "/pages/project-editor.html"; });
+            $(".dv3-registry [data-filter]").click(function () {
+                filter = $(this).data("filter");
+                $(".dv3-registry [data-filter]").removeClass("active-filter");
+                $(this).addClass("active-filter");
+                renderGrid();
+            });
+            $("#filterButton").click(function () {
+                sortDesc = !sortDesc;
+                $(this).text(sortDesc ? "最近更新 ↓" : "最早更新 ↑");
+                renderGrid();
+            });
+
+            $.get("/api/auth/me", function (u) {
+                if (!u || !u.userId) { location.href = "login.html"; return; }
+                var h = new Date().getHours();
+                var greet = h < 6 ? "夜深了" : h < 11 ? "早上好" : h < 14 ? "中午好" : h < 18 ? "下午好" : "晚上好";
+                $("#greet").text(greet + "，" + (u.nickname || u.username || "") + "，继续创造你的世界。");
+                load();
+            }).fail(function () { location.href = "login.html"; });
+        });
+
+        function load() {
+            $.get("/api/drama", function (d) {
+                dramas = d || [];
+                if (!dramas.length) { $("#dramaEmpty").show(); renderHead(); renderFeature(null); return; }
+                $("#dramaEmpty").hide();
+                var left = dramas.length;
+                dramas.forEach(function (dr) {
+                    $.get("/api/drama/" + dr.dramaId + "/projects", function (ps) {
+                        projs[dr.dramaId] = ps || [];
+                        if (--left === 0) renderAll();
+                    }).fail(function () { projs[dr.dramaId] = []; if (--left === 0) renderAll(); });
+                });
+                renderHead();
+                loadMetrics();
+            });
+        }
+
+        function renderAll() { renderFeature(pickFocus()); renderGrid(); }
+
+        function renderHead() {
+            var n = String(dramas.length).padStart(2, "0");
+            $("#collectionCount").text(n);
+            $("#statusCount").text(n);
+        }
+
+        /* 焦点卡放哪一部：按当前排序的第一部（＝最近动过的），没有单集的不优先。
+           这样每次进来看到的就是正在做的那一部，而不是固定的第一部。 */
+        function pickFocus() {
+            var arranged = arrangedDramas();
+            var active = arranged.filter(function (d) { return (projs[d.dramaId] || []).length > 0; });
+            return (active[0] || arranged[0] || null);
+        }
+
+        function arrangedDramas() {
+            return dramas.slice().sort(function (a, b) {
+                var da = a.updatedAt || a.createdAt || "", dbb = b.updatedAt || b.createdAt || "";
+                return sortDesc ? (da < dbb ? 1 : da > dbb ? -1 : 0) : (da < dbb ? -1 : da > dbb ? 1 : 0);
+            });
+        }
+
+        function renderFeature(dr) {
+            if (!dr) {
+                $("#featureSigil").text("＋"); $("#featureState").text("还没有漫剧");
+                $("#featureMeta").text("先创建一部，再从世界观往下推");
+                $("#featureTitle").text("从一部漫剧开始");
+                $("#featureDesc").text("创建漫剧时可以录入整部剧本素材，之后逐集跑「写剧本」时会按本集提纲从里面取那一段。");
+                $("#featureEp").text("—"); $("#featureStage").text("—");
+                $("#featureBar").css("width", "0"); $("#featurePct").text("0%");
+                $("#btnContinue").off("click").click(function () { location.href = "/pages/project-editor.html"; });
+                $("#featureFoot").text("");
+                return;
+            }
+            var ps = projs[dr.dramaId] || [];
+            var pct = ps.length ? Math.round(ps.reduce(function (s, p) { return s + stagePct(p.currentStage); }, 0) / ps.length) : 0;
+            // 焦点那一集的定性：跑得最远的那一集（＝当前在做的）
+            var lead = ps.slice().sort(function (a, b) { return (Number(b.currentStage) || 0) - (Number(a.currentStage) || 0); })[0];
+
+            var art = $("#featureArt");
+            if (dr.coverImage) art.css("background-image", "url(" + dr.coverImage + ")").addClass("has-cover");
+            else art.css("background-image", "").removeClass("has-cover");
+            $("#featureSigil").text(first2(dr.title));
+            $("#featureState").text(ps.length ? "正在制作" : "草稿");
+            $("#featureMeta").text("DRAMA #" + dr.dramaId + " · " + ps.length + " 个单集");
+            $("#featureTitle").text(dr.title);
+            $("#featureDesc").text(dr.description || "暂无描述");
+            $("#featureEp").text(lead ? esc(lead.title) : "还没有单集");
+            $("#featureStage").text(lead
+                ? String(Number(lead.currentStage) || 0).padStart(2, "0") + " / " + STAGES[Number(lead.currentStage) || 0]
+                : "—");
+            $("#featureBar").css("width", pct + "%");
+            $("#featurePct").text(pct + "%");
+            $("#btnContinue").off("click").click(function () {
+                location.href = "project-manage.html?dramaId=" + dr.dramaId + "&title=" + encodeURIComponent(dr.title);
+            });
+            $("#featureFoot").text((dr.updatedAt ? "更新于 " + fmt(dr.updatedAt) : "刚刚创建") + " · " + (ps.length ? ps.length + " 个单集在推" : "还没有单集"));
+        }
+
+        function renderGrid() {
+            var list = arrangedDramas().filter(function (dr) {
+                var n = (projs[dr.dramaId] || []).length;
+                if (filter === "active") return n > 0;
+                if (filter === "empty") return n === 0;
+                return true;
+            });
+            var h = "";
+            list.forEach(function (dr, i) {
+                var ps = projs[dr.dramaId] || [];
+                var pct = ps.length ? Math.round(ps.reduce(function (s, p) { return s + stagePct(p.currentStage); }, 0) / ps.length) : 0;
+                var cls = "dv3-project-art " + tone(dr.dramaId) + (dr.coverImage ? " has-cover" : "");
+                var sty = dr.coverImage ? " style='background-image:url(" + dr.coverImage + ")'" : "";
+                h += "<article class='dv3-project panel' data-open='" + dr.dramaId + "'>"
+                    + "<div class='" + cls + "'" + sty + ">"
+                    + "<span>" + String(i + 1).padStart(2, "0") + "</span><b>" + esc(first2(dr.title)) + "</b><em>" + pct + "%</em></div>"
+                    + "<div class='dv3-project-copy'>"
+                    + "<span>" + (ps.length ? "进行中 · " + ps.length + " 集" : "草稿 · 暂无单集") + "</span>"
+                    + "<h3>" + esc(dr.title) + "</h3>"
+                    + "<p>" + esc(dr.description || "暂无描述") + "</p>"
+                    + "<div><i style='width:" + pct + "%'></i></div>"
+                    + "<footer><small>DRAMA #" + dr.dramaId + "</small>"
+                    + "<button data-open='" + dr.dramaId + "'>打开项目 →</button></footer>"
+                    + "</div></article>";
+            });
+            /* 创建卡先摘出来再放回最前：它本来就在这一格里，
+               直接 html(h) 会把它一起清掉，事后再 $() 是查不到的。 */
+            var createCard = $("#btnCreateCard").detach();
+            $("#projectGrid").html(h).prepend(createCard);
+            $("#projectGrid [data-open]").off("click").click(function (e) {
+                if ($(e.target).closest("a").length) return;
+                var id = $(this).data("open");
+                var dr = dramas.filter(function (x) { return x.dramaId === id; })[0];
+                location.href = "project-manage.html?dramaId=" + id + "&title=" + encodeURIComponent(dr ? dr.title : "");
+            });
+        }
+
+        /* 右侧那两个数字 + 「最近出图」列表：取系统报告那份统计（近 7 天），全都是真实数据。
+           取不到就留 –，不编数字。 */
+        function loadMetrics() {
+            $.get("/api/dashboard/report?days=7", function (r) {
+                var img = r.images || {}, vid = r.videos || {};
+                $("#mImage").text(img.total || 0);
+                $("#mRunning").text((img.running || 0) + (vid.running || 0));
+
+                var rec = img.recent || [];
+                $("#queueCount").text(rec.length + " TASKS");
+                var h = "";
+                rec.slice(0, 5).forEach(function (t) {
+                    var failed = t.st === "failed";
+                    h += "<button data-report><i class='" + (failed ? "orange" : "") + "'></i>"
+                        + "<span><b>" + esc(t.title || "未命名任务") + "</b>"
+                        + "<small>" + esc(t.src || "") + " · " + (failed ? "失败" : t.st === "done" ? "已完成" : "进行中") + " · " + fmt(t.updatedAt) + "</small></span>"
+                        + "<em>→</em></button>";
+                });
+                if (!rec.length) h = "<button><i></i><span><b>近 7 天还没有出图任务</b><small>在单集里跑「角色资产 / 道具资产」后这里会出现记录</small></span></button>";
+                $("#queueList").html(h);
+                $("#queueList [data-report]").click(function () { location.href = "report.html"; });
+            }).fail(function () { });
+        }
+    </script>
 
     <script>
         (function () {
@@ -388,16 +346,11 @@
             canvas.style.pointerEvents = "none";
             var ctx = canvas.getContext("2d");
             var W, H;
-            function resize() {
-                W = canvas.width = window.innerWidth;
-                H = canvas.height = window.innerHeight;
-            }
+            function resize() { W = canvas.width = window.innerWidth; H = canvas.height = window.innerHeight; }
             resize();
             window.addEventListener("resize", resize);
             var particles = [];
             var COUNT = 70;
-            /* 原来这三个是紫色，背景换成 HUD 青之后紫粒子压在青特效上很脏，改成同色系的青。
-               想把粒子恢复成紫色就把这三行换回去。 */
             var colors = ["rgba(5,232,240,", "rgba(16,219,230,", "rgba(83,247,255,"];
             for (var i = 0; i < COUNT; i++) {
                 particles.push({
@@ -421,15 +374,13 @@
                     ctx.fill();
                     for (var j = i + 1; j < COUNT; j++) {
                         var q = particles[j];
-                        var dx = p.x - q.x;
-                        var dy = p.y - q.y;
+                        var dx = p.x - q.x, dy = p.y - q.y;
                         var dist = Math.sqrt(dx * dx + dy * dy);
                         if (dist < CONNECT_DIST) {
-                            var alpha = (1 - dist / CONNECT_DIST) * 0.2;
                             ctx.beginPath();
                             ctx.moveTo(p.x, p.y);
                             ctx.lineTo(q.x, q.y);
-                            ctx.strokeStyle = "rgba(5,232,240," + alpha + ")";
+                            ctx.strokeStyle = "rgba(5,232,240," + (1 - dist / CONNECT_DIST) * 0.2 + ")";
                             ctx.lineWidth = 0.6;
                             ctx.stroke();
                         }

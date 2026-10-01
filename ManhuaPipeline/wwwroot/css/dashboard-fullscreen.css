@@ -1,0 +1,64 @@
+@media (min-width: 701px) {
+  .page.dashboard-v3 {
+    width: 100%;
+    max-width: none;
+    min-height: 100vh;
+    margin: 0;
+    padding-left: clamp(22px, 2.4vw, 52px);
+    padding-right: clamp(22px, 2.4vw, 52px);
+  }
+
+  .dv3-overview {
+    width: 100%;
+    grid-template-columns: minmax(0, 1.72fr) minmax(390px, .72fr);
+  }
+
+  .dv3-feature {
+    min-height: clamp(312px, 42vh, 500px);
+  }
+
+  .dv3-side {
+    min-height: clamp(312px, 42vh, 500px);
+  }
+
+  .dv3-queue {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .dv3-queue > button {
+    flex: 1;
+    min-height: 52px;
+  }
+
+  .dv3-projects {
+    width: 100%;
+  }
+
+  .dv3-project,
+  .dv3-create {
+    height: clamp(165px, 21vh, 245px);
+  }
+
+  .dv3-project-art > b {
+    font-size: clamp(25px, 2vw, 42px);
+  }
+}
+
+@media (min-width: 1700px) {
+  .dv3-feature-copy { padding: 34px 40px; }
+  .dv3-feature-copy h2 { font-size: 32px; }
+  .dv3-feature-copy > p { font-size: 13px; }
+  .dv3-current b { font-size: 12px; }
+  .dv3-metrics b { font-size: 28px; }
+  .dv3-project-copy { padding: 20px; }
+  .dv3-project-copy h3 { font-size: 17px; }
+}
+
+.dv3-project-copy footer a {
+  color: #58777b;
+  font-size: 8px;
+  text-decoration: none;
+}
+
+.dv3-project-copy footer a:hover { color: #7ffff3; }
