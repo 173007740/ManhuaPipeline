@@ -998,6 +998,14 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
             h += "<div style='border:1px solid rgba(255,255,255,0.08);border-radius:8px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,0.03);display:flex;gap:12px;align-items:flex-start;'>";
             h += "<div style='flex:1;min-width:0;'>";
             h += "<p style='color:#e2e8f0;padding:0;margin:0;'><strong>" + (i + 1) + ". " + escHtml(a.name || "") + "</strong></p>";
+            /* 跨集复用：这一条在漫剧里的身份（同一个角色 / 场景 / 道具，全剧只认一个身份）。
+               定过妆的写明「定妆在第 N 集」——这一集出图会照着那一集那张出，形象一致；
+               还没定妆的也说明一句：这一集出的图就是它全剧的定妆图。 */
+            if (a.anchorEpisode) {
+                h += "<p style='padding:2px 0 0 0;margin:0;font-size:11px;color:#6af7ff;'><i class='fas fa-link' style='font-size:10px;'></i> 跨集复用 · 定妆在第 " + a.anchorEpisode + " 集 —— 这一集出图照着它出，形象与那一集一致</p>";
+            } else if (a.identityId) {
+                h += "<p style='padding:2px 0 0 0;margin:0;font-size:11px;color:#789096;'><i class='fas fa-link' style='font-size:10px;'></i> 跨集身份 #" + a.identityId + " · 全剧还没给它定妆，这一集出的图就是定妆图</p>";
+            }
             if (a.description || a.attributes) { h += "<p style='color:#789096;padding:2px 0 0 0;margin:0;white-space:pre-wrap;line-height:1.6;font-size:13px;'>" + escHtml(a.description || a.attributes) + "</p>" }
             if (a.imagePrompt) {
                 var _ip = String(a.imagePrompt);

@@ -1596,11 +1596,20 @@ END", conn);
     }
 
     // ========== �ʲ� ==========
+    /* 四个资产列表都顺带把这个身份的「定妆图出自第几集」查出来（AnchorEpisode）：
+       资产卡上要显示「跨集复用 · 定妆在第 N 集」，不然人看不出这一条跟前面几集是不是同一个人、
+       也看不出这一集出图会照着哪一集那张出。身份还没定过妆的查出来是 NULL，页面上就不显示这一行。 */
     public List<CharacterAsset> GetCharacterAssets(int projectId)
     {
         var list = new List<CharacterAsset>();
         using var conn = GetConn(); conn.Open();
-        using var cmd = new SqlCommand("SELECT * FROM CharacterAssets WHERE ProjectId=@pid", conn);
+        using var cmd = new SqlCommand(@"
+SELECT a.*, ep.EpisodeNumber AS AnchorEpisode
+FROM CharacterAssets a
+LEFT JOIN DramaAssetIdentities i ON i.IdentityId = a.IdentityId
+     AND i.AnchorImageUrl IS NOT NULL AND i.AnchorImageUrl <> ''
+LEFT JOIN Projects ep ON ep.ProjectId = i.AnchorProjectId
+WHERE a.ProjectId=@pid ORDER BY a.AssetId DESC", conn);
         cmd.Parameters.AddWithValue("@pid", projectId);
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(new CharacterAsset
@@ -1613,6 +1622,8 @@ END", conn);
             Attributes = r["Attributes"] == DBNull.Value ? null : (string)r["Attributes"],
             ImagePrompt = r["ImagePrompt"] == DBNull.Value ? null : (string)r["ImagePrompt"],
             NegativePrompt = r["NegativePrompt"] == DBNull.Value ? null : (string)r["NegativePrompt"],
+            IdentityId = r["IdentityId"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["IdentityId"]),
+            AnchorEpisode = r["AnchorEpisode"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["AnchorEpisode"]),
         });
         return list;
     }
@@ -1621,7 +1632,13 @@ END", conn);
     {
         var list = new List<PropAsset>();
         using var conn = GetConn(); conn.Open();
-        using var cmd = new SqlCommand("SELECT * FROM PropAssets WHERE ProjectId=@pid", conn);
+        using var cmd = new SqlCommand(@"
+SELECT a.*, ep.EpisodeNumber AS AnchorEpisode
+FROM PropAssets a
+LEFT JOIN DramaAssetIdentities i ON i.IdentityId = a.IdentityId
+     AND i.AnchorImageUrl IS NOT NULL AND i.AnchorImageUrl <> ''
+LEFT JOIN Projects ep ON ep.ProjectId = i.AnchorProjectId
+WHERE a.ProjectId=@pid ORDER BY a.AssetId DESC", conn);
         cmd.Parameters.AddWithValue("@pid", projectId);
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(new PropAsset
@@ -1632,7 +1649,9 @@ END", conn);
             Description = r["Description"] == DBNull.Value ? null : (string)r["Description"],
             ImageUrl = r["ImageUrl"] == DBNull.Value ? null : (string)r["ImageUrl"],
             ImagePrompt = r["ImagePrompt"] == DBNull.Value ? null : (string)r["ImagePrompt"],
-            NegativePrompt = r["NegativePrompt"] == DBNull.Value ? null : (string)r["NegativePrompt"]
+            NegativePrompt = r["NegativePrompt"] == DBNull.Value ? null : (string)r["NegativePrompt"],
+            IdentityId = r["IdentityId"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["IdentityId"]),
+            AnchorEpisode = r["AnchorEpisode"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["AnchorEpisode"])
         });
         return list;
     }
@@ -1642,7 +1661,13 @@ END", conn);
         var list = new List<EffectAsset>();
         using var conn = GetConn();
         conn.Open();
-        using var cmd = new SqlCommand("SELECT * FROM EffectAssets WHERE ProjectId=@pid", conn);
+        using var cmd = new SqlCommand(@"
+SELECT a.*, ep.EpisodeNumber AS AnchorEpisode
+FROM EffectAssets a
+LEFT JOIN DramaAssetIdentities i ON i.IdentityId = a.IdentityId
+     AND i.AnchorImageUrl IS NOT NULL AND i.AnchorImageUrl <> ''
+LEFT JOIN Projects ep ON ep.ProjectId = i.AnchorProjectId
+WHERE a.ProjectId=@pid ORDER BY a.AssetId DESC", conn);
         cmd.Parameters.AddWithValue("@pid", projectId);
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(new EffectAsset
@@ -1653,7 +1678,9 @@ END", conn);
             Description = r["Description"] as string,
             ImageUrl = r["ImageUrl"] as string,
             ImagePrompt = r["ImagePrompt"] as string,
-            NegativePrompt = r["NegativePrompt"] as string
+            NegativePrompt = r["NegativePrompt"] as string,
+            IdentityId = r["IdentityId"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["IdentityId"]),
+            AnchorEpisode = r["AnchorEpisode"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["AnchorEpisode"])
         });
         return list;
     }
@@ -1662,7 +1689,13 @@ END", conn);
     {
         var list = new List<EnvironmentAsset>();
         using var conn = GetConn(); conn.Open();
-        using var cmd = new SqlCommand("SELECT * FROM EnvironmentAssets WHERE ProjectId=@pid", conn);
+        using var cmd = new SqlCommand(@"
+SELECT a.*, ep.EpisodeNumber AS AnchorEpisode
+FROM EnvironmentAssets a
+LEFT JOIN DramaAssetIdentities i ON i.IdentityId = a.IdentityId
+     AND i.AnchorImageUrl IS NOT NULL AND i.AnchorImageUrl <> ''
+LEFT JOIN Projects ep ON ep.ProjectId = i.AnchorProjectId
+WHERE a.ProjectId=@pid ORDER BY a.AssetId DESC", conn);
         cmd.Parameters.AddWithValue("@pid", projectId);
         using var r = cmd.ExecuteReader();
         while (r.Read()) list.Add(new EnvironmentAsset
@@ -1673,7 +1706,9 @@ END", conn);
             Description = r["Description"] == DBNull.Value ? null : (string)r["Description"],
             ImageUrl = r["ImageUrl"] == DBNull.Value ? null : (string)r["ImageUrl"],
             ImagePrompt = r["ImagePrompt"] == DBNull.Value ? null : (string)r["ImagePrompt"],
-            NegativePrompt = r["NegativePrompt"] == DBNull.Value ? null : (string)r["NegativePrompt"]
+            NegativePrompt = r["NegativePrompt"] == DBNull.Value ? null : (string)r["NegativePrompt"],
+            IdentityId = r["IdentityId"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["IdentityId"]),
+            AnchorEpisode = r["AnchorEpisode"] == DBNull.Value ? null : (int?)Convert.ToInt32(r["AnchorEpisode"])
         });
         return list;
     }

@@ -13,4 +13,10 @@ public class EnvironmentAsset
 
     /// <summary>该资产专属的负面提示词（可空，出图时再叠加模版里的统一负面词）。</summary>
     public string? NegativePrompt { get; set; }
+
+    /// <summary>它在漫剧里的身份（跨集复用用）。手工加的资产可以没有。</summary>
+    public int? IdentityId { get; set; }
+
+    /// <summary>这个身份的定妆图出自第几集（读表时顺带查出，资产卡上显示）。</summary>
+    public int? AnchorEpisode { get; set; }
 }
