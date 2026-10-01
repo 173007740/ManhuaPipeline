@@ -486,6 +486,60 @@ public class AssetController : ControllerBase
     }
 
     /// <summary>
+    /// 组装这条资产在流水线里已经定好的依据，喂给「重生成 / 补齐缺失提示词」那两个按钮。
+    ///
+    /// 这两个按钮以前只拿「资产名 + 描述 + 模版」去问模型，跟 P2c 那一批（吃立项锁定参数、
+    /// P2b 台账、本集剧本、跨集复用锚点）完全不是一个口径 ——
+    /// 同一个道具，流水线写的是「箱内工具轮廓 + 磕地弹开状态参考」，按钮补出来的却是另一套说法。
+    /// 把同样的依据喂回去，应急补的这条也跟流水线是一个口径。
+    /// </summary>
+    private string BuildAssetPromptContext(int projectId, string assetName)
+    {
+        var sb = new System.Text.StringBuilder();
+        var dramaId = _db.GetDramaIdByProject(projectId);
+
+        if (dramaId > 0)
+        {
+            try
+            {
+                var p0 = _db.BuildP0InputText(dramaId);      // 立项定死的参数（画幅 / 交付形态 / 题材调性…）
+                if (!string.IsNullOrWhiteSpace(p0))
+                    sb.AppendLine("【立项锁定参数·不得改写】").AppendLine(p0.Trim());
+            }
+            catch { /* 立项还没跑就没有锁定参数，不带这一段照样能补 */ }
+        }
+
+        var row = _db.GetLedgerLineFor(projectId, assetName);  // 台账上这一条：分级 / 是否出图 / 出图规格
+        if (!string.IsNullOrWhiteSpace(row))
+            sb.AppendLine("【资产台账里这一条（P2b 定稿）】").AppendLine(row!.Trim());
+
+        var script = _db.GetProjectScriptContent(projectId);
+        if (!string.IsNullOrWhiteSpace(script))
+        {
+            var s = script!.Trim();
+            if (s.Length > 1200) s = s[..1200] + "…";
+            sb.AppendLine("【本集剧本（摘）】").AppendLine(s);
+        }
+
+        if (dramaId > 0)
+        {
+            try
+            {
+                var anchors = _db.GetEpisodeAnchors(dramaId, projectId);   // 前面几集同款已出好的图
+                if (anchors.Count > 0)
+                {
+                    sb.AppendLine("【跨集复用锚点】下面这些在前面几集已经出过图，形象要与它们一致：");
+                    foreach (var a in anchors.Take(12))
+                        sb.AppendLine("- " + a.Category + " " + a.Name + "（第 " + a.Episode + " 集）");
+                }
+            }
+            catch { /* 锚点取不到就算了 */ }
+        }
+
+        return sb.Length == 0 ? "" : "\n" + sb.ToString().TrimEnd();
+    }
+
+    /// <summary>
     /// 按当前模版重新生成该资产的「出图提示词」正文并入库。
     /// 用途：已经跑过 Stage 6/7/8/11 的老项目，不必重跑流水线就能补上提示词。
     /// </summary>
@@ -509,7 +563,8 @@ public class AssetController : ControllerBase
         var tpl = _db.GetAssetPromptTemplate(uid, projectId, category);
         var raw = await _llm.GenerateAssetImagePrompt(
             category, asset.Value.Name, asset.Value.Description, asset.Value.Attributes,
-            tpl, cfg.Value.apiUrl, cfg.Value.apiKey, cfg.Value.model, cfg.Value.thinkingMode);
+            tpl, cfg.Value.apiUrl, cfg.Value.apiKey, cfg.Value.model, cfg.Value.thinkingMode,
+            BuildAssetPromptContext(projectId, asset.Value.Name));
 
         var prompt = NormalizeGeneratedPrompt(raw);
         if (string.IsNullOrWhiteSpace(prompt))
@@ -602,7 +657,8 @@ public class AssetController : ControllerBase
             {
                 var raw = await _llm.GenerateAssetImagePrompt(
                     category, a.Name, a.Description, a.Attributes,
-                    tpl, cfg.Value.apiUrl, cfg.Value.apiKey, cfg.Value.model, cfg.Value.thinkingMode);
+                    tpl, cfg.Value.apiUrl, cfg.Value.apiKey, cfg.Value.model, cfg.Value.thinkingMode,
+                    BuildAssetPromptContext(projectId, a.Name));
                 var prompt = NormalizeGeneratedPrompt(raw);
                 if (string.IsNullOrWhiteSpace(prompt)) { failed++; continue; }
                 _db.SaveAssetImagePrompt(projectId, category, a.AssetId, prompt);

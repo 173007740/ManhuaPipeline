@@ -190,6 +190,39 @@ public partial class DbService
     }
 
     /// <summary>
+    /// 从本集最近一次 P2b 定稿清单里，找出写着这个资产名的那几行（带上表头，光看一行不知道列是什么意思）。
+    /// 给「重生成 / 补齐缺失提示词」用：那两个按钮以前只看资产名和描述，
+    /// 不知道台账上给这一条定的是 B 级还是 C 级、出图规格写了什么，
+    /// 于是补出来的词跟 P2c 那一批不是一个口径。
+    /// </summary>
+    public string? GetLedgerLineFor(int projectId, string assetName)
+    {
+        if (projectId <= 0 || string.IsNullOrWhiteSpace(assetName)) return null;
+
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+SELECT TOP 1 s.OutputText
+FROM DirectorSkillRunSteps s JOIN DirectorSkillRuns r ON r.RunId = s.RunId
+WHERE r.ProjectId=@p AND s.StageKey='P2b' AND ISNULL(s.OutputText,'')<>''
+ORDER BY s.StepId DESC", conn);
+        cmd.Parameters.AddWithValue("@p", projectId);
+        var text = cmd.ExecuteScalar() as string;
+        if (string.IsNullOrWhiteSpace(text)) return null;
+
+        var lines = text!.Split('\n');
+        var hits = new List<string>();
+        for (int i = 0; i < lines.Length; i++)
+        {
+            if (!lines[i].Contains(assetName, StringComparison.OrdinalIgnoreCase)) continue;
+            if (hits.Count == 0 && i > 0 && lines[i - 1].TrimStart().StartsWith("|") && !lines[i - 1].Contains("---"))
+                hits.Add(lines[i - 1].Trim());      // 表头：编码 / 名称 / 分级 / 出图 / 出图规格
+            hits.Add(lines[i].Trim());
+            if (hits.Count >= 3) break;
+        }
+        return hits.Count == 0 ? null : string.Join("\n", hits);
+    }
+
+    /// <summary>
     /// 这个项目在这一类里都有哪些资产名。给「提示词没对上」的报错用：
     /// 光说「名字对不上」人不知道该改成什么，把表上现有的名字摆出来才看得出差在哪。
     /// </summary>

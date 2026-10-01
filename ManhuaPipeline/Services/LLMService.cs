@@ -701,9 +701,16 @@ public class LLMService
     /// 按模版为「单个」资产生成出图提示词正文（资产卡上的「重新生成提示词」与批量补全都走它）。
     /// 只返回提示词正文：不含统一风格与负面词，出图时由系统拼接。
     /// </summary>
+    /// <summary>
+    /// 为一条资产写出图提示词。
+    /// projectContext 是这条资产在流水线里已经定好的依据（立项锁定参数 / P2b 台账那一行 /
+    /// 本集剧本 / 跨集复用锚点）—— 不带它时，模型只能照资产名和描述自己猜，
+    /// 跟 P2c 那一批（吃完整依据）写出来的不是一个口径，同一条资产两套说法。
+    /// </summary>
     public Task<string> GenerateAssetImagePrompt(
         string category, string name, string? description, string? attributes,
-        AssetPromptTemplate template, string apiUrl, string apiKey, string model, string? thinkingMode = null)
+        AssetPromptTemplate template, string apiUrl, string apiKey, string model,
+        string? thinkingMode = null, string? projectContext = null)
     {
         var sys = new System.Text.StringBuilder();
         sys.Append("你是漫画/动画项目的资产出图提示词撰写器。任务：为下面这一条「")
@@ -716,11 +723,17 @@ public class LLMService
         if (!string.IsNullOrWhiteSpace(template.StyleLock))
             sys.Append("统一视觉风格由系统在出图时自动追加，正文里不要再写风格词（参考：").Append(template.StyleLock.Trim()).Append("）。\n");
         sys.Append("正文里禁止出现：剧情叙述、对白、动作过程、运镜、景别、镜头语言、负面词清单，也禁止写「未明确描述」。");
+        if (!string.IsNullOrWhiteSpace(projectContext))
+            sys.Append("\n下面会给出这部剧与本集已有的依据（立项锁定参数 / 资产台账 / 本集剧本 / 跨集复用锚点）。")
+               .Append("它们是对这条资产已经定好的结论，优先级高于你自己的推断：")
+               .Append("跟你的想法冲突时以它们为准，不要另起一套画幅、风格、材质或造型；")
+               .Append("台账里写明「不出图 / C 级一次性」之类的也照着办，不用替它写得更好。");
 
         var user = new System.Text.StringBuilder();
         user.Append("资产名：").Append(name).Append('\n');
         if (!string.IsNullOrWhiteSpace(description)) user.Append("资产描述：\n").Append(description.Trim()).Append('\n');
         if (!string.IsNullOrWhiteSpace(attributes)) user.Append("附加属性：\n").Append(attributes.Trim()).Append('\n');
+        if (!string.IsNullOrWhiteSpace(projectContext)) user.Append('\n').Append(projectContext!.Trim()).Append('\n');
         user.Append("请直接输出这一条出图提示词。");
 
         return CallAsync(apiUrl, apiKey, model, sys.ToString(), user.ToString(), thinkingMode: thinkingMode);
