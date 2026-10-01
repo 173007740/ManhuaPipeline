@@ -184,6 +184,41 @@ WHERE StepId=@id", conn);
         cmd.ExecuteNonQuery();
     }
 
+    /// <summary>
+    /// 把人写好的剧本落成这次运行的 P1 产出 —— 这才是下游真正会读的那一份
+    /// （下游一律按 P1 步骤取剧本，光改 Projects.ScriptContent 接不上流水线）。
+    ///
+    /// 改剧本是常事（改两句台词再跑一遍看效果），所以第二次起改的是同一条记录：
+    /// 否则改十次就堆十条 P1 步骤，而下游只认 StepId 最大那条，其余全是垃圾。
+    /// 每一版原文照样存进交付物（Version 递增），要回看上一版还能找到。
+    /// </summary>
+    public int AttachUserScriptStep(int runId, int projectId, string text)
+    {
+        var mine = GetSkillSteps(runId)
+                   .Where(s => s.StageKey == "P1" && (s.Name ?? "").Contains("用户提供"))
+                   .OrderByDescending(s => s.StepId)
+                   .FirstOrDefault();
+
+        int stepId;
+        bool updated;
+        if (mine != null)
+        {
+            stepId = mine.StepId;
+            FinishSkillStep(stepId, "done", text, null, null);   // 原地改这一条
+            updated = true;
+        }
+        else
+        {
+            stepId = CreateSkillStep(runId, "P1", "剧本（用户提供）", 20,
+                                     "（用户导入的定稿剧本，这一步没调模型）", null, 0, null);
+            FinishSkillStep(stepId, "done", text, null, null);
+            updated = false;
+        }
+        InsertDeliverable(runId, stepId, "P1", projectId, 0,
+                          updated ? "剧本（用户提供·改后）" : "剧本（用户提供）", text, null);
+        return stepId;
+    }
+
     public sealed record SkillStepRow(int StepId, string StageKey, string? Name, int SortOrder, string Status,
                                        int PromptChars, string? OutputText, string? Gates, string? Error,
                                        string? DocsSummary, string? ConfirmedAt,

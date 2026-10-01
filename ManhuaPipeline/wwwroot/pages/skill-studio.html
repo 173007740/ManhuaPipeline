@@ -1186,8 +1186,9 @@
     box.append('<label class="wide-row"><span class="ft">用我自己的剧本'
       + ' <span style="color:#4f655b">粘进来就按它走，模型不再自己写；这一格留空、点上面的「剧本生成」才是让模型写</span></span>'
       + '<textarea id="myScript" rows="10" placeholder="把你写好的剧本整篇粘进来"></textarea>'
-      + '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">'
       +   '<button class="go" id="btnMyScript" type="button" style="padding:7px 14px;">用这份剧本</button>'
+      +   '<button class="go" id="btnMyScriptRun" type="button" style="padding:7px 14px;">用这份并往下跑</button>'
       +   '<small id="myScriptState" style="color:#4f655b;"></small>'
       + '</div></label>');
     var pid = $('#proj').val();
@@ -1200,25 +1201,65 @@
       }
       else $('#myScriptState').text('这一集还没有剧本');
     });
-    $('#btnMyScript').click(function(){
-      var t = $('#myScript').val().trim();
-      if (!t){ say('× 剧本是空的', 'lerr'); return; }
-      $('#btnMyScript').prop('disabled', true).text('接入中…');
-      ensureRun(function(rid){
-        $.ajax({ url: '/api/director-agent/runs/' + rid + '/script', method: 'POST',
-                 contentType: 'application/json',
-                 data: JSON.stringify({ projectId: pid ? +pid : null, script: t }) })
-         .done(function(r){
-            say('剧本已接上流水线：' + r.chars + ' 字 · 后面的提取资产 / 分镜 / 提示词都按这份走');
-            $('#myScriptState').text('已接上 · ' + r.chars + ' 字');
-            pollOnce();     // 这一步变成「已完成」，后面的格子按新剧本往下排
-          })
-         .fail(function(xhr){
-            say('× 剧本没接上：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
-          })
-         .always(function(){ $('#btnMyScript').prop('disabled', false).text('用这份剧本'); });
-      });
+    $('#btnMyScript').click(function(){ saveMyScript(pid, false); });
+    /* 改完就按改完的跑：改剧本从来不是一次定终身，改两句台词再往下跑一遍看效果才是常态。
+       这个按钮 = 保存这一版 + 从剧本后面第一格一路跑到最后一格（资产 → 台账 → 分镜 → 提示词），
+       不用人挨个点。只保存不跑用左边那个按钮。 */
+    $('#btnMyScriptRun').click(function(){ saveMyScript(pid, true); });
+  }
+
+  function saveMyScript(pid, thenRun){
+    var t = $('#myScript').val().trim();
+    if (!t){ say('× 剧本是空的', 'lerr'); return; }
+    $('#btnMyScript').prop('disabled', true);
+    $('#btnMyScriptRun').prop('disabled', true).text('接入中…');
+    ensureRun(function(rid){
+      $.ajax({ url: '/api/director-agent/runs/' + rid + '/script', method: 'POST',
+               contentType: 'application/json',
+               data: JSON.stringify({ projectId: pid ? +pid : null, script: t }) })
+       .done(function(r){
+          say('剧本已接上流水线：' + r.chars + ' 字' + (r.updated ? '（改的是这一版，没多插一条）' : '')
+              + ' · 后面的提取资产 / 分镜 / 提示词都按这份走');
+          $('#myScriptState').text('已接上 · ' + r.chars + ' 字');
+          if (thenRun){ runAfterScript(rid, pid); return; }
+          /* 只保存不跑：下游那些格子还是按上一版剧本跑出来的，不说人会因为「已完成」三个字以为齐了 */
+          var stale = 0;
+          for (var k = 2; k < STEP_STATE.length; k++)
+            if (STEP_STATE[k] && (STEP_STATE[k].tier === 'done' || STEP_STATE[k].tier === 'part')) stale++;
+          if (stale) say('有 ' + stale + " 步是按上一版剧本跑的，要点它们的「重跑」才会按新的来", 'lwait');
+          pollOnce();     // 这一步变成「已完成」
+        })
+       .fail(function(xhr){
+          say('× 剧本没接上：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
+        })
+       .always(function(){
+          $('#btnMyScript').prop('disabled', false);
+          $('#btnMyScriptRun').prop('disabled', false).text('用这份并往下跑');
+        });
     });
+  }
+
+  /* 从剧本后面第一格一路跑到最后一格。run-all 认 from..stopStageKey，一次点火跑完，
+     不用人挨个点「重跑」——改一版剧本要点四五次，忘点一格后面的就全是旧剧本的结果。 */
+  function runAfterScript(rid, pid){
+    var first = null, last = '';
+    STEPS.forEach(function(s){
+      if (s.noRun || !s.from) return;
+      if (!first && s.from !== 'P0' && s.from !== 'P1') first = s;
+      if (s.to) last = s.to;
+    });
+    if (!first){ say('× 剧本后面没有可跑的阶段', 'lerr'); pollOnce(); return; }
+    say('按这份剧本往下跑：' + first.from + ' → ' + (last || first.to));
+    $.ajax({ url: '/api/director-agent/runs/' + rid + '/run-all', method: 'POST',
+             contentType: 'application/json',
+             data: JSON.stringify({ stageKey: first.from, inputText: '', stopStageKey: last || first.to,
+                                    projectId: pid ? +pid : null,
+                                    episodeId: $('#eps').val() ? +$('#eps').val() : null }) })
+     .done(function(r){
+        if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); pollOnce(); return; }
+        startPoll(true);
+      })
+     .fail(function(xhr){ say('× 启动失败：' + (xhr.status || ''), 'lerr'); });
   }
 
   // 挑画风时把风格描述摆出来：下拉里只有名字，真正拼进出图提示词的是这段描述，得让人看见挑的是什么

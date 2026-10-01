@@ -153,7 +153,29 @@ public class ProjectController : ControllerBase
         if (uid == 0) return Unauthorized();
         if (!_db.ProjectBelongsToUser(id, uid)) return NotFound(new { message = "项目不存在" });
         _db.UpdateProjectScript(id, uid, req.ScriptContent);
-        return Ok(new { message = "剧本保存成功" });
+
+        /* 改完就按改完的跑：剧本正本（Projects.ScriptContent）在流水线上本来没人读，
+           下游一律按 P1 步骤的产出取剧本 —— 所以在这里改完，必须同时把这一版写成
+           最近一次运行的 P1 产出，否则人改了半天，跑起来还是上一版。
+           没跑过流水线的项目没有运行可挂，跳过（syncedRunId=0）。 */
+        int syncedRunId = 0;
+        var text = (req.ScriptContent ?? "").Trim();
+        if (text.Length > 0)
+        {
+            var run = _db.GetLatestSkillRunByProject(id);
+            if (run != null)
+            {
+                _db.AttachUserScriptStep(run.RunId, id, text);
+                syncedRunId = run.RunId;
+            }
+        }
+        return Ok(new
+        {
+            message = syncedRunId > 0
+                ? "剧本已保存，并接上了最近一次运行（#" + syncedRunId + "）：从第 3 步起按这份跑"
+                : "剧本保存成功",
+            syncedRunId = syncedRunId
+        });
     }
 
     [HttpPut("{id}/episode-count")]

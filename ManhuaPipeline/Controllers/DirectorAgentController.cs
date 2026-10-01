@@ -346,6 +346,10 @@ public class DirectorAgentController : ControllerBase
     /// 这里把它直接落成本次运行的 P1 产出（status=done）：下游照旧取 P1，取到的就是人这一份；
     /// 同时写回剧本正本并标成 user（P1 跑完不再覆盖，见 SkillOutputImporter）。
     /// 之后想换成模型写的，点「重跑 · 剧本生成」即可——那次会把来源改回 ai。
+    ///
+    /// 改剧本是常事（改两句台词、调一场顺序，再往下跑一遍看效果），所以第二次起不新插一条：
+    /// 改十次就堆十条 P1 步骤，而下游只认最新那条，前面九条全是垃圾。直接改上次那条记录。
+    /// 每一次的原文仍存进交付物（Version 递增），要回看上一版还能找到。
     /// </summary>
     [HttpPost("runs/{runId:int}/script")]
     public IActionResult ImportScript(int runId, [FromBody] ScriptImportBody body)
@@ -361,10 +365,7 @@ public class DirectorAgentController : ControllerBase
         _db.UpdateProjectScript(pid, GetUserId(), text);
 
         // 本次运行的 P1 产出：这才是下游真正会读的那一份
-        var stepId = _db.CreateSkillStep(runId, "P1", "剧本（用户提供）", 20,
-                                         "（用户导入的定稿剧本，这一步没调模型）", null, 0, null);
-        _db.FinishSkillStep(stepId, "done", text, null, null);
-        _db.InsertDeliverable(runId, stepId, "P1", pid, 0, "剧本（用户提供）", text, null);
+        var stepId = _db.AttachUserScriptStep(runId, pid, text);
 
         return Ok(new { stepId = stepId, chars = text.Length });
     }

@@ -251,6 +251,11 @@
                                 <button class="btn btn-primary btn-primary" id="btnSaveScript" style="display:none;"><i class="fas fa-save"></i> 保存剧本</button>
                                 <button class="btn btn-primary" id="btnCancelScript" style="display:none;">取消</button>
                             </div>
+                            <!-- 改剧本是中途常事，改完要按改完的跑：保存时会把这一版接上最近一次流水线运行 -->
+                            <p style="margin:10px 0 0;font-size:12px;color:#7f96a3;line-height:1.7;">
+                                这里改的是剧本正本。保存后会自动接上这一集最近一次流水线运行 —— 后面提取资产、分镜、提示词都按这份跑；
+                                已经在流水线页跑过的步骤要点「重跑」才会换成新的。要让模型重写剧本，去流水线页点「重跑 · 剧本生成」。
+                            </p>
                             <div id="continueArea" style="display:none;margin-top:12px;padding:16px;background:rgba(5,232,240,0.08);border-radius:8px;border:1px solid rgba(5,232,240,0.2);">
                                 <label style="font-weight:600;color:#6af7ff;display:block;margin-bottom:8px;"><i class="fas fa-feather-alt"></i> 续写内容</label>
                                 <textarea id="continueContent" style="width:100%;min-height:150px;font-size:14px;" placeholder="请输入续写的剧情内容..."></textarea>
@@ -2474,7 +2479,7 @@ function closeAssetLib() { $("#assetLibModal").hide() }
             $(document).on("click", "#btnEditScript", function () { $("#scriptDisplay").hide(); $("#scriptContent").show(); $("#scriptContent").focus(); $("#btnSaveScript,#btnCancelScript").show() });
 
             // Save script
-            $(document).on("click", "#btnSaveScript", function () { var sc = $("#scriptContent").val(); $.ajax({ url: "/api/project/" + currentProjectId + "/script", method: "PUT", contentType: "application/json", data: JSON.stringify({ scriptContent: sc }), success: function () { $("#scriptDisplay").html(sc.replace(/\n/g, "<br>")).show(); $("#scriptContent").hide(); $("#btnSaveScript,#btnCancelScript").hide() }, error: function (x) { alert("保存失败: " + (x.responseJSON?.message || x.statusText)) } }) });
+            $(document).on("click", "#btnSaveScript", function () { var sc = $("#scriptContent").val(); $.ajax({ url: "/api/project/" + currentProjectId + "/script", method: "PUT", contentType: "application/json", data: JSON.stringify({ scriptContent: sc }), success: function (r) { $("#scriptDisplay").html(sc.replace(/\n/g, "<br>")).show(); $("#scriptContent").hide(); $("#btnSaveScript,#btnCancelScript").hide(); /* 接上流水线这件事要说出来：不说的话人改完以为齐了，跑起来还是上一版 */ if (r && r.syncedRunId) alert("剧本已保存，并接上了最近一次流水线运行（#" + r.syncedRunId + "）：从第 3 步起按这份跑；已经跑过的步骤要点「重跑」才会换成新的") }, error: function (x) { alert("保存失败: " + (x.responseJSON?.message || x.statusText)) } }) });
 
             // Cancel edit
             $(document).on("click", "#btnCancelScript", function () { $("#scriptDisplay").show(); $("#scriptContent").hide(); $("#btnSaveScript,#btnCancelScript").hide() });
