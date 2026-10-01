@@ -612,6 +612,23 @@
      不必再从 projectId 上溯 DramaId、再跨到别的集的运行里翻 StepId。
      那条路绕一圈不说，第 2 集自己没有运行记录时全靠它，哪一环没接上立项就整个空着。 */
   var DRAMA_ID = +(new URLSearchParams(location.search).get('dramaId') || 0);
+  /* 链接上带的项目（第几集）。页面一进来就能定下来，不等项目下拉加载完。
+     浏览器里记的「上次运行」要按它分开存（见 lsKey）。 */
+  var PAGE_PID = +(new URLSearchParams(location.search).get('projectId') || 0);
+
+  /* 浏览器里存的东西一律按项目分开存。
+     以前「上次运行的编号」全站就一个键，两个标签页（第 2 集 / 第 3 集）抢同一个键：
+     在第 3 集那边点火，编号写进键里；第 2 集这个页面刷新时把它读回来，
+     于是第 2 集的页面接上了第 3 集那次运行——界面跟着别人跑，按钮全锁、
+     进度条走别人的，看着就是「明明跑完了却卡住了」。 */
+  function lsKey(base){
+    var pid = PAGE_PID || ($('#proj').val() ? +$('#proj').val() : 0);
+    return base + ':' + (pid || 'x');
+  }
+  // 老版本留下的全域键：读回来会串台，进来先清掉
+  ['skillStudioRun', 'skillStudioStartAt'].forEach(function(k){
+    if (localStorage.getItem(k) !== null) localStorage.removeItem(k);
+  });
   // 图片风格库（立项「画风方向」下拉的数据源）与项目上已存的资产画风
   var IMG_STYLES = [], PROJ_IMG_STYLE = 0;
   /* 立项里那份「画风方向」：整部漫剧的画风，存在 Dramas.ArtStyleId 上。
@@ -1114,7 +1131,7 @@
       return;
     }
     var saved = {};
-    try { saved = JSON.parse(localStorage.getItem('skillStudioForm_' + key) || '{}'); } catch (e) { saved = {}; }
+    try { saved = JSON.parse(localStorage.getItem(lsKey('skillStudioForm_' + key)) || '{}'); } catch (e) { saved = {}; }
     var h = '';
     fields.forEach(function(f){
       var v = saved[f.key] != null ? saved[f.key] : (f.default || '');
@@ -1449,7 +1466,7 @@
     if (sp.form){
       var form = {};
       $('#sf' + i + ' [data-fk]').each(function(){ form[$(this).data('fk')] = $(this).val(); });
-      localStorage.setItem('skillStudioForm_' + sp.form, JSON.stringify(form));
+      localStorage.setItem(lsKey('skillStudioForm_' + sp.form), JSON.stringify(form));
       /* 立项这一步填的东西直接进库：它是独立模块，不是「跑完才有的一段文本」。
          画幅、集数、提示词引擎进 Dramas 上各自的列，改哪个都不用重跑这一步。
          进的是漫剧那一行——同部漫剧下换一集再填，改的还是同一份立项。 */
@@ -1497,7 +1514,7 @@
              }) })
      .done(function(d){
         runId = d.runId;
-        localStorage.setItem('skillStudioRun', runId);
+        localStorage.setItem(lsKey('skillStudioRun'), runId);
         say('新开一次运行 #' + runId);
         cb(runId);
      })
@@ -1569,7 +1586,7 @@
     clearInterval(timer);
     if (reset || !runStartAt){
       runStartAt = Date.now();
-      localStorage.setItem('skillStudioStartAt', runStartAt);
+      localStorage.setItem(lsKey('skillStudioStartAt'), runStartAt);
       sawRunning = false;
       markStarting();     // 点火那一刻先把按钮按下去，别等第一次轮询回来才变
     }
@@ -1648,7 +1665,7 @@
   function forgetRun(msg){
     clearInterval(timer); stopTick();
     runId = 0; runStartAt = 0;
-    localStorage.removeItem('skillStudioRun'); localStorage.removeItem('skillStudioStartAt');
+    localStorage.removeItem(lsKey('skillStudioRun')); localStorage.removeItem(lsKey('skillStudioStartAt'));
     say('× ' + msg + '，已重置，可以重新跑', 'lwait');
     $('#runStat').text('尚未开始'); $('#runSub').text(msg);
     renderSteps([]); renderPipe([]);
@@ -1658,6 +1675,19 @@
     if (!runId) return;
     $.get('/api/director-agent/runs/' + runId, function(d){
       if (!d || !d.runId){ forgetRun('上次记下的运行已经不在了'); return; }
+      /* 手里这次运行是给别的项目跑的（另一个标签页在第 3 集点火，这个页面却接了过来）：
+         再轮询下去，这个页面会一直显示别人的进度、按钮也跟着别人的状态锁住。
+         当场撒手，不用等刷新——接回本项目的那一次由 resumeRun 负责。 */
+      var cur = PAGE_PID || ($('#proj').val() ? +$('#proj').val() : 0);
+      if (cur && d.projectId && d.projectId !== cur){
+        clearInterval(timer); stopTick(); runId = 0;
+        localStorage.removeItem(lsKey('skillStudioRun'));
+        localStorage.removeItem(lsKey('skillStudioStartAt'));
+        say('× 刚接的是别的项目那次运行，已撒手；正在接回本项目的运行', 'lwait');
+        renderSteps([]); renderPipe([]);
+        resumeRun();
+        return;
+      }
       if (d.status === 'running') sawRunning = true;
       /* 刚点火的头几秒，后台任务还在排队，库里的状态还是点火前那一个。
          照着旧状态判定「没在跑」会把轮询直接停掉——表现就是点了「重跑」按钮纹丝不动，
@@ -1672,7 +1702,7 @@
       if (d.status === 'running') return;          // 还在跑，继续轮询
       clearInterval(timer); stopTick();
       // 结掉的那次不该再被「接上次运行」捞起来
-      if (d.status === 'done' || d.status === 'abandoned') localStorage.removeItem('skillStudioRun');
+      if (d.status === 'done' || d.status === 'abandoned') localStorage.removeItem(lsKey('skillStudioRun'));
       loadDeliverables();                            // 这一轮跑完，交付物可能多了新的
       loadLand();                                    // 资产/提示词刚入库，落地那两块的数字也变了
       if (d.status === 'done') say('全部跑完');
@@ -1724,7 +1754,7 @@
       $.post('/api/director-agent/runs/' + runId + '/abort', function(){}, 'json');
     }
     clearInterval(timer); stopTick(); runId = 0; runStartAt = 0; logLines = 0;
-    localStorage.removeItem('skillStudioRun'); localStorage.removeItem('skillStudioStartAt');
+    localStorage.removeItem(lsKey('skillStudioRun')); localStorage.removeItem(lsKey('skillStudioStartAt'));
     $('#gate').empty(); $('#log').empty(); $('#logCount').text('0 行'); $('#stateHint').text('');
     $('#runStat').text('尚未开始'); $('#runBar').css('width', '0'); $('#runSub').text('已重置，可以新开一次运行');
     $('#rbFill').css('width', '0%'); $('#rbTime').text('0:00');
@@ -1874,7 +1904,7 @@
      第 1 集的，连「本集提纲」都会照着旧项目取成第 1 集那一集——第 2 集等于白跑。
      所以接上之前先问一次它绑的是哪个项目，对不上就当没这回事，点火时现开一次。 */
   function resumeRun(){
-    var saved = localStorage.getItem('skillStudioRun');
+    var saved = localStorage.getItem(lsKey('skillStudioRun'));
     var pid = $('#proj').val() ? +$('#proj').val() : 0;
 
     if (saved){ resumeSaved(+saved, pid); return; }
@@ -1893,10 +1923,13 @@
     $.get('/api/director-agent/runs/' + saved, function(d){
       if (!d || !d.runId){ forgetRun('上次记下的运行已经不在了'); return; }
 
-      // 手上挑了项目就必须完全对得上：绑了别的项目、或者压根没绑项目，都不接
-      if (pid && d.projectId !== pid){
-        localStorage.removeItem('skillStudioRun');
-        localStorage.removeItem('skillStudioStartAt');
+      /* 必须完全对得上才接：绑了别的项目、或者压根没绑项目，都不接。
+         以前写成「手上挑了项目才比对」（pid && …），项目下拉还没加载完时 pid 是 0，
+         这一句整个被跳过——于是页面会接上一次别的项目的运行，界面跟着别人跑。 */
+      var cur = PAGE_PID || pid;
+      if (!cur || d.projectId !== cur){
+        localStorage.removeItem(lsKey('skillStudioRun'));
+        localStorage.removeItem(lsKey('skillStudioStartAt'));
         say('上次运行 #' + saved + ' 是给别的项目跑的，不接了（点火时新开一次）');
         return;
       }
@@ -1908,8 +1941,8 @@
   // 认下这次运行：记进浏览器、把计时接上（不从 0 重来）、开始轮询
   function adoptRun(d, msg){
     runId = d.runId; say(msg);
-    localStorage.setItem('skillStudioRun', String(runId));
-    runStartAt = +(localStorage.getItem('skillStudioStartAt') || 0);
+    localStorage.setItem(lsKey('skillStudioRun'), String(runId));
+    runStartAt = +(localStorage.getItem(lsKey('skillStudioStartAt')) || 0);
     startPoll();
   }
   </script>
