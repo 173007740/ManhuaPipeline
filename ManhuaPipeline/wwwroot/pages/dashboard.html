@@ -57,6 +57,16 @@
         .dv3-art > i { text-shadow: 0 0 30px #26e9e866; }
         #dramaEmpty a { text-decoration: none; }
 
+        /* 工作台顶部的工具 shortcut：一排描边小方块（资产库 / 无限画布 / …），
+           样子跟「编辑设置」那类链接同源，一组八个排一行，窄了自动折。 */
+        .dv3-quick { display: flex; flex-wrap: wrap; gap: 8px; margin: 0 0 22px; }
+        .dv3-quick a {
+            display: inline-flex; align-items: center; gap: 6px; padding: 9px 13px; text-decoration: none;
+            color: #a9c1c6; background: rgba(4, 18, 28, .5); border: 1px solid rgba(140, 180, 200, .28);
+            font: 10px/1 ui-monospace, SFMono-Regular, Menlo, monospace; letter-spacing: .08em; white-space: nowrap }
+        .dv3-quick a:hover { color: var(--cyan); border-color: var(--cyan); background: #041821; }
+        .dv3-quick a .material-icons { font-size: 14px; color: #6fe9f0; }
+
         /* 「编辑设置」：卡片 footer 里那条链接给个描边小小的样子，跟旁边的实心按钮分得开；
            大卡里那一个同款。 */
         a.dv3-edit, #btnEditDrama{
@@ -93,6 +103,20 @@
                 </div>
                 <button class="primary" id="btnCreate"><b>＋</b> 新建漫剧</button>
             </header>
+
+            <!-- 原来那一排快捷入口（v1.30.4 换版时漏了）：资产库 / 无限画布 / 技能库 / 打斗库 /
+                 运镜原子库 / 系统报告 / 音色库 / 作品展示。它们跟顶栏那三项是两回事 ——
+                 顶栏定的是「只放三个」，这些是工作台自己的工具 shortcut，照旧新标签页打开。 -->
+            <nav class="dv3-quick">
+                <a href="asset-library.html" target="_blank"><span class="material-icons">folder_open</span>资产库</a>
+                <a href="canvas.html" target="_blank"><span class="material-icons">gesture</span>无限画布</a>
+                <a href="skill-library.html" target="_blank"><span class="material-icons">bolt</span>技能库</a>
+                <a href="fight-library.html" target="_blank"><span class="material-icons">sports_martial_arts</span>打斗库</a>
+                <a href="camera-atom-library.html" target="_blank"><span class="material-icons">movie_filter</span>运镜原子库</a>
+                <a href="report.html" target="_blank"><span class="material-icons">assessment</span>系统报告</a>
+                <a href="voice-library.html" target="_blank"><span class="material-icons">mic</span>音色库</a>
+                <a href="works.html" target="_blank"><span class="material-icons">palette</span>作品展示</a>
+            </nav>
 
             <section class="dv3-overview">
                 <article class="dv3-feature panel" id="featureCard">
