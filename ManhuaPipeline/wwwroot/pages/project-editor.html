@@ -194,8 +194,10 @@
 
   /* ---------- 风格选项：直接来自风格库，选中的才存得进 StyleId ---------- */
   function loadPicks(boxId, url, name, onPick) {
-    var box = document.getElementById(boxId);
+    var box = $('#' + boxId);
     $.ajax({ url: url, method: 'GET' }).done(function (list) {
+      /* 有的接口直接给数组，有的包一层 {value:[…]}：两种都接，别卡在「载入中」 */
+      if (list && !Array.isArray(list)) list = list.value || list.items || list.data || [];
       list = list || [];
       /* 留一个「不指定」：风格库里没有合适的（例如这家地方转出图时另配）时不至于被逼选一个错的 */
       var html = '<label><input type="radio" name="' + name + '" value="" checked><span><i>—</i><b>不指定</b>'
@@ -214,10 +216,10 @@
   }
   function markPick(name, id) {
     if (!id) return;
-    $('#projectForm input[name=' + name + '][value=' + id + ']').prop('checked', true);
+    $('#projectForm input[name="' + name + '"][value="' + id + '"]').prop('checked', true);
   }
   function pickVal(name) {
-    var v = $('#projectForm input[name=' + name + ']:checked').val();
+    var v = $('#projectForm input[name="' + name + '"]:checked').val();
     return v ? parseInt(v, 10) : null;
   }
 
