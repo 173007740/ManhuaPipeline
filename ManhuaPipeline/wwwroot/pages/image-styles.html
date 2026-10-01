@@ -10,18 +10,83 @@
   <link rel="stylesheet" href="/lib/fontawesome/css/all.min.css">
   <link href="/lib/material-icons/material-icons.css" rel="stylesheet">
   <style>
-    .container{max-width:100%;padding:32px 24px;}
-    .page-title{font-size:24px;font-weight:700;margin-bottom:24px;color:var(--primary-light);}
-    .action-bar{display:flex;gap:12px;align-items:center;}
-    .btn-grad{background:linear-gradient(135deg,#6af7ff,#0b8f99);color:#fff;border:none;border-radius:8px;padding:10px 20px;font-size:14px;font-weight:600;cursor:pointer;display:inline-flex;align-items:center;gap:6px;}
-    .btn-grad:hover{opacity:0.9;}
-    .style-table{width:100%;border-collapse:collapse;background:rgba(30,41,59,0.6);border:1px solid rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;}
-    .style-table th{background:rgba(5,232,240,0.25);color:#c4b5fd;font-size:13px;font-weight:600;padding:10px 14px;text-align:left;border-bottom:1px solid rgba(255,255,255,0.08);}
-    .style-table td{padding:10px 14px;color:#e2e8f0;font-size:13px;border-bottom:1px solid rgba(255,255,255,0.05);vertical-align:middle;}
-    .style-table tr:hover td{background:rgba(255,255,255,0.03);}
-    .btn-edit{background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;}
-    .btn-del{background:#ef4444;color:#fff;border:none;border-radius:6px;padding:6px 12px;font-size:12px;cursor:pointer;margin-left:6px;}
-    .img-thumb{width:72px;height:44px;object-fit:cover;border-radius:4px;border:1px solid #334155;display:block;}
+    /* 视觉跟「导演流水线 / 我的工作台」那套 HUD 对齐：近黑底 + 主青强调 + 等宽小标签 + 切角卡片。
+       按钮、弹窗直接照搬 skill-studio.html 里那一套（.btn / .modal 覆写），
+       两处改一处不至于长得不一样。选择器都挂在页面范围内，不往全站 style.css 里写。 */
+    :root{--hud-cyan:#05e8f0;--hud-red:#ff3852;--hud-btn:#06313b;--hud-line:#183033;
+          --t1:#dce8e5;--t2:#819594;--t3:#5c7474;
+          --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace}
+    body{font:13px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;color:var(--t1)}
+    .container{max-width:1440px;padding:28px 24px 60px}
+
+    /* ── 按钮：整页统一成工作台那颗（40px 高、1px 描边、左上右下各切 8px） ── */
+    .btn{height:40px;padding:0 16px;font-size:12px;border-radius:0;
+         border:1px solid #49626a;background:transparent;color:#dbe7e8;
+         clip-path:polygon(8px 0,100% 0,100% calc(100% - 8px),calc(100% - 8px) 100%,0 100%,0 8px);
+         display:inline-flex;align-items:center;justify-content:center;gap:6px;cursor:pointer}
+    .btn:hover{border-color:var(--hud-cyan);color:var(--hud-cyan);background:#06313b80}
+    .btn-primary{border-color:var(--hud-cyan);background:var(--hud-btn);color:var(--hud-cyan);font-weight:700}
+    .btn-primary:hover{border-color:var(--hud-cyan);color:var(--hud-cyan);background:#08424f}
+    .btn-danger{border-color:var(--hud-red);background:transparent;color:var(--hud-red)}
+    .btn-danger:hover{border-color:var(--hud-red);color:#fff;background:#3a0d14}
+    .btn-sm{height:30px;padding:0 10px;font-size:11px}
+
+    /* ── 页头：青色竖条 + 等宽英文小标签 ── */
+    .iss-head{border-left:2px solid var(--hud-cyan);padding-left:12px}
+    .iss-head h1{font-size:20px;font-weight:700;letter-spacing:.5px;margin:0;color:#e4fbff}
+    .iss-head small{display:block;margin-top:4px;font:9px var(--mono);letter-spacing:1.6px;color:var(--t3)}
+    .iss-head p{margin:8px 0 0;font-size:12px;color:var(--t2)}
+    .iss-bar{display:flex;align-items:flex-end;justify-content:space-between;gap:12px;margin-bottom:18px}
+    .iss-count{font:10px var(--mono);color:var(--t3);letter-spacing:1px;text-align:right}
+
+    /* ── 表格：切角卡片包住，表头等宽青灰小字，行 hover 泛青 ── */
+    .iss-table{width:100%;border-collapse:separate;border-spacing:0;background:rgba(8,17,19,.72);
+               border:1px solid var(--hud-line);
+               clip-path:polygon(0 0,calc(100% - 12px) 0,100% 12px,100% 100%,12px 100%,0 calc(100% - 12px))}
+    .iss-table th{background:rgba(6,49,59,.55);color:#8da6ad;font:10px var(--mono);letter-spacing:1.2px;
+                  padding:11px 14px;text-align:left;border-bottom:1px solid var(--hud-line);white-space:nowrap}
+    .iss-table td{padding:11px 14px;font-size:12.5px;color:#cfe0df;
+                  border-bottom:1px solid rgba(24,48,51,.6);vertical-align:middle}
+    .iss-table tbody tr:hover td{background:rgba(5,232,240,.045)}
+    .iss-table tbody tr:last-child td{border-bottom:0}
+    .iss-id{font:11px var(--mono);color:var(--t3)}
+    .iss-name{font-weight:700;color:#e4fbff}
+    .iss-prompt{color:#9fb3b3;font-size:12px;line-height:1.55}
+    .iss-neg{color:#7e9494;font-size:12px}
+    .iss-empty{color:#5c7078;font-size:12px}
+    .iss-thumb{width:80px;height:48px;object-fit:cover;display:block;border:1px solid #1d3a3c;background:#04100f}
+    .iss-noimg{font:10px var(--mono);color:#4e6464}
+    /* 分类做成小徽章：表格里一眼区分是哪一路画风 */
+    .iss-chip{display:inline-block;padding:3px 9px;border:1px solid #1d5f68;background:rgba(6,49,59,.5);
+              color:var(--hud-cyan);font-size:11px;letter-spacing:.5px;white-space:nowrap}
+    .iss-chip-none{border-color:#2a3b3d;background:transparent;color:#6d8484}
+    /* 分组那一格跨行：分类名 + 这一组共几条 */
+    .iss-group{background:rgba(6,49,59,.3);vertical-align:top}
+    .iss-group small{display:block;margin-top:2px;color:var(--t3);font:10px var(--mono);font-weight:400}
+    .iss-act{white-space:nowrap}
+    .iss-act .btn+.btn{margin-left:8px}
+
+    /* ── 弹窗：跟工作台那颗一模一样（右上切 13px、外发光、输入框青描边压深底） ── */
+    .modal-overlay{background:#000c;padding:20px;backdrop-filter:none}
+    .modal{width:min(580px,96vw);max-width:none;padding:25px;border-radius:0;border-color:var(--hud-line);
+           box-shadow:0 0 80px #10dce633;
+           clip-path:polygon(0 0,calc(100% - 13px) 0,100% 13px,100% 100%,13px 100%,0 calc(100% - 13px))}
+    .modal>header{display:flex;align-items:center;justify-content:space-between;margin-bottom:6px}
+    .modal h3{font-size:16px;letter-spacing:1px;margin-bottom:0;color:#e4fbff}
+    .modal h3 .material-icons{color:var(--hud-cyan)}
+    .modal-close{border:0;background:none;color:#8ea7ae;font-size:26px;line-height:1;padding:0 4px;cursor:pointer}
+    .modal-close:hover{color:var(--hud-cyan)}
+    .modal label{display:block;color:#8da6ad;font-size:12px;font-weight:400;margin-top:16px}
+    .modal input,.modal textarea,.modal select{width:100%;margin-top:7px;padding:12px;
+           border:1px solid #18505c;border-radius:0;background:#020b11;color:#e4fbff;font-size:13px}
+    .modal input:focus,.modal textarea:focus,.modal select:focus{border-color:var(--hud-cyan);box-shadow:none;outline:0}
+    .modal-actions{margin-top:24px;display:flex;justify-content:flex-end;gap:10px}
+    /* 字段下方那行补充说明 */
+    .iss-hint{color:#5c7078;font-size:12px;margin-top:6px}
+    .iss-pick{display:flex;align-items:center;gap:12px;margin-top:7px}
+    .iss-file{flex:1;min-width:0;color:#a8c0bd;font-size:12px}
+    .iss-file::file-selector-button{height:30px;margin-right:10px;padding:0 12px;font-size:11px;
+           border:1px solid #49626a;background:#06313b;color:#dbe7e8;cursor:pointer}
   </style>
 </head>
 <body>
@@ -50,63 +115,63 @@
   </nav>
 
   <div class="container">
-    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:24px;">
-      <div class="page-title" style="margin-bottom:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 图片风格管理<span style="color:#789096;font-size:13px;font-weight:400;margin-left:8px;">无限画布节点的「图片风格」下拉直接读这里，不依赖所属项目</span></div>
-      <div class="action-bar">
-        <button class="btn-grad" onclick="openStyleModal()"><i class="fas fa-plus"></i> 新增风格</button>
+    <div class="iss-bar">
+      <div class="iss-head">
+        <h1><span class="material-icons" style="font-size:20px;vertical-align:-3px;color:#05e8f0">palette</span> 图片风格管理</h1>
+        <small>IMAGE STYLE LIBRARY</small>
+        <p>无限画布节点的「图片风格」下拉直接读这里，不依赖所属项目</p>
+      </div>
+      <div style="display:flex;align-items:center;gap:14px;">
+        <div class="iss-count" id="issCount">—</div>
+        <button class="btn btn-primary" onclick="openStyleModal()"><i class="fas fa-plus"></i> 新增风格</button>
       </div>
     </div>
 
-    <table class="style-table" id="styleTable">
+    <table class="iss-table" id="styleTable">
       <thead>
-        <tr><th style="width:60px;">ID</th><th style="width:96px;">风格图</th><th style="width:110px;">分类</th><th style="width:160px;">风格名称</th>
-            <th>正向提示词（出图时拼进提示词）</th><th>反向提示词（并入负面词）</th><th style="width:150px;">操作</th></tr>
+        <tr><th style="width:60px;">ID</th><th style="width:96px;">风格图</th><th style="width:120px;">分类</th><th style="width:150px;">风格名称</th>
+            <th>正向提示词（出图时拼进提示词）</th><th>反向提示词（并入负面词）</th><th style="width:170px;">操作</th></tr>
       </thead>
       <tbody id="styleBody"><tr><td colspan="7" style="text-align:center;color:#789096;padding:24px;">加载中...</td></tr></tbody>
     </table>
   </div>
 
-  <div id="styleModal" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.6);z-index:2000;justify-content:center;align-items:center;" onclick="if(event.target===this)closeStyleModal()">
-    <div style="background:#061923;border-radius:12px;padding:24px;max-width:560px;width:90%;border:1px solid rgba(255,255,255,0.1);max-height:88vh;overflow:auto;">
-      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
-        <h3 style="color:#f1f1f5;font-size:16px;margin:0;"><span class="material-icons" style="font-size:inherit;vertical-align:middle;color:#6af7ff">palette</span> <span id="styleModalTitle">新增风格</span></h3>
-        <button onclick="closeStyleModal()" style="background:none;border:none;color:#789096;font-size:20px;cursor:pointer;">&times;</button>
+  <div id="styleModal" class="modal-overlay" style="display:none;position:fixed;top:0;left:0;width:100%;height:100%;z-index:2000;justify-content:center;align-items:center;" onclick="if(event.target===this)closeStyleModal()">
+    <div class="modal" style="background:#061923;max-height:88vh;overflow:auto;">
+      <header>
+        <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> <span id="styleModalTitle">新增风格</span></h3>
+        <button class="modal-close" onclick="closeStyleModal()">&times;</button>
+      </header>
+      <label>风格名称（画布下拉里显示的就是它）</label>
+      <input id="styleName" type="text" placeholder="如：日系动漫、写实电影感、水墨国风">
+
+      <label>分类（只用来分组显示，不进提示词）</label>
+      <select id="styleCategory">
+        <option value="">未分类</option>
+        <option value="2D动画">2D动画</option>
+        <option value="3D动画">3D动画</option>
+        <option value="真人影视">真人影视</option>
+        <option value="漫画与插画">漫画与插画</option>
+      </select>
+
+      <label>正向提示词（出图时整段拼进提示词）</label>
+      <textarea id="styleDesc" rows="4" placeholder="如：日系动漫风格，线条干净流畅，色彩明快清新，角色大眼睛萌系表情"></textarea>
+
+      <label>反向提示词（这条风格该避开什么，出图时并入负面词）</label>
+      <textarea id="styleNegative" rows="3" placeholder="如：真人照片，蜡像皮肤，塑料材质，错误肢体，多余手指，随机文字，水印"></textarea>
+      <div class="iss-hint">不填也行 —— 那时只按资产卡上那条与模版里的通用负面词出图</div>
+
+      <label>风格图（只作预览缩略图，不送进模型）</label>
+      <div class="iss-pick">
+        <img id="imgPreview" class="iss-thumb" style="display:none;" alt="">
+        <input id="imgFile" class="iss-file" type="file" accept="image/*" onchange="onPickImage(this)">
+        <button type="button" class="btn btn-sm" onclick="clearImage()">清除</button>
       </div>
-      <div style="margin-bottom:14px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格名称（画布下拉里显示的就是它）</label>
-        <input id="styleName" type="text" placeholder="如：日系动漫、写实电影感、水墨国风" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;">
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">分类（只用来分组显示，不进提示词）</label>
-        <select id="styleCategory" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;">
-          <option value="">未分类</option>
-          <option value="2D动画">2D动画</option>
-          <option value="3D动画">3D动画</option>
-          <option value="真人影视">真人影视</option>
-          <option value="漫画与插画">漫画与插画</option>
-        </select>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">正向提示词（出图时整段拼进提示词）</label>
-        <textarea id="styleDesc" rows="4" placeholder="如：日系动漫风格，线条干净流畅，色彩明快清新，角色大眼睛萌系表情" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;resize:vertical;"></textarea>
-      </div>
-      <div style="margin-bottom:14px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">反向提示词（这条风格该避开什么，出图时并入负面词）</label>
-        <textarea id="styleNegative" rows="3" placeholder="如：真人照片，蜡像皮肤，塑料材质，错误肢体，多余手指，随机文字，水印" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;resize:vertical;"></textarea>
-        <div style="color:#5c7078;font-size:12px;margin-top:6px;">不填也行 —— 那时只按资产卡上那条与模版里的通用负面词出图</div>
-      </div>
-      <div style="margin-bottom:20px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格图（只作预览缩略图，不送进模型）</label>
-        <div style="display:flex;align-items:center;gap:12px;">
-          <img id="imgPreview" class="img-thumb" style="display:none;" alt="">
-          <input id="imgFile" type="file" accept="image/*" onchange="onPickImage(this)" style="color:#cbd5e1;font-size:13px;">
-          <button type="button" onclick="clearImage()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:6px 10px;font-size:12px;cursor:pointer;">清除</button>
-        </div>
-        <div id="imgHint" style="color:#5c7078;font-size:12px;margin-top:6px;">不选也行 —— 只影响挑风格时看不看得见图</div>
-      </div>
-      <div style="display:flex;justify-content:flex-end;gap:10px;">
-        <button onclick="closeStyleModal()" style="background:#475569;color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;">取消</button>
-        <button onclick="saveStyle()" style="background:linear-gradient(135deg,#6af7ff,#0b8f99);color:#fff;border:none;border-radius:6px;padding:10px 18px;font-size:14px;cursor:pointer;font-weight:600;">保存</button>
+      <div id="imgHint" class="iss-hint">不选也行 —— 只影响挑风格时看不看得见图</div>
+
+      <div class="modal-actions">
+        <button class="btn" onclick="closeStyleModal()">取消</button>
+        <button class="btn btn-primary" onclick="saveStyle()">保存</button>
       </div>
     </div>
   </div>
@@ -123,6 +188,7 @@ function loadStyles() {
     var h = "";
     if (!list || list.length === 0) {
       h = '<tr><td colspan="7" style="text-align:center;color:#789096;padding:24px;">还没有风格 —— 点右上角「新增风格」加一条，加了之后无限画布的「图片风格」下拉里就能选它</td></tr>';
+      $("#issCount").text("共 0 条");
     } else {
       /* 按分类分组：16 条摊平着挑得靠名字猜是哪一路画风。
          分类为空的那几条（自己后来加的）归到「未分类」，排在最后。 */
@@ -137,24 +203,30 @@ function loadStyles() {
         if (b === "未分类") return -1;
         return a.localeCompare(b, "zh");
       });
+      var real = order.filter(function(k){ return k !== "未分类"; }).length;
+      $("#issCount").text("共 " + list.length + " 条 · " + real + " 个分类");
+
       order.forEach(function(k){
         var rows = groups[k];
         rows.forEach(function(s, idx){
           var img = s.styleImageUrl
-            ? '<img class="img-thumb" src="' + escHtml(s.styleImageUrl) + '" alt="">'
-            : '<span style="color:#5c7078;font-size:12px;">无图</span>';
+            ? '<img class="iss-thumb" src="' + escHtml(s.styleImageUrl) + '" alt="">'
+            : '<span class="iss-noimg">无图</span>';
           var pos = (s.styleDesc || "").length > 90 ? (s.styleDesc || "").slice(0, 90) + '…' : (s.styleDesc || "");
           var neg = (s.styleNegative || "").length > 60 ? (s.styleNegative || "").slice(0, 60) + '…' : (s.styleNegative || "");
-          h += "<tr><td>" + s.styleId + "</td><td>" + img + "</td>"
+          var chip = k === "未分类"
+            ? '<span class="iss-chip iss-chip-none">未分类</span>'
+            : '<span class="iss-chip">' + escHtml(k) + '</span>';
+          h += "<tr><td class='iss-id'>" + s.styleId + "</td><td>" + img + "</td>"
             /* 分类只在每组第一行写一次，配上「共 N 条」，一眼看出这一组有多大 */
-            + (idx === 0 ? "<td rowspan='" + rows.length + "' style='color:#6af7ff;font-weight:600;vertical-align:top;'>" + escHtml(k)
-                          + "<div style='color:#5c7078;font-weight:400;font-size:12px;margin-top:2px;'>共 " + rows.length + " 条</div></td>" : "")
-            + "<td style='font-weight:600;color:#f1f1f5;'>" + escHtml(s.styleName) + "</td>"
-            + "<td title='" + escHtml(s.styleDesc) + "'>" + escHtml(pos) + "</td>"
-            + (neg ? "<td title='" + escHtml(s.styleNegative) + "' style='color:#94a3b8;'>" + escHtml(neg) + "</td>"
-                   : "<td style='color:#5c7078;'>（无）</td>")
-            + "<td><button class='btn-edit' onclick='openStyleModal(" + s.styleId + ")'><i class='fas fa-pen'></i> 编辑</button>"
-            + "<button class='btn-del' onclick='deleteStyle(" + s.styleId + ")'><i class='fas fa-trash'></i> 删除</button></td></tr>";
+            + (idx === 0 ? "<td class='iss-group' rowspan='" + rows.length + "'>" + chip
+                          + "<small>共 " + rows.length + " 条</small></td>" : "")
+            + "<td class='iss-name'>" + escHtml(s.styleName) + "</td>"
+            + "<td class='iss-prompt' title='" + escHtml(s.styleDesc) + "'>" + escHtml(pos) + "</td>"
+            + (neg ? "<td class='iss-neg' title='" + escHtml(s.styleNegative) + "'>" + escHtml(neg) + "</td>"
+                   : "<td class='iss-empty'>（无）</td>")
+            + "<td class='iss-act'><button class='btn btn-sm' onclick='openStyleModal(" + s.styleId + ")'><i class='fas fa-pen'></i> 编辑</button>"
+            + "<button class='btn btn-sm btn-danger' onclick='deleteStyle(" + s.styleId + ")'><i class='fas fa-trash'></i> 删除</button></td></tr>";
         });
       });
     }
