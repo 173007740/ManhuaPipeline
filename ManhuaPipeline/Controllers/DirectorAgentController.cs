@@ -139,6 +139,13 @@ public class DirectorAgentController : ControllerBase
     {
         var uid = GetUserId();
         if (uid == 0) return Unauthorized();
+        return StartRun(uid, runId, body.StageKey, body.InputText, body.ProjectId, body.EpisodeId, body.StopStageKey);
+    }
+
+    /// <summary>点火一次并立刻返回：状态先落库，后台接着跑（run-all / continue / 按底本跑剧本共用）。</summary>
+    private IActionResult StartRun(int uid, int runId, string? stageKey, string? inputText,
+                                   int? projectId, int? episodeId, string? stopStageKey)
+    {
         /* 只拦「已经作废的那次」和「正在跑的那次」。
            跑完（done）的那次允许再点火——页面上「重跑 · 生成场景提示词」这类按钮点下去
            就是要把这一件事再做一遍，挡掉它等于点了没反应。
@@ -153,16 +160,16 @@ public class DirectorAgentController : ControllerBase
         // 先把状态落库再动手。后台任务要等排上队、跑到第一个阶段才会写 running，
         // 前端点火后立刻轮询到的会是点火前那个状态，于是判定「没在跑」把轮询停掉——
         // 按钮就一直停在「重跑」，刷新页面才变。这里同步写一次，让点火和可见状态同一时刻发生
-        _db.UpdateSkillRun(runId, body.StageKey, "running");
+        _db.UpdateSkillRun(runId, stageKey, "running");
 
         _ = Task.Run(async () =>
         {
-            try { await _agent.RunFromAsync(uid, runId, body.StageKey, body.InputText ?? "",
-                                            body.ProjectId, body.EpisodeId, body.StopStageKey); }
+            try { await _agent.RunFromAsync(uid, runId, stageKey ?? "", inputText ?? "",
+                                            projectId, episodeId, stopStageKey); }
             catch (Exception ex)
             {
-                _log.LogError(ex, "run-all failed run={RunId} stage={Stage}", runId, body.StageKey);
-                _db.UpdateSkillRun(runId, body.StageKey, "error");
+                _log.LogError(ex, "run failed run={RunId} stage={Stage}", runId, stageKey);
+                _db.UpdateSkillRun(runId, stageKey, "error");
             }
             finally { _running.TryRemove(runId, out _); }
         });
@@ -369,6 +376,67 @@ public class DirectorAgentController : ControllerBase
 
         return Ok(new { stepId = stepId, chars = text.Length });
     }
+
+    /// <summary>
+    /// 我的剧本当底本，让模型整理成稿（另一种「我自己写剧本」的方式）。
+    ///
+    /// 跟上面那条的区别：上面是「这就是终稿，别动」，这条是「这是素材，你按一步 step 的产出契约整理成
+    /// 能往下用的剧本」。人写的东西常常不合流水线格式（缺页头四行、场号不是 [1内]·[地点]-[日] 这种、
+    /// 没有人物关系小节、缺节奏秒数），下游 P2a/P3 是按这些结构解析的，格式不合等于跑不出来。
+    /// 反过来全交给模型写，内容就不是他要的。这条接口是中间那条路：内容归人、格式归模型。
+    ///
+    /// 防它改内容的办法写在指令里：明说哪些必须原样保留、哪些才是它该补的，
+    /// 并要求产出末尾交一份「改动清单」——人一眼能看出它改了什么，改多了就退回来用上面那种方式。
+    /// </summary>
+    [HttpPost("runs/{runId:int}/script/draft")]
+    public IActionResult RunScriptFromDraft(int runId, [FromBody] ScriptImportBody body)
+    {
+        var uid = GetUserId();
+        if (uid == 0) return Unauthorized();
+        var draft = (body?.Script ?? "").Trim();
+        if (draft.Length == 0) return BadRequest(new { message = "剧本是空的" });
+
+        var pid = body!.ProjectId > 0 ? body.ProjectId : _db.GetRunContext(runId).ProjectId;
+        if (pid <= 0) return BadRequest(new { message = "这次运行没挂项目，先在左边选好落点项目" });
+
+        /* 底本模式这次是让模型重写一版剧本：来源得放回 ai，
+           否则 P1 跑完那句「用户定稿不覆盖」会把它挡住，整理好的那一版进不了剧本正本
+           （Projects.ScriptContent 是老流水线与「补资产提示词」的输入源）。
+           人要继续改，改的时候又会标回 user —— 两种模式来回切换都走得通。 */
+        _db.SetProjectScriptSource(pid, "ai");
+
+        return StartRun(uid, runId, "P1", DraftInputText(draft), pid, null, "P1");
+    }
+
+    /// <summary>
+    /// 底本 + 整理指令 = P1 这一步的输入。
+    /// 指令必须写死边界，不然「完善」两个字会被理解成「重写一遍更好的」——
+    /// 模型天生会替人优化：加一场、改两句台词、把慢节奏压紧凑，改完人认不出自己的剧本。
+    /// </summary>
+    private static string DraftInputText(string draft) =>
+        "【用户剧本底本·引擎注入】下面「===剧本底本 开始===」到「===剧本底本 结束===」之间，\n"
+      + "是用户自己写的这一集剧本。你的任务不是重新写一个，而是把它整理成符合这一步产出契约的最终剧本：\n"
+      + "格式归你（补足缺的结构），内容归他（一个字都不要改）。\n"
+      + "\n"
+      + "必须原样保留，不许增删改：\n"
+      + "- 场次顺序、每场的地点与日夜；\n"
+      + "- 所有台词、旁白、押韵或有意为之的病句（那是风格，不是错别字）；\n"
+      + "- 已经写明的结局与关键情节点；\n"
+      + "- 剧本里已经写了的秒数 / 节奏标注（例如「静场约 8 秒」「水滴间隔约 6 秒」）。\n"
+      + "\n"
+      + "允许你补的：缺的页头四行（【题材】【平台】【总集数】【目标时长】）、标准场号格式、\n"
+      + "人物关系小节、全剧梗概、以及底本没交代但下游要用的场景与道具描写。\n"
+      + "底本缺这些时不许回头改上面的内容去凑，只在下面注明你补了什么。\n"
+      + "五道剧本门里有跟底本冲突的（前提公式、三幕比例），以底本为准，\n"
+      + "在改动清单里写明「底本不符合 Gate N，已按底本保留」，不要因此回退重写。\n"
+      + "\n"
+      + "产出末尾必须单独写这三行：\n"
+      + "改动清单：共 N 处 ——（逐条写清改了什么、为什么）\n"
+      + "补充清单：共 N 处 ——（你替他补的结构 / 场景 / 道具，依据是什么）\n"
+      + "保留度：底本原句保留约 X%\n"
+      + "一处没改就写「改动清单：0 处，底本原样保留」。\n"
+      + "\n"
+      + "===剧本底本 开始===\n" + draft + "\n===剧本底本 结束===";
 
     /// <summary>
     /// 存立项。只传要改的字段，没传的保持原样——

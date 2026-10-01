@@ -1184,11 +1184,12 @@
     var box = $('#sf' + i);
     if (!box.length || box.find('#myScript').length) return;
     box.append('<label class="wide-row"><span class="ft">用我自己的剧本'
-      + ' <span style="color:#4f655b">粘进来就按它走，模型不再自己写；这一格留空、点上面的「剧本生成」才是让模型写</span></span>'
+      + ' <span style="color:#4f655b">粘进来之后：当终稿直接用 / 当底本让模型整理成稿。这一格留空、点上面的「剧本生成」才是让模型从头写</span></span>'
       + '<textarea id="myScript" rows="10" placeholder="把你写好的剧本整篇粘进来"></textarea>'
       + '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">'
       +   '<button class="go" id="btnMyScript" type="button" style="padding:7px 14px;">用这份剧本</button>'
       +   '<button class="go" id="btnMyScriptRun" type="button" style="padding:7px 14px;">用这份并往下跑</button>'
+      +   '<button class="go" id="btnMyScriptDraft" type="button" style="padding:7px 14px;">当底本，让模型整理成稿</button>'
       +   '<small id="myScriptState" style="color:#4f655b;"></small>'
       + '</div></label>');
     var pid = $('#proj').val();
@@ -1202,6 +1203,28 @@
       else $('#myScriptState').text('这一集还没有剧本');
     });
     $('#btnMyScript').click(function(){ saveMyScript(pid, false); });
+    /* 当底本：自己写的常常不合流水线的格式（缺页头四行、场号不标准、没人物关系小节、缺节奏秒数），
+       下游是按这些结构解析的；反过来全交给模型写，内容又不是他要的。
+       这条走中间：内容归他、格式归模型，产出末尾还要交一份「改动清单」，改多了能一眼看出来。 */
+    $('#btnMyScriptDraft').click(function(){
+      var t = $('#myScript').val().trim();
+      if (!t){ say('× 剧本是空的', 'lerr'); return; }
+      $('#btnMyScriptDraft').prop('disabled', true).text('整理中…');
+      ensureRun(function(rid){
+        $.ajax({ url: '/api/director-agent/runs/' + rid + '/script/draft', method: 'POST',
+                 contentType: 'application/json',
+                 data: JSON.stringify({ projectId: pid ? +pid : null, script: t }) })
+         .done(function(r){
+            if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); return; }
+            say('按你这份底本整理剧本：' + t.length + ' 字 · 改了什么会写在产出末尾的「改动清单」里，改多了就用「用这份剧本」直接锁终稿', 'lrun');
+            startPoll(true);
+          })
+         .fail(function(xhr){
+            say('× 没跑起来：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
+          })
+         .always(function(){ $('#btnMyScriptDraft').prop('disabled', false).text('当底本，让模型整理成稿'); });
+      });
+    });
     /* 改完就按改完的跑：改剧本从来不是一次定终身，改两句台词再往下跑一遍看效果才是常态。
        这个按钮 = 保存这一版 + 从剧本后面第一格一路跑到最后一格（资产 → 台账 → 分镜 → 提示词），
        不用人挨个点。只保存不跑用左边那个按钮。 */
