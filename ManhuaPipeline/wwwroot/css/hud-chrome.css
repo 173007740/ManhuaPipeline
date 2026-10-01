@@ -43,7 +43,10 @@
 
 /* 导航项：等宽字、左细线分隔、hover 变青、当前项底部红线 */
 .navbar.hc-topnav .nav-links{display:flex;align-items:center;height:100%;margin-left:auto;gap:0}
-.navbar.hc-topnav .nav-links>a{display:flex;align-items:center;height:100%;padding:0 20px;
+/* 每一项给一个最小宽度 + 居中：字数是两字的「首页」、五字的「我的工作台」，
+   只靠 padding 撑出来的格子宽窄差一截，排在一起显得乱。给下限之后最窄那格也站得住。 */
+.navbar.hc-topnav .nav-links>a{display:flex;align-items:center;justify-content:center;height:100%;
+  min-width:104px;padding:0 18px;
   border-left:1px solid var(--hc-line);color:var(--hc-muted);text-decoration:none;position:relative;
   font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;white-space:nowrap;
   transition:color .15s,background .15s}
@@ -67,13 +70,17 @@
 /* 用户名 / 退出、登录 / 注册 之间一条竖线，跟导航项之间同一种线。
    a 与用户名那一格都撑到满高（height:100%），线才是通到底的一根 ——
    之前只给了 padding，border 只能画到「文字 + padding」那么高，看着像半截。 */
-.navbar.hc-topnav #navUser a,.navbar.hc-topnav #navGuest a{display:flex;align-items:center;height:100%;
+/* 退出 / 登录 / 注册 都是两个字，给同一个最小宽度就齐了（min-width 相同，视觉上是一排等比格子） */
+.navbar.hc-topnav #navUser a,.navbar.hc-topnav #navGuest a{display:flex;align-items:center;
+  justify-content:center;height:100%;min-width:78px;
   padding:0 10px;color:var(--hc-muted);text-decoration:none;font:inherit;white-space:nowrap}
 .navbar.hc-topnav #navUser a:hover,.navbar.hc-topnav #navGuest a:hover{color:var(--hc-cyan)}
 .navbar.hc-topnav #navGuest a + a,
 .navbar.hc-topnav #navUser #btnLogout{border-left:1px solid var(--hc-line)}
-.navbar.hc-topnav #navUser #userName{display:flex;align-items:center;height:100%;color:var(--hc-cyan);
-  padding:0 10px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:inherit}
+/* 用户名长短不定：给下限（不挤在头像边上），超了由 max-width 截断出省略号 */
+.navbar.hc-topnav #navUser #userName{display:flex;align-items:center;justify-content:center;height:100%;
+  min-width:104px;max-width:220px;color:var(--hc-cyan);
+  padding:0 12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font:inherit}
 .navbar.hc-topnav #navUser #userName img{width:20px;height:20px;border-radius:50%;margin-right:5px;
   vertical-align:middle;object-fit:cover}
 .navbar.hc-topnav #navUser #btnLogout,.navbar.hc-topnav #navUser #btnLogout:hover{color:var(--hc-red)}
@@ -85,11 +92,16 @@
 
 @media(max-width:1400px){
   .navbar.hc-topnav .nav-links>a{padding:0 13px}
+  .navbar.hc-topnav #navUser #userName{min-width:92px}
   .hc-brand{width:250px;flex-basis:250px}
 }
 @media(max-width:1100px){
   .navbar.hc-topnav{padding:0 12px}
   .hc-brand{width:auto;flex-basis:auto;gap:9px}
   .hc-brand small{display:none}
-  .navbar.hc-topnav .nav-links>a{padding:0 9px;font-size:10px}
+  /* 窄屏保字不保格子：再兜 min-width 那排字就换行了，padding 收窄即可 */
+  .navbar.hc-topnav .nav-links>a{padding:0 9px;font-size:10px;min-width:0}
+  .navbar.hc-topnav #navUser a,
+  .navbar.hc-topnav #navGuest a{min-width:0}
+  .navbar.hc-topnav #navUser #userName{min-width:0}
 }
