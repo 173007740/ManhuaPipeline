@@ -2,11 +2,14 @@
    ------------------------------------------------------------------
    project-editor.html 是新做的页面，顶部是 HUD 风格：72px 高、等宽字导航、
    青色 hover 与红色当前项下划线、右上角一个呼吸状态灯。
-   其它页面用的是旧 navbar（56/64px、普通无衬线、<!logo+ slogan 一行>），
-   两套装在同一站点里，来回换页时顶栏会跳一下。
+   其它页面用的是旧 navbar（56/64px、普通无衬线），两套装在同一站点里，
+   来回换页时顶栏会跳一下。
 
    这个文件只管「顶部外壳」，不碰页面内容，也不改 background 特效——
    所以用独立前缀 --hc-* / .hc-*，免得跟各页自己的变量与样式打架。
+
+   选择器统一写成 .navbar.hc-topnav：各页自己的 .navbar 定义跟这里是同权重，
+   压不住的话顶栏会半旧半新（高度变了颜色没变之类），多一个类把它抬起来。
 
    用法：页面 head 里引这一个 css + js/hud-chrome.js。
    js 会给页面里的 .navbar 套上这套皮肤：链接一个都不动，只是换个样子。 */
@@ -20,46 +23,47 @@
 }
 
 /* 外壳：高度与 project-editor 一致（72px），位置维持各页原来的 sticky */
-.hc-topnav{position:sticky;top:0;z-index:100;height:72px;background:var(--hc-bg);
+.navbar.hc-topnav{position:sticky;top:0;z-index:100;height:72px;background:var(--hc-bg);
   border-bottom:1px solid var(--hc-line);box-shadow:0 12px 35px rgba(0,0,0,.55)}
-.hc-topnav .nav-inner{margin:0;height:100%;display:flex;align-items:center;gap:18px;
+.navbar.hc-topnav .nav-inner{margin:0;height:100%;display:flex;align-items:center;gap:18px;
   padding:0 25px;max-width:none}
 
 /* 品牌：project-editor 那边是「方块 + 双行标题」，这里给 logo 同样的容器感 */
-.hc-topnav .logo{display:flex;align-items:center;gap:12px;padding:0;text-decoration:none;
-  border:1px solid transparent;padding-right:14px}
-.hc-topnav .logo>span:first-child{display:flex;align-items:center;gap:8px;
+.navbar.hc-topnav .logo{display:flex;align-items:center;gap:12px;padding:0 14px 0 0;text-decoration:none;
+  border:1px solid transparent}
+.navbar.hc-topnav .logo>span:first-child{display:flex;align-items:center;gap:8px;
   font-size:14px;letter-spacing:2px;color:var(--hc-text)}
-.hc-topnav .logo>span:last-child{font:8px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
+.navbar.hc-topnav .logo>span:last-child{font:8px/1.4 ui-monospace,SFMono-Regular,Menlo,monospace;
   color:#668188;letter-spacing:.04em}
 
 /* 导航项：等宽、左右细线分隔、hover 变青、当前项底部一条红线 */
-.hc-topnav .nav-links{display:flex;align-items:center;margin-left:auto;gap:0}
-.hc-topnav .nav-links>a{display:flex;align-items:center;height:72px;padding:0 18px;
+.navbar.hc-topnav .nav-links{display:flex;align-items:center;margin-left:auto;gap:0}
+.navbar.hc-topnav .nav-links>a{display:flex;align-items:center;height:72px;padding:0 18px;
   color:var(--hc-muted);text-decoration:none;position:relative;
   font:400 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;
   border-left:1px solid rgba(14,47,56,.9);transition:color .15s,background .15s;white-space:nowrap}
-.hc-topnav .nav-links>a:hover{color:var(--hc-cyan);background:#041821}
-.hc-topnav .nav-links>a.hc-active{color:var(--hc-cyan);background:#041821}
-.hc-topnav .nav-links>a.hc-active:after{content:"";position:absolute;left:14px;right:14px;bottom:0;
+.navbar.hc-topnav .nav-links>a:hover{color:var(--hc-cyan);background:#041821}
+.navbar.hc-topnav .nav-links>a.hc-active{color:var(--hc-cyan);background:#041821}
+.navbar.hc-topnav .nav-links>a.hc-active:after{content:"";position:absolute;left:14px;right:14px;bottom:0;
   height:2px;background:var(--hc-red);box-shadow:0 0 12px var(--hc-red)}
-.hc-topnav .nav-links>a .material-icons{font-size:15px;margin-right:6px}
+.navbar.hc-topnav .nav-links>a .material-icons{font-size:15px;margin-right:6px}
 
 /* 右上角状态灯：project-editor 上写着 AUTOSAVE ONLINE。
    这里套在原本的用户区 / 登录区外面——里面的字一个不改，只给它一个统一的青色外框与呼吸点。 */
-.hc-system{display:flex!important;align-items:center;gap:8px;height:72px;padding:0 0 0 16px;
+.navbar.hc-topnav .hc-system{display:flex;align-items:center;gap:8px;height:72px;padding:0 0 0 16px;
   margin-left:6px;border-left:1px solid rgba(14,47,56,.9);color:var(--hc-cyan);
   font:10px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
-.hc-system a{color:var(--hc-cyan);text-decoration:none}
-.hc-system a:hover{text-decoration:underline}
-.hc-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 7px;
+.navbar.hc-topnav .hc-system a{color:var(--hc-cyan);text-decoration:none}
+.navbar.hc-topnav .hc-system a:hover{text-decoration:underline}
+.navbar.hc-topnav .hc-dot{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 7px;
   background:var(--hc-cyan);box-shadow:0 0 10px var(--hc-cyan);animation:hc-pulse 2.4s ease-in-out infinite}
 @keyframes hc-pulse{0%,100%{opacity:.45}50%{opacity:1}}
-@media(prefers-reduced-motion:reduce){.hc-dot{animation:none}}
+@media(prefers-reduced-motion:reduce){.navbar.hc-topnav .hc-dot{animation:none}}
 
 @media(max-width:1000px){
-  .hc-topnav,.hc-topnav .nav-inner,.hc-topnav .nav-links>a,.hc-system{height:60px}
-  .hc-topnav .nav-inner{padding:0 12px;gap:10px}
-  .hc-topnav .nav-links>a{padding:0 10px;font-size:10px}
-  .hc-topnav .logo>span:last-child{display:none}
+  .navbar.hc-topnav,.navbar.hc-topnav .nav-inner,
+  .navbar.hc-topnav .nav-links>a,.navbar.hc-topnav .hc-system{height:60px}
+  .navbar.hc-topnav .nav-inner{padding:0 12px;gap:10px}
+  .navbar.hc-topnav .nav-links>a{padding:0 10px;font-size:10px}
+  .navbar.hc-topnav .logo>span:last-child{display:none}
 }
