@@ -37,7 +37,8 @@ public class ImageStyleController : ControllerBase
 
         var id = _db.SaveImageStyle(req.StyleId, req.StyleName.Trim(), req.StyleDesc.Trim(),
                                     req.StyleImageUrl,
-                                    string.IsNullOrWhiteSpace(req.StyleNegative) ? null : req.StyleNegative!.Trim());
+                                    string.IsNullOrWhiteSpace(req.StyleNegative) ? null : req.StyleNegative!.Trim(),
+                                    string.IsNullOrWhiteSpace(req.Category) ? null : req.Category!.Trim());
         return Ok(new { styleId = id, message = "保存成功" });
     }
 
@@ -76,6 +77,8 @@ public class SaveImageStyleRequest
     public int? StyleId { get; set; }
     public string StyleName { get; set; } = "";
     public string StyleDesc { get; set; } = "";
+    /// <summary>分类（可空）：只用来给挑风格时分组，不进提示词。</summary>
+    public string? Category { get; set; }
     /// <summary>这条风格自带的反向提示词（可空：老风格没有，出图时负面词照旧）。</summary>
     public string? StyleNegative { get; set; }
     public string? StyleImageUrl { get; set; }

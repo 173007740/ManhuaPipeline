@@ -59,9 +59,10 @@
 
     <table class="style-table" id="styleTable">
       <thead>
-        <tr><th style="width:60px;">ID</th><th style="width:96px;">风格图</th><th style="width:180px;">风格名称</th><th>风格描述（出图时拼进提示词）</th><th style="width:160px;">操作</th></tr>
+        <tr><th style="width:60px;">ID</th><th style="width:96px;">风格图</th><th style="width:110px;">分类</th><th style="width:160px;">风格名称</th>
+            <th>正向提示词（出图时拼进提示词）</th><th>反向提示词（并入负面词）</th><th style="width:150px;">操作</th></tr>
       </thead>
-      <tbody id="styleBody"><tr><td colspan="5" style="text-align:center;color:#789096;padding:24px;">加载中...</td></tr></tbody>
+      <tbody id="styleBody"><tr><td colspan="7" style="text-align:center;color:#789096;padding:24px;">加载中...</td></tr></tbody>
     </table>
   </div>
 
@@ -76,8 +77,23 @@
         <input id="styleName" type="text" placeholder="如：日系动漫、写实电影感、水墨国风" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;">
       </div>
       <div style="margin-bottom:14px;">
-        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格描述（出图时整段拼进提示词）</label>
+        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">分类（只用来分组显示，不进提示词）</label>
+        <select id="styleCategory" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;">
+          <option value="">未分类</option>
+          <option value="2D动画">2D动画</option>
+          <option value="3D动画">3D动画</option>
+          <option value="真人影视">真人影视</option>
+          <option value="漫画与插画">漫画与插画</option>
+        </select>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">正向提示词（出图时整段拼进提示词）</label>
         <textarea id="styleDesc" rows="4" placeholder="如：日系动漫风格，线条干净流畅，色彩明快清新，角色大眼睛萌系表情" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;resize:vertical;"></textarea>
+      </div>
+      <div style="margin-bottom:14px;">
+        <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">反向提示词（这条风格该避开什么，出图时并入负面词）</label>
+        <textarea id="styleNegative" rows="3" placeholder="如：真人照片，蜡像皮肤，塑料材质，错误肢体，多余手指，随机文字，水印" style="width:100%;box-sizing:border-box;background:#041017;color:#e2e8f0;border:1px solid #475569;border-radius:6px;padding:10px 12px;font-size:14px;resize:vertical;"></textarea>
+        <div style="color:#5c7078;font-size:12px;margin-top:6px;">不填也行 —— 那时只按资产卡上那条与模版里的通用负面词出图</div>
       </div>
       <div style="margin-bottom:20px;">
         <label style="color:#cbd5e1;font-size:13px;display:block;margin-bottom:6px;">风格图（只作预览缩略图，不送进模型）</label>
@@ -106,23 +122,44 @@ function loadStyles() {
   $.get("/api/image-style", function (list) {
     var h = "";
     if (!list || list.length === 0) {
-      h = '<tr><td colspan="5" style="text-align:center;color:#789096;padding:24px;">还没有风格 —— 点右上角「新增风格」加一条，加了之后无限画布的「图片风格」下拉里就能选它</td></tr>';
+      h = '<tr><td colspan="7" style="text-align:center;color:#789096;padding:24px;">还没有风格 —— 点右上角「新增风格」加一条，加了之后无限画布的「图片风格」下拉里就能选它</td></tr>';
     } else {
-      for (var i = 0; i < list.length; i++) {
-        var s = list[i];
-        var img = s.styleImageUrl
-          ? '<img class="img-thumb" src="' + escHtml(s.styleImageUrl) + '" alt="">'
-          : '<span style="color:#5c7078;font-size:12px;">无图</span>';
-        var desc = (s.styleDesc || "").length > 70 ? (s.styleDesc || "").slice(0, 70) + '…' : (s.styleDesc || "");
-        h += "<tr><td>" + s.styleId + "</td><td>" + img + "</td>"
-          + "<td style='font-weight:600;color:#f1f1f5;'>" + escHtml(s.styleName) + "</td>"
-          + "<td title='" + escHtml(s.styleDesc) + "'>" + escHtml(desc) + "</td>"
-          + "<td><button class='btn-edit' onclick='openStyleModal(" + s.styleId + ")'><i class='fas fa-pen'></i> 编辑</button>"
-          + "<button class='btn-del' onclick='deleteStyle(" + s.styleId + ")'><i class='fas fa-trash'></i> 删除</button></td></tr>";
-      }
+      /* 按分类分组：16 条摊平着挑得靠名字猜是哪一路画风。
+         分类为空的那几条（自己后来加的）归到「未分类」，排在最后。 */
+      var groups = {}, order = [];
+      list.forEach(function(s){
+        var k = s.category || "未分类";
+        if (!groups[k]) { groups[k] = []; order.push(k); }
+        groups[k].push(s);
+      });
+      order.sort(function(a, b){
+        if (a === "未分类") return 1;
+        if (b === "未分类") return -1;
+        return a.localeCompare(b, "zh");
+      });
+      order.forEach(function(k){
+        var rows = groups[k];
+        rows.forEach(function(s, idx){
+          var img = s.styleImageUrl
+            ? '<img class="img-thumb" src="' + escHtml(s.styleImageUrl) + '" alt="">'
+            : '<span style="color:#5c7078;font-size:12px;">无图</span>';
+          var pos = (s.styleDesc || "").length > 90 ? (s.styleDesc || "").slice(0, 90) + '…' : (s.styleDesc || "");
+          var neg = (s.styleNegative || "").length > 60 ? (s.styleNegative || "").slice(0, 60) + '…' : (s.styleNegative || "");
+          h += "<tr><td>" + s.styleId + "</td><td>" + img + "</td>"
+            /* 分类只在每组第一行写一次，配上「共 N 条」，一眼看出这一组有多大 */
+            + (idx === 0 ? "<td rowspan='" + rows.length + "' style='color:#6af7ff;font-weight:600;vertical-align:top;'>" + escHtml(k)
+                          + "<div style='color:#5c7078;font-weight:400;font-size:12px;margin-top:2px;'>共 " + rows.length + " 条</div></td>" : "")
+            + "<td style='font-weight:600;color:#f1f1f5;'>" + escHtml(s.styleName) + "</td>"
+            + "<td title='" + escHtml(s.styleDesc) + "'>" + escHtml(pos) + "</td>"
+            + (neg ? "<td title='" + escHtml(s.styleNegative) + "' style='color:#94a3b8;'>" + escHtml(neg) + "</td>"
+                   : "<td style='color:#5c7078;'>（无）</td>")
+            + "<td><button class='btn-edit' onclick='openStyleModal(" + s.styleId + ")'><i class='fas fa-pen'></i> 编辑</button>"
+            + "<button class='btn-del' onclick='deleteStyle(" + s.styleId + ")'><i class='fas fa-trash'></i> 删除</button></td></tr>";
+        });
+      });
     }
     $("#styleBody").html(h);
-  }).fail(function () { $("#styleBody").html('<tr><td colspan="5" style="text-align:center;color:#ef4444;padding:24px;">加载失败</td></tr>'); });
+  }).fail(function () { $("#styleBody").html('<tr><td colspan="7" style="text-align:center;color:#ef4444;padding:24px;">加载失败</td></tr>'); });
 }
 
 function openStyleModal(styleId) {
@@ -130,6 +167,8 @@ function openStyleModal(styleId) {
   pendingImageUrl = null;
   $("#styleName").val("");
   $("#styleDesc").val("");
+  $("#styleNegative").val("");
+  $("#styleCategory").val("");
   $("#imgFile").val("");
   $("#imgPreview").hide().removeAttr("src");
   $("#imgHint").text("不选也行 —— 只影响挑风格时看不看得见图");
@@ -140,6 +179,8 @@ function openStyleModal(styleId) {
         if (list[i].styleId === editingStyleId) {
           $("#styleName").val(list[i].styleName);
           $("#styleDesc").val(list[i].styleDesc);
+          $("#styleNegative").val(list[i].styleNegative || "");
+          $("#styleCategory").val(list[i].category || "");
           if (list[i].styleImageUrl) setPreview(list[i].styleImageUrl);
           break;
         }
@@ -183,13 +224,16 @@ function onPickImage(input) {
 function saveStyle() {
   var name = $("#styleName").val().trim();
   var desc = $("#styleDesc").val().trim();
+  var neg = $("#styleNegative").val().trim();
+  var cat = $("#styleCategory").val();
   if (!name) { alert("请输入风格名称"); return; }
-  if (!desc) { alert("请输入风格描述 —— 出图时拼进提示词的就是这段"); return; }
+  if (!desc) { alert("请输入正向提示词 —— 出图时拼进提示词的就是这段"); return; }
   $.ajax({
     url: "/api/image-style",
     method: "POST",
     contentType: "application/json",
-    data: JSON.stringify({ styleId: editingStyleId, styleName: name, styleDesc: desc, styleImageUrl: pendingImageUrl }),
+    data: JSON.stringify({ styleId: editingStyleId, styleName: name, styleDesc: desc,
+                           styleNegative: neg, category: cat, styleImageUrl: pendingImageUrl }),
     success: function () { closeStyleModal(); loadStyles(); },
     error: function (x) { alert("保存失败: " + ((x.responseJSON && x.responseJSON.message) || x.statusText)); }
   });

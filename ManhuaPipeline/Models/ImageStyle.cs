@@ -12,6 +12,11 @@ public class ImageStyle
     public string StyleName { get; set; } = "";
     public string StyleDesc { get; set; } = "";
     /// <summary>
+    /// 分类（2D动画 / 3D动画 / 真人影视 / 漫画与插画…）。只用来给挑风格时分组，不进提示词。
+    /// 老风格没分类，为 null，页面上显示「未分类」。
+    /// </summary>
+    public string? Category { get; set; }
+    /// <summary>
     /// 这条风格自带的反向提示词（该避开什么：真人照片 / 蜡像皮肤 / 塑料材质 / 错误肢体 / 水印…）。
     /// 风格预设里每段正向都配一段反向，只存正向等于丢一半。老风格没有这一列，出图时负面词照旧。
     /// </summary>

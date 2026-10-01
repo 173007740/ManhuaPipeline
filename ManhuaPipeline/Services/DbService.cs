@@ -3487,28 +3487,30 @@ WHERE p.Status = 'completed'
     }
 
     public int SaveImageStyle(int? styleId, string styleName, string styleDesc,
-                              string? styleImageUrl, string? styleNegative = null)
+                              string? styleImageUrl, string? styleNegative = null, string? category = null)
     {
         using var conn = GetConn(); conn.Open();
         if (styleId.HasValue && styleId.Value > 0)
         {
             using var cmd = new SqlCommand(
                 @"UPDATE ImageStyles SET StyleName=@n, StyleDesc=@d, StyleImageUrl=@u, StyleNegative=@g,
-                  UpdatedAt=SYSDATETIME() WHERE StyleId=@id", conn);
+                  Category=@c, UpdatedAt=SYSDATETIME() WHERE StyleId=@id", conn);
             cmd.Parameters.AddWithValue("@n", styleName);
             cmd.Parameters.AddWithValue("@d", styleDesc);
             cmd.Parameters.AddWithValue("@u", (object?)styleImageUrl ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@g", (object?)styleNegative ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@c", (object?)category ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@id", styleId.Value);
             cmd.ExecuteNonQuery();
             return styleId.Value;
         }
         using var ins = new SqlCommand(
-            "INSERT INTO ImageStyles(StyleName,StyleDesc,StyleImageUrl,StyleNegative) OUTPUT INSERTED.StyleId VALUES(@n,@d,@u,@g)", conn);
+            "INSERT INTO ImageStyles(StyleName,StyleDesc,StyleImageUrl,StyleNegative,Category) OUTPUT INSERTED.StyleId VALUES(@n,@d,@u,@g,@c)", conn);
         ins.Parameters.AddWithValue("@n", styleName);
         ins.Parameters.AddWithValue("@d", styleDesc);
         ins.Parameters.AddWithValue("@u", (object?)styleImageUrl ?? DBNull.Value);
         ins.Parameters.AddWithValue("@g", (object?)styleNegative ?? DBNull.Value);
+        ins.Parameters.AddWithValue("@c", (object?)category ?? DBNull.Value);
         return (int)ins.ExecuteScalar();
     }
 
@@ -3525,6 +3527,7 @@ WHERE p.Status = 'completed'
         StyleId = (int)r["StyleId"],
         StyleName = (string)r["StyleName"],
         StyleDesc = (string)r["StyleDesc"],
+        Category = r["Category"] == DBNull.Value ? null : (string?)r["Category"],
         StyleNegative = r["StyleNegative"] == DBNull.Value ? null : (string?)r["StyleNegative"],
         StyleImageUrl = r["StyleImageUrl"] == DBNull.Value ? null : (string?)r["StyleImageUrl"],
         CreatedAt = (DateTime)r["CreatedAt"],
