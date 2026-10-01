@@ -229,8 +229,11 @@ progress::-moz-progress-bar { background: var(--accent); }
         <option value="B站">B站</option>
       </select></div>
       <div><label>题材</label><input type="text" data-fk="genre" placeholder="如：宫崎骏自愈系"></div>
-      <div><label>画风</label><select data-fk="artStyle"><option value="">未设置</option></select></div>
-      <div><label>核心爽点</label><input type="text" data-fk="hook" placeholder="一句话说清看什么"></div>
+      <!-- 两个风格各管一段，摆一排挑：图片风格 = 画面长什么样，视觉风格 = 影像什么调子 -->
+      <div><label>图片风格</label><select data-fk="artStyle"><option value="">未设置</option></select></div>
+      <div><label>视觉风格</label><select data-fk="videoStyle"><option value="">未设置</option></select></div>
+      <!-- 加了视觉风格之后它落了单（右边空一格），让它占满整行 -->
+      <div class="pm-brief-span"><label>核心爽点</label><input type="text" data-fk="hook" placeholder="一句话说清看什么"></div>
       <div class="pm-brief-span"><label>核心设定</label><textarea data-fk="premise" rows="2" placeholder="世界观与故事底线"></textarea></div>
       <div><label>总集数</label><input type="number" min="1" data-fk="episodeCount" placeholder="12"></div>
       <div><label>单集时长（秒）</label><input type="number" min="1" data-fk="episodeDuration" placeholder="180"></div>
@@ -362,7 +365,7 @@ $(function(){
     currentDramaId = dramaId ? +dramaId : 0;
     if (currentDramaId) {
       $("#briefPanel").show();
-      loadImageStyles().done(loadBrief);   // 画风下拉要先有选项，回填才填得进去
+      $.when(loadImageStyles(), loadVideoStyles()).done(loadBrief);   // 两个风格下拉要先有选项，回填才填得进去
     }
     $("#sortLabel").text(sortLabel(sortOrder));   // 按钮上的字是写死的，进来先把标签对上实际排序
     loadAllProjects(dramaId);
@@ -405,9 +408,20 @@ function loadDurationStats(dramaId,cb){
 var currentDramaId = 0;
 var genTimer = null;
 
+/* 两个风格库各装一次：图片风格 = 画面长什么样（资产出图拼进提示词），
+   视觉风格 = 影像什么调子（一部剧定一次，存 Dramas.VideoStyleId）。
+   都要在回填立项之前装好 —— 下拉里没有那个选项，回填就填不进去。 */
 function loadImageStyles(){
   return $.get("/api/image-style", function(list){
     var sel = $('[data-fk="artStyle"]').empty().append('<option value="">未设置</option>');
+    (list||[]).forEach(function(s){
+      sel.append('<option value="'+s.styleId+'">'+escHtml(s.styleName||s.name||'')+'</option>');
+    });
+  });
+}
+function loadVideoStyles(){
+  return $.get("/api/video-style", function(list){
+    var sel = $('[data-fk="videoStyle"]').empty().append('<option value="">未设置</option>');
     (list||[]).forEach(function(s){
       sel.append('<option value="'+s.styleId+'">'+escHtml(s.styleName||s.name||'')+'</option>');
     });
@@ -425,6 +439,7 @@ function briefFromForm(){
     delivery: $('[data-fk="delivery"]').val() || null,
     genre: $('[data-fk="genre"]').val() || null,
     artStyleId: $('[data-fk="artStyle"]').val() ? +$('[data-fk="artStyle"]').val() : null,
+    videoStyleId: $('[data-fk="videoStyle"]').val() ? +$('[data-fk="videoStyle"]').val() : null,
     hook: $('[data-fk="hook"]').val() || null,
     premise: $('[data-fk="premise"]').val() || null,
     platform: $('[data-fk="platform"]').val() || null,
@@ -474,7 +489,7 @@ function loadBrief(){
     var map = { aspect:'aspect', delivery:'delivery', genre:'genre', artStyle:'artStyleId',
                 hook:'hook', premise:'premise', platform:'platform',
                 episodeCount:'episodeCount', episodeDuration:'episodeDuration',
-                characters:'charactersJson', promptEngine:'promptEngine' };
+                characters:'charactersJson', promptEngine:'promptEngine', videoStyle:'videoStyleId' };
     Object.keys(map).forEach(function(fk){
       var v = b[map[fk]];
       if(v == null || v === '') return;
