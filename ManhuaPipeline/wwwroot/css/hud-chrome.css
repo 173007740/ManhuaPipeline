@@ -51,19 +51,11 @@
 .navbar.hc-topnav .nav-links>a.hc-active{color:var(--hc-cyan);background:#041821}
 .navbar.hc-topnav .nav-links>a.hc-active:after{content:"";position:absolute;left:14px;right:14px;bottom:0;
   height:2px;background:var(--hc-red);box-shadow:0 0 12px var(--hc-red)}
-.navbar.hc-topnav .nav-links>a .material-icons{font-size:15px;margin-right:6px}
+/* 导航项末尾就是用户名 / 退出（未登录是登录 / 注册），右端不再挂别的东西。
+   原先照 project-editor 搬来的「呼吸点 + AUTOSAVE ONLINE」去掉了 —— 它不是给人读的信息。 */
 
-/* 右上角状态：呼吸点 + AUTOSAVE ONLINE（跟 project-editor 同一句） */
-.hc-status{margin-left:16px;padding-left:16px;display:flex;align-items:center;height:100%;
-  border-left:1px solid var(--hc-line);color:var(--hc-cyan);white-space:nowrap;
-  font:9px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.08em}
-.hc-status i{display:inline-block;width:7px;height:7px;border-radius:50%;flex:0 0 7px;
-  margin-right:7px;background:var(--hc-cyan);box-shadow:0 0 10px var(--hc-cyan);
-  animation:hc-pulse 2.4s ease-in-out infinite}
-@keyframes hc-pulse{0%,100%{opacity:.45}50%{opacity:1}}
-@media(prefers-reduced-motion:reduce){.hc-status i{animation:none}}
-
-/* 各页自己的用户区 / 登录区：放在导航项末尾，跟着换一等宽小字的皮，链接与功能不动 */
+/* 各页自己的用户区 / 登录区：排在导航项之后，跟着换一等宽小字的皮，链接与功能不动。
+   两种父级都写上：有的页面 #navUser 长在 .nav-links 里，有的长在 .nav-inner 里。 */
 .navbar.hc-topnav .nav-links>#navUser,
 .navbar.hc-topnav .nav-links>#navGuest,
 .navbar.hc-topnav .nav-inner>#navUser,
@@ -78,7 +70,6 @@
 .navbar.hc-topnav #navUser #userName img{width:20px;height:20px;border-radius:50%;margin-right:5px;
   vertical-align:middle;object-fit:cover}
 .navbar.hc-topnav #navUser #btnLogout,.navbar.hc-topnav #navUser #btnLogout:hover{color:var(--hc-red)}
-.navbar.hc-topnav .material-icons{font-size:14px;line-height:1}
 
 /* 默认按「未登录」显示：app.js 拉到登录态后会自己切换这两个的显示，
    不给默认值的话两块会短暂同时出现一下。 */
@@ -94,6 +85,4 @@
   .hc-brand{width:auto;flex-basis:auto;gap:9px}
   .hc-brand small{display:none}
   .navbar.hc-topnav .nav-links>a{padding:0 9px;font-size:10px}
-  .navbar.hc-topnav .nav-links>a .material-icons{display:none}
-  .hc-status{font-size:8px;margin-left:8px;padding-left:8px}
 }

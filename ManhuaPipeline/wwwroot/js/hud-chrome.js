@@ -25,15 +25,13 @@
   var P = inPages ? '' : 'pages/';
   var HOME = inPages ? '../index.html' : 'index.html';
 
+  /* 定下来的三项。不配图标 —— 顶栏整个改成纯文字：左侧三项要的就是「四个字扫一眼认得出来」，
+     一个 15px 的小 icon 挤在 11px 等宽字前面既抢戏也拖长了整条，右侧用户区同理（v1.29.97 已经删了）。 */
   var ITEMS = [
-    { href: HOME, icon: 'home', text: '首页' },
-    { href: P + 'dashboard.html', icon: 'grid_view', text: '我的工作台' },
-    { href: P + 'system-config.html', icon: 'tune', text: '系统设置' }
+    { href: HOME, text: '首页' },
+    { href: P + 'dashboard.html', text: '我的工作台' },
+    { href: P + 'system-config.html', text: '系统设置' }
   ];
-
-  function icon(name) {
-    return '<span class="material-icons" aria-hidden="true">' + name + '</span>';
-  }
 
   function boot() {
     var nav = document.querySelector('.navbar');
@@ -68,7 +66,7 @@
        内联比任何选择器都大，不清掉等宽字和那些分隔线一条都不会生效。
        这里直接重写整格，新元素本来就没有内联。 */
     links.innerHTML = ITEMS.map(function (it) {
-      return '<a href="' + it.href + '">' + icon(it.icon) + it.text + '</a>';
+      return '<a href="' + it.href + '">' + it.text + '</a>';
     }).join('');
 
     /* 用户区内部：按规矩重写。右侧只留文字，不带图标 —— 用户名本身就是头像 + 名字，
@@ -90,14 +88,9 @@
       if (h && h === here) a.classList.add('hc-active');
     });
 
-    /* 最右的状态：呼吸的点 + AUTOSAVE ONLINE，跟 project-editor 顶栏同一句 */
-    if (!nav.querySelector('.hc-status')) {
-      var st = document.createElement('div');
-      st.className = 'hc-status';
-      st.innerHTML = '<i></i>AUTOSAVE ONLINE';
-      host.appendChild(st);
-    }
-
+    // 右侧到此为止：最后是用户名 / 退出（未登录是登录 / 注册）。
+    // 原先这里还挂了「呼吸点 + AUTOSAVE ONLINE」（照 project-editor 顶栏搬来的），去掉了 ——
+    // 它不是给人看的信息，站点也不一定有底栏状态条配套，占着右端只会把用户区推得偏中间。
     applyLoginState(userBox, guestBox);
   }
 
