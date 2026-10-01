@@ -240,7 +240,6 @@ progress::-moz-progress-bar { background: var(--accent); }
       <div id="briefState" style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;"></div>
     </div>
   </section>
-  <div id="durationStatDetail" class="pm-detail"></div>
   <header class="pm-section-title">
     <div>
       <span class="pm-eyebrow">PROJECT QUEUE</span>
@@ -388,18 +387,14 @@ function loadDurationStats(dramaId,cb){
   var url=dramaId?"/api/project/duration-stats?dramaId="+dramaId:"/api/project/duration-stats";
   $.get(url,function(list){
     list=list||[];
+    /* 只留 hero 上那两个总数（提示词条数 / 已完成时长）。
+       原来下面还有一整块「按项目明细（提示词口径 · 总时长 …）」，逐条列每个项目的时长与条数——
+       它跟项目列表卡片上已有的信息重复，又在 hero 和列表之间插一截，所以整块去掉（元素一并删了）。 */
     statMap={};
-    var prompts=0,total=0,done=0;
-    list.forEach(function(x){statMap[x.projectId]=x;prompts+=(x.promptCount||0);total+=(x.totalDurationSec||0);done+=(x.completedDurationSec||0);});
+    var prompts=0,done=0;
+    list.forEach(function(x){statMap[x.projectId]=x;prompts+=(x.promptCount||0);done+=(x.completedDurationSec||0);});
     $("#hPrompt").text(prompts);
     $("#hDone").text(fmtDur(done));
-    var rows=list.map(function(x){
-      return '<span style="display:inline-block;background:#061923;border-radius:6px;padding:6px 10px;font-size:12px;margin:0 6px 6px 0;color:#789096;">'+
-        escHtml(x.title)+' · '+fmtDur(x.totalDurationSec||0)+' ('+(x.promptCount||0)+'条)</span>';
-    }).join("");
-    /* 没有明细就整块收掉，别在 hero 和列表之间空出一行 */
-    if(list.length)$("#durationStatDetail").html('<div style="font-size:12px;color:#5c7078;margin-bottom:6px;">按项目明细（提示词口径 · 总时长 '+fmtDur(total)+'）</div>'+rows).show();
-    else $("#durationStatDetail").empty().hide();
     if(cb)cb();
   }).fail(function(){if(cb)cb()});
 }
