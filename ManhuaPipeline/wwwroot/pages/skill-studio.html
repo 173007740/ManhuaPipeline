@@ -1180,147 +1180,73 @@
      实际一步也接不上，跑出来的还是模型自己发挥的那一版。
      所以这里不把它当「存一段文本」，而是直接落成本次运行的 P1 产出（后端 runs/{id}/script）：
      下游照旧取 P1，取到的就是人这一份；同时剧本正本标成 user，P1 跑完不再覆盖。 */
-  function renderMyScript(i){
+  /* 立项那一格不摆表单了：立项是在「项目设置」页做的（那里才有十一个字段和整部剧本素材），
+     流水线这一站要的是「看立项的结果」—— 这里改成只读摘要：
+     立项参数一部剧一份，跑之前先核对一眼；剧本从哪来也说清楚，因为写剧本那一步吃的就是它。
+     要改点右上那条链接过去，改完回来这一页刷新一次。 */
+  function renderBriefCard(i){
     var box = $('#sf' + i);
-    if (!box.length || box.find('#myScript').length) return;
-    /* 默认收起：剧本一般在创建 / 编辑漫剧时就录好了（整部素材，Dramas.ScriptContent），
-       每一集会按本集提纲从中取那一段 —— 这一格是「给某一集单独指定」的口子，不是每集必填，
-       摊开着十行的框反而挡住上面的立项字段。状态一行常显，收着也知道剧本从哪来。 */
-    box.append('<div style="border-top:1px dashed rgba(140,180,200,.22);margin-top:12px;padding-top:10px;">'
-      + '<div id="myScriptBar" style="display:flex;align-items:center;gap:8px;cursor:pointer;">'
-      +   '<span class="material-icons" id="myScriptArrow" style="font-size:18px;color:#8fb3bd;">chevron_right</span>'
-      +   '<span style="font-size:12px;letter-spacing:.5px;color:#8fb3bd;">这一集的剧本</span>'
+    if (!box.length || box.find('#briefCard').length) return;
+    box.append('<div id="briefCard" style="border:1px solid #16383f;background:#04161b;padding:12px 14px;margin-top:4px;">'
+      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
+      +   '<span style="font-size:12px;letter-spacing:.5px;color:#8fb3bd;">立项结果（漫剧级，一部填一次）</span>'
+      +   '<a id="briefEditLink" href="project-editor.html" style="font-size:12px;color:#5ff8f3;text-decoration:none;">改立项 →</a>'
       + '</div>'
-      + '<div id="myScriptBody" style="display:none;margin-top:8px;">'
-      +   '<textarea id="myScript" rows="10" style="width:100%;box-sizing:border-box;" placeholder="给这一集单独一份：整篇粘进来；留空则沿用创建漫剧时录的整部素材"></textarea>'
-      +   '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">'
-      +     '<button class="go" id="btnMyScript" type="button" style="padding:7px 14px;">这份就是终稿</button>'
-      +     '<button class="go" id="btnMyScriptRun" type="button" style="padding:7px 14px;">用这份并往下跑</button>'
-      +     '<button class="go" id="btnMyScriptDraft" type="button" style="padding:7px 14px;">当底本，让模型整理成稿</button>'
-      +   '</div>'
-      + '</div>'
-      + '<div id="myScriptState" style="font-size:12px;color:#4f655b;margin-top:8px;line-height:1.7;"></div>'
+      + '<dl id="briefCardBody" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 14px;margin:12px 0 0;font-size:12px;"></dl>'
+      + '<div id="briefScriptLine" style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(140,180,200,.22);font-size:12px;color:#7fa6b0;line-height:1.7;"></div>'
       + '</div>');
-    $('#myScriptBar').click(function(){
-      var $b = $('#myScriptBody'), willOpen = !$b.is(':visible');
-      $b.stop(true, true).slideToggle(150);
-      $('#myScriptArrow').text(willOpen ? 'expand_more' : 'chevron_right');
-    });
+
     var pid = $('#proj').val();
-    /* 改剧本不是一口气改完的：写着写着要去别的格子看东西，卡片一切走就重画，
-       回来时框里的内容会变成库里那份 —— 没保存的那些字就这么没了。
-       所以边写边暂存，回来时草稿优先，并说清这是没保存的那一版。 */
-    var dk = lsKey('myScriptDraft_' + (pid || 0));
-    $('#myScript').on('input', function(){
-      try { localStorage.setItem(dk, $(this).val()); } catch (e) { }
-    });
-    if (pid) $.get('/api/director-agent/script', { projectId: pid }, function(r){
-      if (!r) return;
-      var draft = '';
-      try { draft = localStorage.getItem(dk) || ''; } catch (e) { }
-      var kept = draft.trim() && draft.trim() !== (r.script || '').trim();
-      if (kept){
-        $('#myScript').val(draft);
-        $('#myScriptState').text('已恢复上次没保存的草稿 ' + draft.trim().length + ' 字（保存后就不丢了）');
+    var q = DRAMA_ID ? { dramaId: DRAMA_ID } : (pid ? { projectId: pid } : null);
+    if (!q){ $('#briefCardBody').html(briefRow('状态', '先在左上选项目')); return; }
+    $('#briefEditLink').attr('href', 'project-editor.html' + (DRAMA_ID ? ('?dramaId=' + DRAMA_ID) : ''));
+
+    $.get('/api/director-agent/brief', q, function(b){
+      if (!b || !b.exists){
+        $('#briefCardBody').html(briefRow('状态', '这部漫剧还没立项 —— 去「项目设置」填一次'));
+        return;
       }
-      else if (r.script){
-        $('#myScript').val(r.script);
-        $('#myScriptState').html(
-            (r.source === 'user'  ? '已存 ' + r.chars + ' 字 · 你的终稿（写剧本那站不会再改它）'
-           : r.source === 'draft' ? '已存 ' + r.chars + ' 字 · 你给这一集的底本（点第 2 步「写剧本」，模型按它整理成稿）'
-           : r.wholeDrama
-               /* 整部素材已经在册：这一集会连同本集提纲一起交给模型，让它从中取本集这一段。
-                  不用在这里删改 —— 这是「已经在创建漫剧时录过」的那条路的正常状态，不是警告。 */
-             ? '<b style="color:#4fbdd4">剧本来自「创建 / 编辑漫剧时录的整部素材」（' + r.chars
-               + ' 字）：写剧本时会把整份连同本集提纲一起交给模型，让它取出本集这一段。'
-               + '不用在这一页改。要给本集单独一份就点上面那行展开。</b>'
-             : '已存 ' + r.chars + ' 字 · 模型写的'));
-      }
-      else $('#myScriptState').text('这一集还没有剧本：会用创建漫剧时录的整部素材；没有素材就让模型自己从头写');
-    });
-    $('#btnMyScript').click(function(){ saveMyScript(pid, false); });
-    /* 当底本：自己写的常常不合流水线的格式（缺页头四行、场号不标准、没人物关系小节、缺节奏秒数），
-       下游是按这些结构解析的；反过来全交给模型写，内容又不是他要的。
-       这条走中间：内容归他、格式归模型，产出末尾还要交一份「改动清单」，改多了能一眼看出来。 */
-    $('#btnMyScriptDraft').click(function(){
-      var t = $('#myScript').val().trim();
-      if (!t){ say('× 剧本是空的', 'lerr'); return; }
-      try { localStorage.removeItem(lsKey('myScriptDraft_' + (pid || 0))); } catch (e) { }
-      $('#btnMyScriptDraft').prop('disabled', true).text('整理中…');
-      ensureRun(function(rid){
-        $.ajax({ url: '/api/director-agent/runs/' + rid + '/script/draft', method: 'POST',
-                 contentType: 'application/json',
-                 data: JSON.stringify({ projectId: pid ? +pid : null, script: t }) })
-         .done(function(r){
-            if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); return; }
-            say('按你这份底本整理剧本：' + t.length + ' 字 · 改了什么会写在产出末尾的「改动清单」里，改多了就用「用这份剧本」直接锁终稿', 'lrun');
-            startPoll(true);
-          })
-         .fail(function(xhr){
-            say('× 没跑起来：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
-          })
-         .always(function(){ $('#btnMyScriptDraft').prop('disabled', false).text('当底本，让模型整理成稿'); });
+      $('#briefEditLink').attr('href', 'project-editor.html?dramaId=' + (b.dramaId || DRAMA_ID || 0));
+      videoStyleName(b.videoStyleId, function(vname){
+        $('#briefCardBody').html([
+          briefRow('题材', b.genre), briefRow('画幅', b.aspect), briefRow('平台', b.platform),
+          briefRow('交付形态', b.delivery),
+          briefRow('图片风格', styleTitleOf(IMG_STYLES, b.artStyleId)), briefRow('视觉风格', vname),
+          briefRow('集数', b.episodeCount ? (b.episodeCount + ' 集') : ''),
+          briefRow('单集时长', b.episodeDuration ? (b.episodeDuration + ' 秒') : ''),
+          briefRow('提示词引擎', b.promptEngine),
+          briefRow('核心爽点', b.hook), briefRow('核心设定', b.premise)
+        ].join(''));
       });
-    });
-    /* 改完就按改完的跑：改剧本从来不是一次定终身，改两句台词再往下跑一遍看效果才是常态。
-       这个按钮 = 保存这一版 + 从剧本后面第一格一路跑到最后一格（资产 → 台账 → 分镜 → 提示词），
-       不用人挨个点。只保存不跑用左边那个按钮。 */
-    $('#btnMyScriptRun').click(function(){ saveMyScript(pid, true); });
-  }
+    }, 'json');
 
-  function saveMyScript(pid, thenRun){
-    var t = $('#myScript').val().trim();
-    if (!t){ say('× 剧本是空的', 'lerr'); return; }
-    try { localStorage.removeItem(lsKey('myScriptDraft_' + (pid || 0))); } catch (e) { }   // 存进去了，草稿不用留
-    $('#btnMyScript').prop('disabled', true);
-    $('#btnMyScriptRun').prop('disabled', true).text('接入中…');
-    ensureRun(function(rid){
-      $.ajax({ url: '/api/director-agent/runs/' + rid + '/script', method: 'POST',
-               contentType: 'application/json',
-               data: JSON.stringify({ projectId: pid ? +pid : null, script: t }) })
-       .done(function(r){
-          say('剧本已接上流水线：' + r.chars + ' 字' + (r.updated ? '（改的是这一版，没多插一条）' : '')
-              + ' · 后面的提取资产 / 分镜 / 提示词都按这份走');
-          $('#myScriptState').text('已接上 · ' + r.chars + ' 字');
-          if (thenRun){ runAfterScript(rid, pid); return; }
-          /* 只保存不跑：下游那些格子还是按上一版剧本跑出来的，不说人会因为「已完成」三个字以为齐了 */
-          var stale = 0;
-          for (var k = 2; k < STEP_STATE.length; k++)
-            if (STEP_STATE[k] && (STEP_STATE[k].tier === 'done' || STEP_STATE[k].tier === 'part')) stale++;
-          if (stale) say('有 ' + stale + " 步是按上一版剧本跑的，要点它们的「重跑」才会按新的来", 'lwait');
-          pollOnce();     // 这一步变成「已完成」
-        })
-       .fail(function(xhr){
-          say('× 剧本没接上：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
-        })
-       .always(function(){
-          $('#btnMyScript').prop('disabled', false);
-          $('#btnMyScriptRun').prop('disabled', false).text('用这份并往下跑');
-        });
+    /* 剧本写清楚来源：写剧本那一步吃的就是它，来源不同走法也不同 */
+    if (pid) $.get('/api/director-agent/script', { projectId: pid }, function(r){
+      if (!r || !r.script){
+        $('#briefScriptLine').text('剧本：还没录 —— 点「写剧本」时让模型按核心设定从头写');
+        return;
+      }
+      var how = r.source === 'user'  ? '你的终稿（不改写）'
+              : r.source === 'draft' ? '你给这一集的底本（照它整理成稿）'
+              : r.wholeDrama         ? '整部素材（按本集提纲从中取本集这一段）'
+              :                        '模型写的';
+      $('#briefScriptLine').html('剧本：<b style="color:#5ff8f3">' + how + '</b> · ' + r.chars + ' 字');
     });
   }
-
-  /* 从剧本后面第一格一路跑到最后一格。run-all 认 from..stopStageKey，一次点火跑完，
-     不用人挨个点「重跑」——改一版剧本要点四五次，忘点一格后面的就全是旧剧本的结果。 */
-  function runAfterScript(rid, pid){
-    var first = null, last = '';
-    STEPS.forEach(function(s){
-      if (s.noRun || !s.from) return;
-      if (!first && s.from !== 'P0' && s.from !== 'P1') first = s;
-      if (s.to) last = s.to;
-    });
-    if (!first){ say('× 剧本后面没有可跑的阶段', 'lerr'); pollOnce(); return; }
-    say('按这份剧本往下跑：' + first.from + ' → ' + (last || first.to));
-    $.ajax({ url: '/api/director-agent/runs/' + rid + '/run-all', method: 'POST',
-             contentType: 'application/json',
-             data: JSON.stringify({ stageKey: first.from, inputText: '', stopStageKey: last || first.to,
-                                    projectId: pid ? +pid : null,
-                                    episodeId: $('#eps').val() ? +$('#eps').val() : null }) })
-     .done(function(r){
-        if (!r.started){ say('× ' + (r.message || '没启动'), 'lerr'); pollOnce(); return; }
-        startPoll(true);
-      })
-     .fail(function(xhr){ say('× 启动失败：' + (xhr.status || ''), 'lerr'); });
+  function briefRow(k, v){
+    return '<div style="min-width:0"><span style="display:block;color:#4f655b;font-size:10px;letter-spacing:.5px;">'
+         + esc(k) + '</span><b style="font-weight:400;color:#cfe3ea;word-break:break-all;">'
+         + (v ? esc(String(v)) : '—') + '</b></div>';
+  }
+  function styleTitleOf(list, id){
+    if (!id) return '';
+    var hit = (list || []).filter(function(s){ return String(s.styleId) === String(id); })[0];
+    return hit ? (hit.styleName || hit.name || '') : ('#' + id);
+  }
+  function videoStyleName(id, cb){
+    if (!id){ cb(''); return; }
+    $.get('/api/video-style', function(list){ cb(styleTitleOf(list, id)); })
+      .fail(function(){ cb('#' + id); });
   }
 
   // 挑画风时把风格描述摆出来：下拉里只有名字，真正拼进出图提示词的是这段描述，得让人看见挑的是什么
@@ -1377,9 +1303,8 @@
       renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
       // 表单画完才有元素可填：立项的值要等这一步切过来时才回填
       if (STEPS[activeStep].form === 'P0') loadBrief();
-      // 立项那一格除了立项字段，还要能录入「这一集的剧本」：人在立项阶段就别把手里的稿子交出去，
-      // 写剧本那一站（P1）才有东西可依 —— 否则它拿到的只是一句话前提，照旧从头写一个。
-      if (STEPS[activeStep].form === 'P0') renderMyScript(activeStep);
+      // 立项那一格不摆表单，摆的是「立项结果」只读摘要（改立项去项目设置页）
+      if (STEPS[activeStep].form === 'P0') renderBriefCard(activeStep);
     }
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
     renderWork();
