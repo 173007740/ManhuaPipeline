@@ -128,8 +128,6 @@ progress::-moz-progress-bar { background: var(--accent); }
     border: 1px solid var(--line); border-radius: 6px; color: var(--text); font-size: 13px; font-family: inherit;
 }
 .pm-brief-span { grid-column: 1 / -1; }
-  /* 立项标题条：整条可点（展开 / 收起），指上去要有反馈，不然看不出能点 */
-  #briefToggle:hover { background: rgba(106,247,255,.05); }
 </style>
 </head>
 <body>
@@ -181,68 +179,12 @@ progress::-moz-progress-bar { background: var(--accent); }
       <dt>已完成时长</dt><dd id="hDone">–</dd>
     </dl>
   </section>
-  <!-- 立项：漫剧级，一部漫剧一份。跑一次立项（P0），产出里的「N 集分集卡点」表
-       解析出来就是 N 个单集项目——一集一个，标题取集名，集号存 EpisodeNumber。 -->
-  <section id="briefPanel" class="hud-panel" style="display:none;margin:16px 0 0;padding:0;">
-    <!-- 立项内容默认收起：这一页主要看的是下面的项目列表，而立项一部剧只填一次，
-         摊开着每次进来都先被它挡住。状态（存没存、跑到哪一步）同步写在标题条右侧，收起也看得见。 -->
-    <div id="briefToggle" onclick="toggleBrief()" title="展开 / 收起立项内容"
-         style="display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;">
-      <div style="display:flex;align-items:center;gap:10px;">
-        <span class="material-icons" id="briefArrow" style="color:var(--primary-light);">expand_more</span>
-        <div>
-          <span class="pm-eyebrow">PRODUCTION BRIEF</span>
-          <h2 style="font-size:18px;margin:2px 0 0;">立项</h2>
-        </div>
-      </div>
-      <div id="briefSummary" style="font-size:12px;color:var(--muted);text-align:right;line-height:1.6;">未填写</div>
-    </div>
-    <div id="briefBody" style="display:none;padding:4px 18px 16px;border-top:1px solid var(--border);">
-      <div style="display:flex;align-items:flex-end;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:14px 0;">
-        <div>
-          <p style="margin:0;font-size:12px;color:var(--muted);line-height:1.7;">一部漫剧填一次。跑完立项，模型给出每集的标题、三幕骨架与卡点，按它直接建出单集项目。</p>
-        </div>
-      <div style="display:flex;gap:8px;flex-wrap:wrap;">
-        <button class="pm-hud-button" onclick="saveBrief()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">save</span> 保存立项</button>
-        <button class="pm-hud-button" onclick="parseEpisodes()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">table_rows</span> 解析分集表</button>
-        <button class="pm-primary" id="btnGenEpisodes" onclick="generateEpisodes()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">auto_awesome</span> 跑立项并生成分集</button>
-      </div>
-    </div>
-    <div class="pm-brief-grid">
-      <div><label>画幅</label><input type="text" data-fk="aspect" placeholder="16:9 横屏"></div>
-      <!-- 交付形态三项取值来自闭源视频模型适配层规范（DocId 27）§〇 C 节：
-           ① 只要离线看板 / ② 只要 markdown / ③ 两者都交付（未指定时默认 ③）。
-           md 是唯一真相、看板由 md 编译生成，所以没有「跳过 md 直接要看板」这一项。
-           留「未设置」是为了如实反映库里没值——否则一打开就显示 ③，看着像已经选过。 -->
-      <div><label>交付形态</label><select data-fk="delivery">
-        <option value="">未设置</option>
-        <option value="Markdown + 离线看板">Markdown + 离线看板（都交付）</option>
-        <option value="只要 Markdown 文档">只要 Markdown 文档</option>
-        <option value="只要离线看板">只要离线看板</option>
-      </select></div>
-      <div><label>目标平台</label><select data-fk="platform">
-        <option value="">未设置</option>
-        <option value="全平台">全平台</option>
-        <option value="抖音">抖音</option>
-        <option value="快手">快手</option>
-        <option value="视频号">视频号</option>
-        <option value="B站">B站</option>
-      </select></div>
-      <div><label>题材</label><input type="text" data-fk="genre" placeholder="如：宫崎骏自愈系"></div>
-      <!-- 两个风格各管一段，摆一排挑：图片风格 = 画面长什么样，视觉风格 = 影像什么调子 -->
-      <div><label>图片风格</label><select data-fk="artStyle"><option value="">未设置</option></select></div>
-      <div><label>视觉风格</label><select data-fk="videoStyle"><option value="">未设置</option></select></div>
-      <!-- 加了视觉风格之后它落了单（右边空一格），让它占满整行 -->
-      <div class="pm-brief-span"><label>核心爽点</label><input type="text" data-fk="hook" placeholder="一句话说清看什么"></div>
-      <div class="pm-brief-span"><label>核心设定</label><textarea data-fk="premise" rows="2" placeholder="世界观与故事底线"></textarea></div>
-      <div><label>总集数</label><input type="number" min="1" data-fk="episodeCount" placeholder="12"></div>
-      <div><label>单集时长（秒）</label><input type="number" min="1" data-fk="episodeDuration" placeholder="180"></div>
-      <div><label>提示词引擎</label><select data-fk="promptEngine"><option value="SD">SD</option><option value="H3">H3</option></select></div>
-      <div class="pm-brief-span"><label>角色（逗号分隔）</label><input type="text" data-fk="characters" placeholder="杨彦刚，刘如烟"></div>
-    </div>
-      <div id="briefState" style="margin-top:12px;font-size:12px;color:var(--muted);line-height:1.7;"></div>
-    </div>
-  </section>
+  <!-- 立项参数与「生成分集」已经搬到项目设置页（project-editor.html）：
+       这一页只管项目列表。各归各页，免得同一套立项字段在两个地方被改成两回事。 -->
+  <div id="briefTip" class="hud-panel" style="display:none;margin:16px 0 0;padding:12px 18px;font-size:12px;color:var(--muted);line-height:1.7;">
+    <a id="briefTipLink" href="project-editor.html" style="color:var(--primary-light);">立项参数与「生成分集」</a>
+    都在这一部漫剧的「项目设置」页，这里只看项目。
+  </div>
   <header class="pm-section-title">
     <div>
       <span class="pm-eyebrow">PROJECT QUEUE</span>
@@ -361,11 +303,11 @@ $(function(){
       var sig = String(dramaTitle).replace(/[\s·\-—_、.。,，]/g, "").charAt(0);
       $("#pmSigil").text(sig || "项");
     }
-    // 立项是漫剧级的：只在点进某部漫剧时才有得填，全项目视图下没有归属，收起来
+    // 立项已经不在这页了：点进某部漫剧时给一条去「项目设置」的入口，全项目视图下没有归属就不给
     currentDramaId = dramaId ? +dramaId : 0;
     if (currentDramaId) {
-      $("#briefPanel").show();
-      $.when(loadImageStyles(), loadVideoStyles()).done(loadBrief);   // 两个风格下拉要先有选项，回填才填得进去
+      $("#briefTip").show();
+      $("#briefTipLink").attr("href", "project-editor.html?dramaId=" + currentDramaId);
     }
     $("#sortLabel").text(sortLabel(sortOrder));   // 按钮上的字是写死的，进来先把标签对上实际排序
     loadAllProjects(dramaId);
@@ -401,177 +343,8 @@ function loadDurationStats(dramaId,cb){
     if(cb)cb();
   }).fail(function(){if(cb)cb()});
 }
-/* ===== 立项与分集（漫剧级）=====
-   跑一次立项（P0）→ 产出里的分集卡点表解析成提纲 → 按提纲建单集项目。
-   三步都能单独重来，所以「保存立项」「解析分集表」「跑立项并生成分集」是三个按钮：
-   模型给的表不一定次次都对，让人能只看不改、也能随时重跑。 */
 var currentDramaId = 0;
-var genTimer = null;
 
-/* 两个风格库各装一次：图片风格 = 画面长什么样（资产出图拼进提示词），
-   视觉风格 = 影像什么调子（一部剧定一次，存 Dramas.VideoStyleId）。
-   都要在回填立项之前装好 —— 下拉里没有那个选项，回填就填不进去。 */
-function loadImageStyles(){
-  return $.get("/api/image-style", function(list){
-    var sel = $('[data-fk="artStyle"]').empty().append('<option value="">未设置</option>');
-    (list||[]).forEach(function(s){
-      sel.append('<option value="'+s.styleId+'">'+escHtml(s.styleName||s.name||'')+'</option>');
-    });
-  });
-}
-function loadVideoStyles(){
-  return $.get("/api/video-style", function(list){
-    var sel = $('[data-fk="videoStyle"]').empty().append('<option value="">未设置</option>');
-    (list||[]).forEach(function(s){
-      sel.append('<option value="'+s.styleId+'">'+escHtml(s.styleName||s.name||'')+'</option>');
-    });
-  });
-}
-
-/* 表单 → 立项字段。数字要转成数字存（集数是字符串没法比大小），
-   角色在表单里是一段文本，进库存成 json 数组，后面要用能直接取出来。 */
-function briefFromForm(){
-  function num(v){ var n=parseInt(v,10); return isNaN(n)?null:n; }
-  var chars = String($('[data-fk="characters"]').val()||'').split(/[,，、]/)
-                .map(function(s){return s.trim()}).filter(function(s){return s});
-  return {
-    aspect: $('[data-fk="aspect"]').val() || null,
-    delivery: $('[data-fk="delivery"]').val() || null,
-    genre: $('[data-fk="genre"]').val() || null,
-    artStyleId: $('[data-fk="artStyle"]').val() ? +$('[data-fk="artStyle"]').val() : null,
-    videoStyleId: $('[data-fk="videoStyle"]').val() ? +$('[data-fk="videoStyle"]').val() : null,
-    hook: $('[data-fk="hook"]').val() || null,
-    premise: $('[data-fk="premise"]').val() || null,
-    platform: $('[data-fk="platform"]').val() || null,
-    episodeCount: num($('[data-fk="episodeCount"]').val()),
-    episodeDuration: num($('[data-fk="episodeDuration"]').val()),
-    charactersJson: chars.length ? JSON.stringify(chars) : null,
-    promptEngine: $('[data-fk="promptEngine"]').val() || null
-  };
-}
-
-/* 往字段里塞值。下拉要额外小心：值不在选项里时 jQuery 的 .val() 设不进去，
-   下拉会静默落回「未设置」——用户什么都没动，随手一点保存就把库里的旧值清成了 null。
-   交付形态与目标平台刚从文本框改成下拉，改版前手打的值多半对不上新选项，
-   所以这里先把旧值补成一个临时选项再选中，标上「旧值」提示用户重新选一个。 */
-function setField(el, v){
-  var s = String(v);
-  if(!el.is('select')){ el.val(s); return; }
-
-  var hit = false;
-  el.find('option').each(function(){ if($(this).val() === s){ hit = true; return false; } });
-  if(!hit) el.append($('<option>').val(s).text(s + '（旧值）'));
-  el.val(s);
-}
-
-/* 库里存的值才作数：清了缓存、换了台机器读回来还是那份立项。
-   只盖有值的字段，没填过的保持默认。 */
-/* 立项内容默认收起，点标题条展开 / 收起。
-   收起时箭头朝右，展开时朝下，一眼看出当前是哪一态。 */
-function toggleBrief(){
-  var $b = $('#briefBody');
-  var willOpen = !$b.is(':visible');
-  $b.stop(true, true).slideToggle(160);
-  $('#briefArrow').text(willOpen ? 'expand_less' : 'expand_more');
-}
-
-/* 立项的状态写两处：表单底部（展开时看）与标题条右侧（收起时也要看得见 ——
-   跑立项那几分钟要是把面板一收就看不见进度，人就只能一直开着它）。 */
-function briefSay(html){
-  $('#briefState').html(html);
-  $('#briefSummary').html(html);
-}
-
-function loadBrief(){
-  if(!currentDramaId) return;
-  $.get("/api/director-agent/brief", { dramaId: currentDramaId }, function(b){
-    if(!b || !b.exists) return;
-    var map = { aspect:'aspect', delivery:'delivery', genre:'genre', artStyle:'artStyleId',
-                hook:'hook', premise:'premise', platform:'platform',
-                episodeCount:'episodeCount', episodeDuration:'episodeDuration',
-                characters:'charactersJson', promptEngine:'promptEngine', videoStyle:'videoStyleId' };
-    Object.keys(map).forEach(function(fk){
-      var v = b[map[fk]];
-      if(v == null || v === '') return;
-      var el = $('[data-fk="'+fk+'"]');
-      if(!el.length) return;
-      if(fk === 'characters'){
-        try { var arr = JSON.parse(v); if(arr && arr.length) el.val(arr.join('、')); } catch(e){}
-      } else setField(el, v);
-    });
-    briefSay('已存立项：' + (b.episodeCount ? b.episodeCount + ' 集' : '集数未填')
-             + ' · ' + (b.episodeDuration ? b.episodeDuration + ' 秒/集' : '时长未填')
-             + ' · 引擎 ' + (b.promptEngine || '未选'));
-  }, 'json');
-}
-
-function saveBrief(){
-  if(!currentDramaId) return;
-  var body = $.extend({ dramaId: +currentDramaId }, briefFromForm());
-  $.ajax({ url:'/api/director-agent/brief', method:'PUT', contentType:'application/json',
-           data: JSON.stringify(body) })
-   .done(function(){ briefSay('立项已保存 · ' + new Date().toLocaleTimeString()); })
-   .fail(function(xhr){
-     alert('存立项失败：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status));
-   });
-}
-
-/* 只解析不建项目：让人先看一眼模型给的表对不对 */
-function parseEpisodes(){
-  if(!currentDramaId) return;
-  $.post('/api/drama/' + currentDramaId + '/episodes/parse', function(r){
-    var items = r.items || [];
-    briefSay('解析出 <b style="color:var(--accent)">' + items.length + '</b> 集：'
-      + items.map(function(e){ return escHtml(e.title); }).join(' · '));
-  }, 'json').fail(function(xhr){
-    alert(((xhr.responseJSON && xhr.responseJSON.message) || '解析失败'));
-  });
-}
-
-function generateEpisodes(){
-  if(!currentDramaId) return;
-  if(!confirm('跑一次立项：会调模型，要点几分钟。\n\n跑完按产出的分集表建单集项目，'
-              + '已有同集号的项目会被更新标题与简介（不会重复建）。\n\n继续？')) return;
-  var $btn = $('#btnGenEpisodes').prop('disabled', true);
-  briefSay('立项跑起来了，这一步要点几分钟……');
-
-  $.ajax({ url:'/api/drama/' + currentDramaId + '/episodes/generate', method:'POST' })
-   .done(function(r){
-     if(!r.runId){ briefSay('没启动'); $btn.prop('disabled', false); return; }
-     pollRun(r.runId, $btn);
-   })
-   .fail(function(xhr){
-     alert((xhr.responseJSON && xhr.responseJSON.message) || '启动失败');
-     $btn.prop('disabled', false);
-   });
-}
-
-/* 立项在后台跑，HTTP 不等它——这里隔几秒问一次状态，
-   跑完刷新项目列表，出错就把按钮放回来并说明产出还在。 */
-function pollRun(runId, $btn){
-  clearInterval(genTimer);
-  genTimer = setInterval(function(){
-    $.get('/api/director-agent/runs/' + runId, function(r){
-      briefSay('立项状态：' + (r.status||'') + ' · ' + (r.currentStage||'P0'));
-      if(r.status === 'running' || r.status === 'await_confirm') return;
-
-      clearInterval(genTimer);
-      $btn.prop('disabled', false);
-
-      if(r.status !== 'done'){
-        briefSay('立项没跑成（状态 ' + r.status + '）。'
-          + '产出原文留在运行记录里——重跑一次，或点「解析分集表」手工再来一遍。');
-        return;
-      }
-
-      loadAllProjects(currentDramaId);
-      $.get('/api/drama/' + currentDramaId + '/episodes', function(e){
-        var n = ((e && e.items) || []).length;
-        briefSay('立项完成：分集提纲 ' + n + ' 集，单集项目已按集名建好。');
-      });
-    }).fail(function(){ /* 网络抖一下不算失败，下一轮再问 */ });
-  }, 4000);
-}
 
 function loadAllProjects(dramaId){
   var url=dramaId?"/api/drama/"+dramaId+"/projects":"/api/project";
