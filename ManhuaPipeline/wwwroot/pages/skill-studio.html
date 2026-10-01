@@ -1134,7 +1134,12 @@
     try { saved = JSON.parse(localStorage.getItem(lsKey('skillStudioForm_' + key)) || '{}'); } catch (e) { saved = {}; }
     var h = '';
     fields.forEach(function(f){
-      var v = saved[f.key] != null ? saved[f.key] : (f.default || '');
+      /* 立项（P0）这一格：立项表里已经存了的值优先。
+         以前只按「上次填过的（localStorage）> 默认」来画，而立项是一进页面才异步读回来的，
+         读完又要重画一次卡片（画风可能就靠它）——重画时库里那份被丢掉，表单又回到上次填的或默认值，
+         看着就是「立项里明明有，页面上没绑上」。立项表是唯一真相，localStorage 只是没存库时的兜底。 */
+      var bv = (key === 'P0') ? briefValFor(f.key) : null;
+      var v = bv != null ? bv : (saved[f.key] != null ? saved[f.key] : (f.default || ''));
       var wide = (f.type === 'textarea') ? 'wide-row' : '';
       // 标签文字、必填红点、提示必须包在一个 span 里：label 是 grid 容器，
       // 每个直接子元素会各自占一行，散着放 span 会让红点掉到标签下面单独一行
@@ -1830,6 +1835,35 @@
     };
   }
 
+  /* 立项表（Dramas）读回来那份。表单渲染与重画都要用它的值，别用「上次填过的」覆盖掉。
+     字段 key ↔ 立项表列的对应：artStyle 存的是风格库 id，characters 在库里是 JSON 数组。 */
+  var BRIEF_VALS = null;
+  var BRIEF_MAP = { aspect:'aspect', delivery:'delivery', genre:'genre', artStyle:'artStyleId',
+                    hook:'hook', premise:'premise', platform:'platform',
+                    episodeCount:'episodeCount', episodeDuration:'episodeDuration',
+                    characters:'charactersJson', promptEngine:'promptEngine' };
+  function briefValFor(fk){
+    if (!BRIEF_VALS || !fk) return null;
+    var v = BRIEF_VALS[BRIEF_MAP[fk]];
+    if (v == null || v === '') return null;
+    if (fk === 'characters'){
+      try { var arr = JSON.parse(v); return (arr && arr.length) ? arr.join('、') : null; }
+      catch (e) { return null; }
+    }
+    return String(v);
+  }
+  // 把立项表里的值盖到已经画好的表单上（库里有值的才盖，没填过的保持默认）
+  function applyBriefToForm(){
+    if (!BRIEF_VALS) return;
+    Object.keys(BRIEF_MAP).forEach(function(fk){
+      var v = briefValFor(fk);
+      if (v == null) return;
+      var el = $('[data-fk="' + fk + '"]');
+      if (!el.length) return;
+      el.val(v);
+    });
+  }
+
   /* 引擎归立项管。以前这边也是个能改的下拉，改了就往立项写——两个入口写同一列，
      结果谁最后写谁说了算，页面上还可能一边显示 SD、库里存着 H3，人根本看不出该信哪个。
      所以立项有值时这边只当显示用（按住不让改），真要换引擎回立项页；
@@ -1867,26 +1901,11 @@
       if (!b || !b.exists){ briefDramaId = 0; applyEngineLock('', 0); return; }
       briefDramaId = b.dramaId || 0;
 
-      // 立项表单字段 ← 立项表列。库里有值的才盖上去，没填过的保持默认值
-      var map = { aspect:'aspect', delivery:'delivery', genre:'genre', artStyle:'artStyleId',
-                  hook:'hook', premise:'premise', platform:'platform',
-                  episodeCount:'episodeCount', episodeDuration:'episodeDuration',
-                  characters:'charactersJson', promptEngine:'promptEngine' };
-      Object.keys(map).forEach(function(fk){
-        var v = b[map[fk]];
-        if (v == null || v === '') return;
-        var el = $('[data-fk="' + fk + '"]');
-        if (!el.length) return;
-        if (fk === 'characters'){
-          try { var arr = JSON.parse(v); if (arr && arr.length) el.val(arr.join('、')); } catch (e) {}
-        } else el.val(String(v));
-      });
-
-      /* 立项的画风方向兜底项目上的资产画风。两个请求谁先回来不一定，
-         所以读回来就补画一次——后到的那次也要生效。 */
       // 立项读回来了：画风可能就靠它，重画一次
       BRIEF_ART_STYLE = b.artStyleId || 0;
+      BRIEF_VALS = b;                      // 表单重画时按它填，不按「上次填过的」
       if (stages.length) renderSteps(lastRun ? lastRun.steps : []);
+      applyBriefToForm();                  // 重画之后再盖一次：重画用的是 localStorage，得把库里那份补回去
 
       applyEngineLock(b.promptEngine || '', briefDramaId);
       if (b.promptEngine) say('提示词引擎已由立项锁定：' + b.promptEngine);
