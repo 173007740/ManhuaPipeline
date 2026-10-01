@@ -129,6 +129,33 @@ WHERE p.ProjectId = @pid
         return limit > 0 && outlines.Count > limit ? outlines.Take(limit).ToList() : outlines;
     }
 
+    /// <summary>
+    /// 产出里没写分集表时的兜底：只给「总集数 = 1」的单集剧补一条占位提纲。
+    ///
+    /// 为什么不按总集数补 N 条：填了 12 集就造出 12 个空壳项目，
+    /// 名字全叫「第N集」、简介全是空的 —— 比没有更糟，人还得一个个删。
+    /// 多集的情况本来就该在 P0 产出里写那张分集表，模型没写说明这一版不行，值得人去看一眼。
+    ///
+    /// 单集不一样：人就写了「1 集」，产出再怎么组织都是在讲这一集，
+    /// 补一条「第1集」的占位去接后面的流水线是合理的。标题与简介在项目里随时能改。
+    /// </summary>
+    public List<EpisodeOutline> SingleEpisodeFallback(int dramaId)
+    {
+        if (GetDramaEpisodeCount(dramaId) != 1) return new List<EpisodeOutline>();
+
+        return new List<EpisodeOutline>
+        {
+            new EpisodeOutline
+            {
+                EpisodeNumber = 1,
+                Title = "第1集",
+                Outline = "立项产出里没有分集表，这一条是按立项填写的「总集数 = 1」补的占位。"
+                        + "标题与简介可以直接改；跑剧本时会按这一集往下走。",
+                Cliffhanger = null
+            }
+        };
+    }
+
     public void SaveEpisodeOutline(int dramaId, IReadOnlyList<EpisodeOutline> outlines)
     {
         if (dramaId <= 0) return;

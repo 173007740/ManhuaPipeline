@@ -155,6 +155,10 @@ public class DramaController : ControllerBase
         _db.SaveDramaP0Result(id, step.StepId, step.OutputText);
 
         var list = _db.ClampEpisodeOutline(id, EpisodeOutlineParser.Parse(step.OutputText));
+
+        // 产出里没写分集表：单集剧补一条「第1集」占位；多集剧不猜，照实报错让人去看产出
+        if (list.Count == 0) list = _db.SingleEpisodeFallback(id);
+
         if (list.Count == 0)
             return BadRequest(new { message = "这次 P0 产出里没找到分集表。重跑一次立项，或在项目里手工建" });
 
@@ -220,16 +224,23 @@ public class DramaController : ControllerBase
                 _db.SaveDramaP0Result(id, r.StepId, r.Output);
 
                 var list = EpisodeOutlineParser.Parse(r.Output);
+
+                // 按立项里填的总集数截断：这份产出万一写了更多集，也不该越过人填的那个数
+                list = _db.ClampEpisodeOutline(id, list);
+
+                /* 产出里没写分集表（常见于单集剧：三幕骨架写得很全，就是没有那张 N 集表）时，
+                   给总集数 = 1 的补一条「第1集」占位 —— 不然人跑完一圈一个集也没长出来，
+                   只能回头猜哪里坏了。多集剧不补：凭空造 N 个空壳项目比没有更糟。 */
+                if (list.Count == 0) list = _db.SingleEpisodeFallback(id);
+
                 if (list.Count == 0)
                 {
                     /* 产出对人是完整的，只是没按表格写——原文已经存在步骤记录里让人能去看。
                        这里停成 error，但不停在 running，免得页面一直转圈等一个不会来的结果。 */
                     _db.UpdateSkillRun(runId, "P0", "error");
+                    _logger.LogWarning("P0 产出里没有分集表，且不是单集剧 drama={DramaId} run={RunId}", id, runId);
                     return;
                 }
-
-                // 按立项里填的总集数截断：这份产出万一写了更多集，也不该越过人填的那个数
-                list = _db.ClampEpisodeOutline(id, list);
 
                 _db.SaveEpisodeOutline(id, list);
                 _db.BuildEpisodeProjects(uid, id, list);
