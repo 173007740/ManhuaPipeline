@@ -100,12 +100,48 @@ public static class AssetImageSupport
     }
 
     /// <summary>
+    /// 取项目「资产画风」自带的反向提示词（ImageStyles.StyleNegative），取法与正向那条完全一致。
+    /// 风格预设里每段正向都配了段反向（该避开什么：真人照片 / 蜡像皮肤 / 塑料材质 / 错误肢体 / 水印…），
+    /// 只把正向拼进去、反向留在库里等于丢一半。老风格没有这一列，返回 null，负面词照旧。
+    /// </summary>
+    public static string? GetAssetStyleNegative(DbService db, ILogger logger, int projectId)
+    {
+        try
+        {
+            var project = db.GetProjectById(projectId);
+            if (project?.ImageStyleId is int imageStyleId)
+            {
+                var imageStyle = db.GetImageStyle(imageStyleId);
+                if (!string.IsNullOrWhiteSpace(imageStyle?.StyleNegative)) return imageStyle!.StyleNegative!.Trim();
+            }
+
+            // 同上：项目上没设就上溯漫剧那份（立项的「画风方向」）
+            var dramaId = db.GetDramaIdByProject(projectId);
+            if (dramaId > 0)
+            {
+                var brief = db.GetDramaBrief(dramaId);
+                if (brief?.ArtStyleId is int artStyleId)
+                {
+                    var artStyle = db.GetImageStyle(artStyleId);
+                    if (!string.IsNullOrWhiteSpace(artStyle?.StyleNegative)) return artStyle!.StyleNegative!.Trim();
+                }
+            }
+        }
+        catch (Exception ex)
+        {
+            logger.LogWarning(ex, "[AssetImage] 取项目资产画风反向提示词失败 projectId={ProjectId}", projectId);
+        }
+        return null;
+    }
+
+    /// <summary>
     /// 拼最终出图提示词：资产卡正文（或临时覆盖）→ 模版风格锁 + 负面词 + 项目画风 + 额外要求。
     /// 资产还没有提示词正文时退回「名称+描述+属性」的旧拼法。
     /// </summary>
     public static string ComposeFinalPrompt(
         DbService db, int userId, int projectId, string category, AssetImageFields asset,
-        string? projectStyle, string? promptOverride, string? negativeOverride, string? extraPrompt)
+        string? projectStyle, string? promptOverride, string? negativeOverride, string? extraPrompt,
+        string? styleNegative = null)
     {
         var tpl = db.GetAssetPromptTemplate(userId, projectId, category);
         var bodyPrompt = string.IsNullOrWhiteSpace(promptOverride) ? asset.ImagePrompt : promptOverride!.Trim();
@@ -113,6 +149,13 @@ public static class AssetImageSupport
         var negative = string.IsNullOrWhiteSpace(assetNegative)
             ? (tpl.Enabled ? tpl.NegativePrompt : null)
             : assetNegative;
+
+        /* 画风自带的反向词接在后面：它说的是「这种画风该避开什么」，
+           跟资产卡上那条、模版里那条通用负面说的是两回事，拼在一起比互相覆盖有用。 */
+        if (!string.IsNullOrWhiteSpace(styleNegative))
+            negative = string.IsNullOrWhiteSpace(negative)
+                ? styleNegative!.Trim()
+                : negative.Trim().TrimEnd('。', '.', '，', ',') + "，" + styleNegative!.Trim();
 
         if (!string.IsNullOrWhiteSpace(bodyPrompt))
         {

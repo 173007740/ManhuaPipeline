@@ -70,7 +70,8 @@ public class AssetImageRunner
         var projectStyle = AssetImageSupport.GetAssetStylePrompt(_db, _logger, task.ProjectId);
         var prompt = AssetImageSupport.ComposeFinalPrompt(
             _db, task.UserId, task.ProjectId, task.Category, asset, projectStyle,
-            task.PromptOverride, task.NegativeOverride, task.ExtraPrompt);
+            task.PromptOverride, task.NegativeOverride, task.ExtraPrompt,
+            AssetImageSupport.GetAssetStyleNegative(_db, _logger, task.ProjectId));
 
         _logger.LogInformation(
             "[AssetImage] 开始出图 projectId={ProjectId} {Category}#{AssetId} size={Size} quality={Quality} 张数={Count} 背景={Bg} 格式={Fmt} model={Model}",
@@ -149,7 +150,8 @@ public class AssetImageRunner
         var projectStyle = AssetImageSupport.GetAssetStylePrompt(_db, _logger, task.ProjectId);
         var prompt = AssetImageSupport.ComposeFinalPrompt(
             _db, task.UserId, task.ProjectId, task.Category, asset, projectStyle,
-            refNote + userBody, task.NegativeOverride, task.ExtraPrompt);
+            refNote + userBody, task.NegativeOverride, task.ExtraPrompt,
+            AssetImageSupport.GetAssetStyleNegative(_db, _logger, task.ProjectId));
 
         // 血缘先落库拿到 Id，出图成功后回填结果图。
         // 失败也留下这条记录（ResultImageUrl 为空），排查时能看到「某次派生试过、没成」。

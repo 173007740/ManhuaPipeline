@@ -35,7 +35,9 @@ public class ImageStyleController : ControllerBase
         if (string.IsNullOrWhiteSpace(req.StyleDesc))
             return BadRequest(new { message = "风格描述不能为空 —— 出图时拼进提示词的就是这段" });
 
-        var id = _db.SaveImageStyle(req.StyleId, req.StyleName.Trim(), req.StyleDesc.Trim(), req.StyleImageUrl);
+        var id = _db.SaveImageStyle(req.StyleId, req.StyleName.Trim(), req.StyleDesc.Trim(),
+                                    req.StyleImageUrl,
+                                    string.IsNullOrWhiteSpace(req.StyleNegative) ? null : req.StyleNegative!.Trim());
         return Ok(new { styleId = id, message = "保存成功" });
     }
 
@@ -74,5 +76,7 @@ public class SaveImageStyleRequest
     public int? StyleId { get; set; }
     public string StyleName { get; set; } = "";
     public string StyleDesc { get; set; } = "";
+    /// <summary>这条风格自带的反向提示词（可空：老风格没有，出图时负面词照旧）。</summary>
+    public string? StyleNegative { get; set; }
     public string? StyleImageUrl { get; set; }
 }

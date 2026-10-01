@@ -11,6 +11,11 @@ public class ImageStyle
     public int StyleId { get; set; }
     public string StyleName { get; set; } = "";
     public string StyleDesc { get; set; } = "";
+    /// <summary>
+    /// 这条风格自带的反向提示词（该避开什么：真人照片 / 蜡像皮肤 / 塑料材质 / 错误肢体 / 水印…）。
+    /// 风格预设里每段正向都配一段反向，只存正向等于丢一半。老风格没有这一列，出图时负面词照旧。
+    /// </summary>
+    public string? StyleNegative { get; set; }
     public string? StyleImageUrl { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.Now;
     public DateTime UpdatedAt { get; set; } = DateTime.Now;
