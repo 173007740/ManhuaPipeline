@@ -1,0 +1,410 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>项目设置 · 漫剧立项</title>
+<link rel="stylesheet" href="/css/hud-static.css">
+<link rel="stylesheet" href="/css/project-editor.css">
+<style>
+  /* 补充样式：静态原型里 .panel / .status 没有落在 css 上，这里补齐 */
+  .panel{border:1px solid #16414b;background:#031017ed}
+  .status{position:fixed;left:0;right:0;bottom:0;height:24px;display:flex;align-items:center;gap:12px;
+    padding:0 18px;background:#02090ff2;border-top:1px solid #12414a;color:#5b757b;font:9px monospace}
+  .status b{color:#5ff8f3} .status em{margin-left:auto;font-style:normal;color:#3f6d73}
+  /* 风格卡片：库里可能有五六个风格，四列放不下要能换行 */
+  .pe-style-picks{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}
+  .pe-style-picks label span{height:auto;min-height:88px;padding:12px 8px;text-align:center}
+  .pe-pick-empty{color:#4c6268;font-size:9px;padding:10px 0}
+  /* 剧本素材是这一页最要紧的一格：整剧每一集的剧本都从这里出，视觉上要压得住 */
+  .pe-script-box{border:1px solid #1d6a72;background:#04161b;padding:12px;margin-top:6px}
+  .pe-script-box textarea{background:#020d12}
+  .pe-hint{font-size:9px;color:#557076;line-height:1.7;margin:7px 0 0}
+  .pe-hint b{color:#5ff8f3}
+  .pe-field-note{font-size:8px;color:#4c6268;margin-top:5px;display:block}
+  #coverPreviewImg{max-width:100%;max-height:145px;object-fit:cover}
+</style>
+</head>
+<body>
+<header class="topnav">
+  <a class="brand" href="/pages/dashboard.html"><i>幕</i><span><b>MANGA ENGINE</b><small>AI COMIC DIRECTOR OS</small></span></a>
+  <nav><a href="/pages/dashboard.html">工作台</a><a href="/pages/skill-studio.html">导演流水线</a><a href="/pages/project-manage.html">项目管理</a></nav>
+  <div class="system"><i></i>AUTOSAVE ONLINE</div>
+</header>
+<main class="pe-shell">
+  <aside class="pe-sidebar">
+    <a class="pe-back" href="/pages/dashboard.html">← 返回工作台</a>
+    <div class="pe-mode"><span id="modeCode">NEW PROJECT</span><h2 id="sideTitle">创建漫剧</h2>
+      <p id="sideDesc">填一次，后面每一集都按这些参数跑。</p></div>
+    <nav id="stepNav">
+      <a class="on" href="#basic"><i>01</i><span><b>基础信息</b><small>名称、简介与封面</small></span></a>
+      <a href="#delivery"><i>02</i><span><b>交付规格</b><small>平台、画幅与集数</small></span></a>
+      <a href="#story"><i>03</i><span><b>故事设定</b><small>爽点、设定与整部剧本</small></span></a>
+      <a href="#visual"><i>04</i><span><b>视觉方向</b><small>图片风格与影像调性</small></span></a>
+      <a href="#production"><i>05</i><span><b>生产配置</b><small>提示词引擎</small></span></a>
+    </nav>
+    <div class="pe-completion"><span>配置完整度 <b id="completionText">0%</b></span>
+      <div><i id="completionBar" style="width:0%"></i></div><small>名称与简介填了就能建项目</small></div>
+  </aside>
+
+  <section class="pe-main">
+    <header class="pe-head">
+      <div><span id="pageEyebrow">// PROJECT INITIALIZATION</span><h1 id="pageTitle">创建一个新漫剧</h1>
+        <p>这些参数会成为跑立项、写剧本、建资产的全局约束。</p></div>
+      <div><button class="pe-secondary" id="saveDraft" type="button">保存草稿</button>
+        <button class="pe-primary" id="submitProject" type="button">创建项目并继续 →</button></div>
+    </header>
+
+    <form id="projectForm">
+      <!-- 01 基础信息 -->
+      <section class="pe-section panel" id="basic">
+        <header><span>01</span><div><small>BASIC INFORMATION</small><h2>基础信息</h2></div><em>REQUIRED</em></header>
+        <div class="pe-grid two">
+          <label>漫剧名称 <b>*</b><input name="title" id="projectTitle" required placeholder="例如：苔岬 · 第一季"></label>
+          <label>作品类型<input name="genre" list="genreList" placeholder="东方奇幻 / 都市悬疑…">
+            <datalist id="genreList"><option>东方奇幻</option><option>都市悬疑</option><option>古风志怪</option>
+              <option>科幻冒险</option><option>恋爱日常</option></datalist>
+            <span class="pe-field-note">写死的那几个只是常用的，这里是自由填写</span></label>
+        </div>
+        <label>一句话简介 <b>*</b><textarea name="logline" rows="3" required placeholder="用一句话说明主角、目标和核心冲突"></textarea></label>
+        <div class="pe-cover-row">
+          <button type="button" class="pe-upload" id="coverBtn"><i>＋</i>
+            <span><b>上传漫剧封面</b><small id="coverTip">建议 16:9，JPG / PNG</small></span></button>
+          <div><b>封面将用于</b><p>工作台上的漫剧卡片。<span id="coverState" class="pe-field-note"></span></p></div>
+          <input type="file" id="coverInput" accept="image/*" style="display:none">
+        </div>
+      </section>
+
+      <!-- 02 交付规格 -->
+      <section class="pe-section panel" id="delivery">
+        <header><span>02</span><div><small>DELIVERY SPEC</small><h2>交付规格</h2></div></header>
+        <div class="pe-grid four">
+          <label>主要平台<select name="platform">
+            <option>抖音</option><option>快手</option><option>Bilibili</option><option>小红书</option><option>全平台</option></select></label>
+          <label>画面比例<select name="aspect">
+            <option>16:9 横屏</option><option>9:16 竖屏</option><option>2.35:1 电影</option></select></label>
+          <label>交付形态<select name="delivery">
+            <option>Markdown + 离线看板</option><option>只要 Markdown 文档</option><option>只要离线看板</option></select></label>
+        </div>
+        <div class="pe-grid two">
+          <label>计划集数<input type="number" name="episodeCount" min="1" placeholder="例如 12"></label>
+          <label>单集时长（秒）<input type="number" name="episodeDuration" min="1" placeholder="例如 180">
+            <span class="pe-field-note">按秒填：90 秒 / 180 秒 / 300 秒。这个数会被拿去校验每集分镜的总时长（±5%）</span></label>
+        </div>
+      </section>
+
+      <!-- 03 故事设定 -->
+      <section class="pe-section panel" id="story">
+        <header><span>03</span><div><small>STORY BIBLE</small><h2>故事设定</h2></div></header>
+        <label>核心爽点<input name="hook" placeholder="一句话说清看什么（例如：手艺碾压 + 身份反转）"></label>
+        <label style="margin-top:12px">核心设定<textarea name="premise" rows="4" placeholder="这个世界观 / 这一部讲的是什么，几句话说清"></textarea></label>
+        <label style="margin-top:12px">主要角色<input name="characters" placeholder="杨彦刚，外婆，阿蓝（逗号分隔）">
+          <span class="pe-field-note">跑 P0 立项时会把这些名字交给模型去生成角色设定</span></label>
+
+        <div class="pe-script-box" style="margin-top:16px">
+          <label style="margin:0">整部剧本素材（选填）<textarea name="scriptContent" rows="12"
+            placeholder="把你写好的整部剧本整篇粘进来"></textarea></label>
+          <p class="pe-hint"><b>这一格是后面每一集剧本的来源。</b>
+            逐集跑「写剧本」时，这一份会连同那一集的提纲一起交给模型，让它从中取出本集那一段
+            —— 内容一点不改，只把格式补成流水线要的样子（页头四行、标准场号、人物关系小节）。
+            <br>留着不填也可以，那就是让模型按核心设定从头写。</p>
+        </div>
+      </section>
+
+      <!-- 04 视觉方向 -->
+      <section class="pe-section panel" id="visual">
+        <header><span>04</span><div><small>VISUAL DIRECTION</small><h2>视觉方向</h2></div></header>
+        <label style="margin-bottom:10px">图片风格<span class="pe-field-note" style="display:inline;margin-left:8px">出图时统一追加的风格基调，选项来自风格库</span></label>
+        <div class="pe-style-picks" id="artStylePicks"><span class="pe-pick-empty">载入中…</span></div>
+        <label style="margin-bottom:10px">视觉风格（影像调性）<span class="pe-field-note" style="display:inline;margin-left:8px">整部漫剧的影像质感</span></label>
+        <div class="pe-style-picks" id="videoStylePicks"><span class="pe-pick-empty">载入中…</span></div>
+      </section>
+
+      <!-- 05 生产配置 -->
+      <section class="pe-section panel" id="production">
+        <header><span>05</span><div><small>PRODUCTION SETTINGS</small><h2>生产配置</h2></div></header>
+        <div class="pe-grid three">
+          <label>提示词引擎<select name="promptEngine"><option>SD</option><option>H3</option></select>
+            <span class="pe-field-note">写提示词用哪套格式。选错了后面也能改</span></label>
+        </div>
+        <p class="pe-hint">底层用哪个模型不在这一部剧里定 —— 由「配置中心」统一控制，
+          这一部剧真正要自己定的生产参数就是<b>提示词引擎</b>。</p>
+      </section>
+    </form>
+  </section>
+
+  <aside class="pe-summary">
+    <div class="pe-summary-card panel">
+      <span>PROJECT PREVIEW</span>
+      <div class="pe-preview-art" id="previewArt"><i id="previewMark">新</i><small id="previewState">DRAFT / UNSAVED</small></div>
+      <h3 id="previewTitle">未命名漫剧</h3>
+      <p id="previewLogline">填写名称与一句话简介后，这里会显示摘要。</p>
+      <dl>
+        <div><dt>平台</dt><dd id="previewPlatform">—</dd></div>
+        <div><dt>画幅</dt><dd id="previewAspect">—</dd></div>
+        <div><dt>规模</dt><dd id="previewScale">—</dd></div>
+        <div><dt>剧本</dt><dd id="previewScript">未录入</dd></div>
+      </dl>
+    </div>
+    <div class="pe-help"><b>创建后会怎样？</b><ol>
+      <li>漫剧与它的立项参数落库</li>
+      <li>回工作台，进这部漫剧跑「立项」出分集提纲</li>
+      <li>提纲长出 N 个单集项目</li>
+      <li>逐集跑写剧本 → 资产 → 分镜 → 提示词</li></ol></div>
+    <div class="pe-autosave"><i></i><span><b>本地草稿保护</b><small>内容变更会自动暂存到本机</small></span></div>
+  </aside>
+</main>
+<footer class="status"><span>● EDITOR READY</span><b id="footerMode">MODE CREATE</b><em>LOCAL WORKSPACE</em></footer>
+<div class="pe-toast" id="editorToast"></div>
+
+<script src="/lib/jquery/jquery-3.7.1.min.js"></script>
+<script>
+/* ============================================================
+   创建 / 编辑漫剧（独立页面）
+   本来这活放在工作台的弹窗里，字段挤在一屏装不下，
+   而立项一部剧一次要填十来项，所以单独做一页。
+   每一项字段都对应后端实际存储的字段 —— 没有落点的东西不做做样子。
+   ============================================================ */
+(function () {
+  var params = new URLSearchParams(location.search);
+  var dramaId = parseInt(params.get('dramaId') || params.get('projectId') || '0', 10) || 0;
+  var editing = dramaId > 0;
+  var f = document.getElementById('projectForm');
+  var coverFile = null, oldCover = '', loadedBrief = null;
+
+  if (editing) {
+    document.getElementById('modeCode').textContent = 'EDIT PROJECT / #' + dramaId;
+    document.getElementById('sideTitle').textContent = '编辑漫剧';
+    document.getElementById('sideDesc').textContent = '改完这里，后面每一集按新的参数跑。';
+    document.getElementById('pageEyebrow').textContent = '// PROJECT CONFIGURATION';
+    document.getElementById('pageTitle').textContent = '编辑漫剧项目';
+    document.getElementById('submitProject').textContent = '保存更改 →';
+    document.getElementById('footerMode').textContent = 'MODE EDIT / DRAMA ' + dramaId;
+  }
+
+  function toast(t) {
+    var el = document.getElementById('editorToast');
+    el.textContent = '✓ ' + t;
+    el.classList.add('show');
+    clearTimeout(window.__pet);
+    window.__pet = setTimeout(function () { el.classList.remove('show'); }, 2200);
+  }
+  function val(n) { return (f.elements[n] && f.elements[n].value || '').trim(); }
+  function setVal(n, v) { if (f.elements[n]) f.elements[n].value = v == null ? '' : v; }
+
+  /* ---------- 风格选项：直接来自风格库，选中的才存得进 StyleId ---------- */
+  function loadPicks(boxId, url, name, onPick) {
+    var box = document.getElementById(boxId);
+    $.ajax({ url: url, method: 'GET' }).done(function (list) {
+      list = list || [];
+      /* 留一个「不指定」：风格库里没有合适的（例如这家地方转出图时另配）时不至于被逼选一个错的 */
+      var html = '<label><input type="radio" name="' + name + '" value="" checked><span><i>—</i><b>不指定</b>'
+               + '<small>出图时再做决定</small></span></label>';
+      list.forEach(function (s) {
+        var nm = s.styleName || s.name || ('#' + s.styleId);
+        html += '<label title="' + nm + '"><input type="radio" name="' + name + '" value="' + s.styleId + '">'
+              + '<span><i>' + nm.slice(0, 1) + '</i><b>' + nm + '</b><small>#' + s.styleId + '</small></span></label>';
+      });
+      box.html(html);
+      box.find('input[type=radio]').change(function () { onPick && onPick(this.value); });
+      if (loadedBrief) markPick(name, name === 'artStyle' ? loadedBrief.artStyleId : loadedBrief.videoStyleId);
+    }).fail(function () {
+      box.html('<span class="pe-pick-empty">风格库没读出来，稍后刷新重试</span>');
+    });
+  }
+  function markPick(name, id) {
+    if (!id) return;
+    $('#projectForm input[name=' + name + '][value=' + id + ']').prop('checked', true);
+  }
+  function pickVal(name) {
+    var v = $('#projectForm input[name=' + name + ']:checked').val();
+    return v ? parseInt(v, 10) : null;
+  }
+
+  /* ---------- 右侧预览 + 完整度 ---------- */
+  function update() {
+    var name = val('title');
+    document.getElementById('previewTitle').textContent = name || '未命名漫剧';
+    document.getElementById('previewMark').textContent = (name || '新').replace(/[·\s]/g, '').slice(0, 1);
+    document.getElementById('previewLogline').textContent =
+      val('logline') || '填写名称与一句话简介后，这里会显示摘要。';
+    document.getElementById('previewPlatform').textContent = val('platform') || '—';
+    document.getElementById('previewAspect').textContent = val('aspect') || '—';
+    var scale = (val('episodeCount') || '?') + ' 集';
+    if (val('episodeDuration')) scale += ' · ' + val('episodeDuration') + ' 秒/集';
+    document.getElementById('previewScale').textContent = scale;
+    var sc = val('scriptContent');
+    document.getElementById('previewScript').textContent = sc ? (sc.length + ' 字') : '未录入';
+
+    /* 完整度：名称与简介是硬的，其余是加分项 —— 只看必填会一直卡在 100%，看不出还剩多少没填 */
+    var must = [val('title'), val('logline')];
+    var opts = [val('hook'), val('premise'), val('characters'), val('scriptContent'),
+                val('episodeCount'), val('episodeDuration'), pickVal('artStyle'), pickVal('videoStyle')];
+    var m = must.filter(Boolean).length, o = opts.filter(Boolean).length;
+    var pct = Math.round(m / 2 * 60 + o / opts.length * 40);
+    document.getElementById('completionText').textContent = pct + '%';
+    document.getElementById('completionBar').style.width = pct + '%';
+
+    saveDraftSilent();
+  }
+  f.addEventListener('input', update);
+  f.addEventListener('change', update);
+
+  /* ---------- 本地草稿：这一页不是一次填得完的，切走再回来不能白填 ---------- */
+  function dk() { return 'manga.dramaDraft.' + (dramaId || 'new'); }
+  function saveDraftSilent() {
+    try {
+      localStorage.setItem(dk(), JSON.stringify({
+        title: val('title'), genre: val('genre'), logline: val('logline'), aspect: val('aspect'),
+        delivery: val('delivery'), platform: val('platform'), promptEngine: val('promptEngine'),
+        episodeCount: val('episodeCount'), episodeDuration: val('episodeDuration'),
+        hook: val('hook'), premise: val('premise'), characters: val('characters'),
+        scriptContent: val('scriptContent'), artStyle: pickVal('artStyle'), videoStyle: pickVal('videoStyle')
+      }));
+    } catch (e) { }
+  }
+  function restoreDraft() {
+    try { return JSON.parse(localStorage.getItem(dk()) || 'null'); } catch (e) { return null; }
+  }
+  document.getElementById('saveDraft').onclick = function () { saveDraftSilent(); toast('草稿已存在本机'); };
+
+  /* ---------- 封面 ---------- */
+  document.getElementById('coverBtn').onclick = function () { $('#coverInput').trigger('click'); };
+  document.getElementById('coverInput').onchange = function () {
+    if (!this.files || !this.files[0]) return;
+    coverFile = this.files[0];
+    document.getElementById('coverState').textContent = '已选：' + coverFile.name;
+    var rd = new FileReader();
+    rd.onload = function (e) {
+      document.getElementById('previewArt').innerHTML =
+        '<img id="coverPreviewImg" src="' + e.target.result + '"><small>PREVIEW</small>';
+    };
+    rd.readAsDataURL(coverFile);
+  };
+  function uploadCover(id, done) {
+    if (!coverFile) { done(); return; }
+    var fd = new FormData(); fd.append('file', coverFile);
+    $.ajax({ url: '/api/drama/' + id + '/cover', method: 'POST', data: fd, processData: false, contentType: false })
+      .done(function () { done(); })
+      .fail(function () { toast('封面没传上去，其余已保存'); done(); });
+  }
+
+  /* ---------- 提交 ---------- */
+  function briefBody(id) {
+    var chars = val('characters').split(/[,，、]/).map(function (s) { return s.trim(); })
+      .filter(function (s) { return s; });
+    return {
+      dramaId: id,
+      aspect: val('aspect') || null,
+      delivery: val('delivery') || null,
+      platform: val('platform') || null,
+      genre: val('genre') || null,
+      artStyleId: pickVal('artStyle'),
+      videoStyleId: pickVal('videoStyle'),
+      episodeCount: val('episodeCount') ? parseInt(val('episodeCount'), 10) : null,
+      episodeDuration: val('episodeDuration') ? parseInt(val('episodeDuration'), 10) : null,
+      hook: val('hook') || null,
+      premise: val('premise') || null,
+      charactersJson: chars.length ? JSON.stringify(chars) : null,
+      promptEngine: val('promptEngine') || null
+    };
+  }
+  function saveBrief(id, after) {
+    $.ajax({
+      url: '/api/director-agent/brief', method: 'PUT', contentType: 'application/json',
+      data: JSON.stringify(briefBody(id))
+    }).done(function () { after(); }).fail(function (x) {
+      toast('立项参数没存上：' + ((x.responseJSON && x.responseJSON.message) || x.status || ''));
+      after();
+    });
+  }
+
+  document.getElementById('submitProject').onclick = function () {
+    if (!f.reportValidity()) { toast('名称与一句话简介必填'); return; }
+    var btn = this; btn.disabled = true;
+    var original = btn.textContent; btn.textContent = '保存中…';
+    function unlock() { btn.disabled = false; btn.textContent = original; }
+
+    if (editing) {
+      $.ajax({
+        url: '/api/drama/' + dramaId, method: 'PUT', contentType: 'application/json',
+        data: JSON.stringify({ title: val('title'), description: val('logline'), scriptContent: val('scriptContent') || null })
+      }).done(function () {
+        saveBrief(dramaId, function () {
+          uploadCover(dramaId, function () { toast('已保存'); unlock(); });
+        });
+      }).fail(function (x) {
+        toast('没存上：' + ((x.responseJSON && x.responseJSON.message) || x.status || '')); unlock();
+      });
+      return;
+    }
+
+    /* 新建：先建漫剧（剧本素材在这一步就带上），拿到 id 再存立项、传封面 */
+    $.ajax({
+      url: '/api/drama', method: 'POST', contentType: 'application/json',
+      data: JSON.stringify({ title: val('title'), description: val('logline'), scriptContent: val('scriptContent') || null })
+    }).done(function (r) {
+      saveBrief(r.dramaId, function () {
+        uploadCover(r.dramaId, function () {
+          try { localStorage.removeItem(dk()); } catch (e) { }
+          toast('已创建，回到工作台');
+          setTimeout(function () { location.href = '/pages/dashboard.html'; }, 900);
+        });
+      });
+    }).fail(function (x) {
+      toast('没建成：' + ((x.responseJSON && x.responseJSON.message) || x.status || '')); unlock();
+    });
+  };
+
+  /* ---------- 载入 ---------- */
+  loadPicks('artStylePicks', '/api/image-style', 'artStyle', update);
+  loadPicks('videoStylePicks', '/api/video-style', 'videoStyle', update);
+
+  if (editing) {
+    $.get('/api/drama/' + dramaId, function (dr) {
+      setVal('title', dr.title); setVal('logline', dr.description);
+      setVal('scriptContent', dr.scriptContent);
+      if (dr.coverImage) {
+        oldCover = dr.coverImage;
+        document.getElementById('previewArt').innerHTML =
+          '<img id="coverPreviewImg" src="' + dr.coverImage + '"><small>CURRENT</small>';
+      }
+      update();
+    });
+    $.get('/api/director-agent/brief', { dramaId: dramaId }, function (b) {
+      loadedBrief = b && b.exists ? b : null;
+      if (!loadedBrief) return;
+      setVal('aspect', b.aspect); setVal('delivery', b.delivery); setVal('platform', b.platform);
+      setVal('genre', b.genre); setVal('promptEngine', b.promptEngine);
+      setVal('episodeCount', b.episodeCount); setVal('episodeDuration', b.episodeDuration);
+      setVal('hook', b.hook); setVal('premise', b.premise);
+      var chars = [];
+      try { var p = JSON.parse(b.charactersJson || '[]'); if (p instanceof Array) chars = p; } catch (e) { }
+      setVal('characters', chars.join('，'));
+      markPick('artStyle', b.artStyleId); markPick('videoStyle', b.videoStyleId);
+      update();
+    });
+  } else {
+    var d = restoreDraft();
+    if (d) {
+      Object.keys(d).forEach(function (k) {
+        if (k === 'artStyle' || k === 'videoStyle') { markPick(k, d[k]); return; }
+        setVal(k, d[k]);
+      });
+      toast('已恢复上次没提交的草稿');
+    }
+  }
+
+  /* 侧栏步骤高亮 */
+  Array.prototype.forEach.call(document.querySelectorAll('#stepNav a'), function (a) {
+    a.onclick = function () {
+      Array.prototype.forEach.call(document.querySelectorAll('#stepNav a'), function (x) { x.classList.remove('on'); });
+      a.classList.add('on');
+    };
+  });
+
+  update();
+})();
+</script>
+</body>
+</html>

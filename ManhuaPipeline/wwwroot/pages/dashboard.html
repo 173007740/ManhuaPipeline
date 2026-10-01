@@ -224,7 +224,7 @@
                         <a href="report.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">assessment</span> 系统报告</a>
                         <a href="voice-library.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">mic</span> 音色库</a>
                         <a href="works.html" target="_blank" class="btn btn-outline" style="text-decoration:none;"><span class="material-icons" style="font-size:inherit;vertical-align:middle">palette</span> 作品展示</a>
-                        <button class="btn btn-primary" onclick="showCreateDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 创建漫剧</button>
+                        <button class="btn btn-primary" onclick="location.href='/pages/project-editor.html'"><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 创建漫剧</button>
                         <button class="btn btn-outline" id="btnDramaSort" onclick="toggleDramaSort()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">sort</span> <span id="dramaSortLabel">最新优先</span></button>
                     </div>
                 </div>
@@ -238,7 +238,7 @@
                 <div id="dramaEmpty" class="empty-state" style="display:none;">
                     <div class="icon">🎬</div>
                     <p>还没有漫剧</p>
-                    <p style="margin-top:8px;"><a href="#" onclick="showCreateDrama()" style="color:var(--primary-light);">创建你的第一个漫剧</a></p>
+                    <p style="margin-top:8px;"><a href="/pages/project-editor.html" style="color:var(--primary-light);">创建你的第一个漫剧</a></p>
                 </div>
             </div>
             <div id="projectView" style="display:none;">
@@ -250,107 +250,6 @@
                 <div id="projectEmpty" class="empty-state" style="display:none;">
                     <div class="icon">📂</div>
                     <p>还没有项目</p>
-                </div>
-            </div>
-        </div>
-        <div id="createDramaModal" class="modal-overlay" style="display:none;">
-            <div class="modal" style="width:760px;max-width:92%;max-height:90vh;overflow-y:auto;">
-                <header>
-                    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">add</span> 新建漫剧</h3>
-                    <button class="modal-close" onclick="$('#createDramaModal').hide()" title="关闭">&times;</button>
-                </header>
-                <label>漫剧名称</label>
-                <input id="dramaTitleInput" placeholder="输入漫剧名称">
-                <label>描述（选填）</label>
-                <textarea id="dramaDescInput" placeholder="输入描述" rows="2"></textarea>
-                <!-- 立项跟着漫剧一起建：一部漫剧一份，存进 Dramas 那一行。
-                     建完进漫剧页点「跑立项并生成分集」，就按这些参数跑 P0、按产出建单集项目。
-                     这一套字段编辑弹窗是克隆过去的（见底部 JS），改这里两边一起变。
-                     还差一项没在这里：交付形态（delivery），建完在漫剧页定。 -->
-                <div style="margin:14px 0 8px;font-size:12px;letter-spacing:1px;color:var(--primary-light);">立项参数</div>
-                <div class="drama-brief-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;">
-                    <!-- 画幅 / 目标平台以前是手填文本框，同一个平台会被写成「抖音」「douyin」「抖音短视频」好几种，
-                         下游按值比对时一条也对不上。改成下拉，取值与立项页、流水线那套一致。 -->
-                    <div>
-                        <label>画幅</label>
-                        <select data-fk="aspect" style="width:100%;box-sizing:border-box;">
-                            <option value="16:9 横屏">16:9 横屏</option>
-                            <option value="9:16 竖屏">9:16 竖屏</option>
-                            <option value="21:9 超宽">21:9 超宽</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label>目标平台</label>
-                        <select data-fk="platform" style="width:100%;box-sizing:border-box;">
-                            <option value="全平台">全平台</option>
-                            <option value="抖音">抖音</option>
-                            <option value="快手">快手</option>
-                            <option value="视频号">视频号</option>
-                            <option value="B站">B站</option>
-                        </select>
-                    </div>
-                    <!-- 两个风格库各管一段，名字要写清楚、也要摆在一排（一个管图、一个管影像，挑的时候本就该一起看）：
-                         图片风格（ImageStyles）—— 画面长什么样，资产出图时拼进提示词；
-                         视觉风格（VideoStyles）—— 影像什么调子，一部剧定一次。 -->
-                    <div>
-                        <label>图片风格</label>
-                        <select data-fk="artStyle" style="width:100%;box-sizing:border-box;"><option value="">未设置</option></select>
-                    </div>
-                    <div>
-                        <label>视觉风格</label>
-                        <select data-fk="videoStyle" style="width:100%;box-sizing:border-box;"><option value="">未设置</option></select>
-                    </div>
-                    <div>
-                        <label>题材</label>
-                        <input type="text" data-fk="genre" placeholder="如：宫崎骏自愈系" style="width:100%;box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label>总集数</label>
-                        <input type="number" min="1" data-fk="episodeCount" placeholder="12" style="width:100%;box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label>单集时长（秒）</label>
-                        <input type="number" min="1" data-fk="episodeDuration" placeholder="180" style="width:100%;box-sizing:border-box;">
-                    </div>
-                    <div>
-                        <label>提示词引擎</label>
-                        <select data-fk="promptEngine" style="width:100%;box-sizing:border-box;">
-                            <option value="SD">SD</option>
-                            <option value="H3">H3</option>
-                        </select>
-                    </div>
-                    <!-- 核心爽点 / 核心设定本来只有漫剧页（project-manage）上有，建漫剧时填不了 ——
-                         于是新建出来的漫剧这两项是空的，进漫剧页还得再补一次。
-                         这两项正是立项里最要紧的（看什么、讲什么），建的时候就该填。 -->
-                    <div style="grid-column:1 / -1;">
-                        <label>核心爽点</label>
-                        <input type="text" data-fk="hook" placeholder="一句话说清看什么" style="width:100%;box-sizing:border-box;">
-                    </div>
-                    <div style="grid-column:1 / -1;">
-                        <label>核心设定</label>
-                        <textarea data-fk="premise" rows="3" placeholder="这个世界观 / 这一部讲的是什么，几句话说清"
-                                  style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
-                    </div>
-                    <!-- 整部剧的剧本素材：立项最早的一步就是这里，那时一集都还没建，
-                         所以只能是整部的。之后每一集打开流水线「立项」那格时会自动预填进来，
-                         人删到自己那一集的部分，再交给模型按它改写。 -->
-                    <div style="grid-column:1 / -1;">
-                        <label>整部剧本素材（选填）</label>
-                        <textarea data-fk="scriptContent" rows="6" placeholder="把你写好的整部剧本粘进来；也可以留着，之后在某一集里单独给"
-                                  style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
-                    </div>
-                    <!-- 加了视觉风格之后共九项，两列排下来最后一行只剩它一个，让它占满整行 -->
-                    <div style="grid-column:1 / -1;">
-                        <label>角色（逗号分隔）</label>
-                        <input type="text" data-fk="characters" placeholder="杨彦刚，刘如烟" style="width:100%;box-sizing:border-box;">
-                    </div>
-                </div>
-                <label style="margin-top:12px;">封面（选填）</label>
-                <input type="file" id="dramaCoverInput" accept="image/*" onchange="previewCover(this)">
-                <div id="coverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:200px;max-height:120px;border-radius:8px;object-fit:cover;"></div>
-                <div class="modal-actions">
-                    <button class="btn btn-outline" onclick="$('#createDramaModal').hide()">取消</button>
-                    <button class="btn btn-primary" onclick="createDrama()">创建</button>
                 </div>
             </div>
         </div>
@@ -373,35 +272,6 @@
                 <div class="modal-actions">
                     <button class="btn btn-outline" onclick="$('#createProjectModal').hide()">取消</button>
                     <button class="btn btn-primary" onclick="createProject()">创建</button>
-                </div>
-            </div>
-        </div>
-        <div id="editDramaModal" class="modal-overlay" style="display:none;">
-            <div class="modal" style="width:760px;max-width:92%;max-height:90vh;overflow-y:auto;">
-                <header>
-                    <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">edit</span> 编辑漫剧</h3>
-                    <button class="modal-close" onclick="$('#editDramaModal').hide()" title="关闭">&times;</button>
-                </header>
-                <input type="hidden" id="editDramaId">
-                <label>漫剧名称</label>
-                <input id="editDramaTitleInput" placeholder="输入漫剧名称">
-                <label>描述（选填）</label>
-                <textarea id="editDramaDescInput" placeholder="输入描述" rows="3"></textarea>
-                <label>封面（选填）</label>
-                <div class="cover-upload-area" style="position:relative;border:2px dashed var(--border);border-radius:8px;padding:20px;text-align:center;cursor:pointer;margin-bottom:12px;">
-                    <span class="material-icons" style="font-size:24px;color:var(--text-muted);display:block;margin-bottom:8px;">cloud_upload</span>
-                    <span style="font-size:13px;color:var(--text-muted);">点击上传封面图片</span>
-                    <input type="file" id="editDramaCoverInput" accept="image/*" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;">
-                </div>
-                <div id="editDramaCoverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;"></div>
-                <!-- 立项参数：以前这个弹窗只有名称 / 描述 / 封面 —— 建漫剧时能填的画幅、平台、题材、
-                     两个风格、集数、时长、核心爽点、核心设定、提示词引擎、角色，建完在这里一项都看不到，
-                     要改只能再进漫剧页。字段是从新建弹窗克隆过来的（见底部 JS），两边永远同一套。 -->
-                <div style="margin:14px 0 8px;font-size:12px;letter-spacing:1px;color:var(--primary-light);">立项参数</div>
-                <div class="drama-brief-grid-slot"></div>
-                <div class="modal-actions">
-                    <button class="btn btn-outline" onclick="$('#editDramaModal').hide()">取消</button>
-                    <button class="btn btn-primary" onclick="saveEditDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check</span> 保存</button>
                 </div>
             </div>
         </div>
@@ -445,7 +315,7 @@
                         h += "<div class='drama-desc'>" + (dr.description ? escHtml(dr.description) : "暂无描述") + "</div>";
                         h += "<div class='card-foot'><span class='card-enter'>进入合集 →</span>" +
                             "<span style='display:flex;align-items:center;gap:8px;'><span class='drama-meta' id='dramaMeta" + dr.dramaId + "'>加载中...</span>" +
-                            "<button class='btn btn-outline btn-sm' onclick=\"event.stopPropagation();showEditDrama('" + dr.dramaId + "','" + escAttr(dr.title) + "')\">编辑</button></span></div>";
+                            "<a class='btn btn-outline btn-sm' href='/pages/project-editor.html?dramaId=" + dr.dramaId + "' onclick='event.stopPropagation()'>编辑</a></span></div>";
                         h += "</div></div>";
                     }
                     $("#dramaList").html(h);
@@ -499,173 +369,9 @@
                     $("#projectList").html(h);
                 });
             }
-            /* 两个风格下拉每次开弹窗都重拉一次：风格库是会长出来的，缓存一次就漏掉后加的。
-               图片风格 = 画面长什么样（资产出图拼进提示词），视觉风格 = 影像什么调子（一部剧定一次）。 */
-            /* 两个弹窗（新建 / 编辑）里都有一套立项字段，风格下拉也要都填。
-               两个请求都回来才回调 —— 编辑弹窗要回填已存的风格，下拉还没填就 set 值会白设。 */
-            function loadDramaStyles(cb) {
-                var a = $.get("/api/image-style", function (list) {
-                    var sel = $('#createDramaModal [data-fk="artStyle"], #editDramaModal [data-fk="artStyle"]')
-                        .empty().append('<option value="">未设置</option>');
-                    (list || []).forEach(function (s) {
-                        sel.append('<option value="' + s.styleId + '">' + escHtml(s.styleName || s.name || '') + '</option>');
-                    });
-                });
-                var v = $.get("/api/video-style", function (list) {
-                    var sel = $('#createDramaModal [data-fk="videoStyle"], #editDramaModal [data-fk="videoStyle"]')
-                        .empty().append('<option value="">未设置</option>');
-                    (list || []).forEach(function (s) {
-                        sel.append('<option value="' + s.styleId + '">' + escHtml(s.styleName || s.name || '') + '</option>');
-                    });
-                });
-                $.when(a, v).done(function () { if (cb) cb(); });
-            }
-            function showCreateDrama() {
-                $("#dramaTitleInput").val(""); $("#dramaDescInput").val(""); $("#dramaCoverInput").val(""); $("#coverPreview").hide();
-                $('#createDramaModal [data-fk]').val("");      // 立项字段一并清掉，别留着上一部的集数
-                $('#createDramaModal [data-fk="promptEngine"]').val("SD");
-                // 画幅 / 平台改成下拉后没有占位符可提示，默认值得显式给（跟流水线那套一致）
-                $('#createDramaModal [data-fk="aspect"]').val("16:9 横屏");
-                $('#createDramaModal [data-fk="platform"]').val("抖音");
-                $("#createDramaModal").css("display", "flex");
-                loadDramaStyles();
-            }
-            /* 立项字段 → 一条立项。数字转成数字（集数是字符串没法比大小），
-               角色在表单里是一段文本，进库存成 json 数组。
-               传弹窗选择器：新建和编辑各有自己的一套字段。 */
-            function dramaBriefFromForm(sel) {
-                function num(v) { var n = parseInt(v, 10); return isNaN(n) ? null : n; }
-                function val(k) { return $(sel + ' [data-fk="' + k + '"]').val(); }
-                var chars = String(val('characters') || '').split(/[,，、]/)
-                    .map(function (s) { return s.trim() }).filter(function (s) { return s });
-                return {
-                    aspect: val('aspect') || null,
-                    platform: val('platform') || null,
-                    genre: val('genre') || null,
-                    artStyleId: val('artStyle') ? +val('artStyle') : null,
-                    episodeCount: num(val('episodeCount')),
-                    episodeDuration: num(val('episodeDuration')),
-                    charactersJson: chars.length ? JSON.stringify(chars) : null,
-                    hook: val('hook') || null,
-                    premise: val('premise') || null,
-                    promptEngine: val('promptEngine') || null,
-                    videoStyleId: val('videoStyle') ? +val('videoStyle') : null
-                };
-            }
-
-            /* 已存的立项回写进表单（编辑弹窗打开时）。
-               没有立项（建的时候一项没填）就只给默认值，其余留空。 */
-            function fillBriefForm(sel, b) {
-                function set(k, v) { $(sel + ' [data-fk="' + k + '"]').val(v == null ? '' : v); }
-                var has = b && b.exists;
-                set('aspect', has ? (b.aspect || '16:9 横屏') : '16:9 横屏');
-                set('platform', has ? (b.platform || '抖音') : '抖音');
-                set('promptEngine', has ? (b.promptEngine || 'SD') : 'SD');
-                set('genre', has ? b.genre : '');
-                set('artStyle', has && b.artStyleId ? String(b.artStyleId) : '');
-                set('videoStyle', has && b.videoStyleId ? String(b.videoStyleId) : '');
-                set('episodeCount', has ? b.episodeCount : '');
-                set('episodeDuration', has ? b.episodeDuration : '');
-                set('hook', has ? b.hook : '');
-                set('premise', has ? b.premise : '');
-                var chars = [];
-                if (has) { try { var p = JSON.parse(b.charactersJson || '[]'); if (Object.prototype.toString.call(p) === '[object Array]') chars = p; } catch (e) { } }
-                set('characters', chars.join('，'));
-            }
-            function createDrama() {
-                var t = $("#dramaTitleInput").val().trim(); if (!t) { alert("请输入名称"); return }
-                $.ajax({
-                    url: "/api/drama", method: "POST", contentType: "application/json",
-                    data: JSON.stringify({ title: t, description: $("#dramaDescInput").val(),
-                                           scriptContent: $('#createDramaModal [data-fk="scriptContent"]').val() || null }),
-                    success: function (r) {
-                        var did = r.dramaId;
-                        /* 立项跟漫剧一起落库：立完项才谈得上跑 P0 出分集。
-                           没填的字段不传，那边的语义是「这次不改动」。 */
-                        $.ajax({
-                            url: "/api/director-agent/brief", method: "PUT", contentType: "application/json",
-                            data: JSON.stringify($.extend({ dramaId: did }, dramaBriefFromForm('#createDramaModal')))
-                        });
-                        var file = $("#dramaCoverInput")[0].files[0];
-                        if (file) { var fd = new FormData(); fd.append("file", file); $.ajax({ url: "/api/drama/" + did + "/cover", method: "POST", data: fd, processData: false, contentType: false, success: function () { $("#createDramaModal").hide(); loadDramas() } }) } else { $("#createDramaModal").hide(); loadDramas() }
-                    }
-                });
-            }
-            function showCreateProject() { $("#projectTitleInput").val(""); $("#projectDescInput").val(""); $("#projectTypeInput").val("drama"); $("#createProjectModal").css("display", "flex") }
-            function createProject() {
-                var t = $("#projectTitleInput").val().trim(); if (!t) { alert("请输入项目名称"); return }
-                $.ajax({ url: "/api/project", method: "POST", contentType: "application/json", data: JSON.stringify({ dramaId: currentDramaId, title: t, description: $("#projectDescInput").val(), scriptContent: "", projectType: $("#projectTypeInput").val() || "drama" }), success: function () { $("#createProjectModal").hide(); loadProjects() }, error: function (x) { alert("失败: " + (x.responseJSON?.message || x.statusText)) } });
-            }
-            function editProject(id, title) { var nt = prompt("项目名称", title); if (!nt || !nt.trim()) return; $.ajax({ url: "/api/project/" + id, method: "PUT", contentType: "application/json", data: JSON.stringify({ title: nt }), success: function () { loadProjects() } }) }
-            function deleteProject(id) { if (!confirm("确定删除？")) return; $.ajax({ url: "/api/project/" + id, method: "DELETE", success: function () { loadProjects() } }) }
-
-
-
-            /* 编辑弹窗里的立项字段直接克隆新建弹窗那一套（连同 data-fk），
-               不另写一份 HTML —— 两处各写一遍迟早漏（刚加的核心爽点 / 核心设定就是这样只在新建那边）。 */
-            $(function () {
-                $('.drama-brief-grid-slot').each(function () {
-                    $(this).empty().append($('#createDramaModal .drama-brief-grid').clone());
-                });
-            });
-
-            var editDramaCoverFile = null;
-            function showEditDrama(id, title) {
-                $("#editDramaId").val(id);
-                $("#editDramaTitleInput").val(title);
-                $("#editDramaCoverInput").val("");
-                $("#editDramaCoverPreview").hide();
-                editDramaCoverFile = null;
-                $.get("/api/drama/" + id, function (dr) {
-                    $("#editDramaDescInput").val(dr.description || "");
-                    // 整部剧本素材（建漫剧时录的那份）
-                    $('#editDramaModal [data-fk="scriptContent"]').val(dr.scriptContent || "");
-                    if (dr.coverImage) $("#editDramaCoverPreview").html('<img src="' + dr.coverImage + '" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">').show();
-                });
-                /* 立项要等风格下拉填完再回填，否则 set 上去的值会被随后的 empty() 冲掉 */
-                loadDramaStyles(function () {
-                    $.get("/api/director-agent/brief", { dramaId: id }, function (b) {
-                        fillBriefForm('#editDramaModal', b);
-                    });
-                });
-                $("#editDramaModal").css("display", "flex");
-            }
-            $(document).on("change", "#editDramaCoverInput", function () {
-                var file = this.files[0];
-                if (file) {
-                    editDramaCoverFile = file;
-                    var reader = new FileReader();
-                    reader.onload = function (e) { $("#editDramaCoverPreview").html('<img src="' + e.target.result + '" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">').show() };
-                    reader.readAsDataURL(file);
-                }
-            });
-            function saveEditDrama() {
-                var id = $("#editDramaId").val();
-                var title = $("#editDramaTitleInput").val().trim();
-                if (!title) { alert("请输入名称"); return }
-                var desc = $("#editDramaDescInput").val().trim();
-                $.ajax({
-                    url: "/api/drama/" + id, method: "PUT", contentType: "application/json",
-                    data: JSON.stringify({ title: title, description: desc,
-                        scriptContent: $('#editDramaModal [data-fk="scriptContent"]').val() || null }),
-                    success: function () {
-                        /* 立项跟名称一起存：改了集数、换了个风格，就在这里改，不用再进漫剧页 */
-                        $.ajax({
-                            url: "/api/director-agent/brief", method: "PUT", contentType: "application/json",
-                            data: JSON.stringify($.extend({ dramaId: +id }, dramaBriefFromForm('#editDramaModal')))
-                        });
-                        if (editDramaCoverFile) {
-                            var fd = new FormData();
-                            fd.append("file", editDramaCoverFile);
-                            $.ajax({ url: "/api/drama/" + id + "/cover", method: "POST", data: fd, processData: false, contentType: false, success: function () { $("#editDramaModal").hide(); loadDramas() } });
-                        } else { $("#editDramaModal").hide(); loadDramas() }
-                    }
-                });
-            }
             function escHtml(s) { return String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;") }
             function escAttr(s) { return String(s).replace(/"/g, "&quot;").replace(/'/g, "&#39;") }
 
-            function previewCover(input) { if (input.files && input.files[0]) { var reader = new FileReader(); reader.onload = function (e) { $("#coverPreview").show().find("img").attr("src", e.target.result) }; reader.readAsDataURL(input.files[0]) } }
         </script>
 
     </div>
