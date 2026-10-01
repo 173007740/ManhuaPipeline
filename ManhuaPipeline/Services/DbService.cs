@@ -42,6 +42,7 @@ public partial class DbService
             Title = (string)r["Title"],
             Description = r["Description"] == DBNull.Value ? null : (string)r["Description"],
             CoverImage = r["CoverImage"] == DBNull.Value ? null : (string)r["CoverImage"],
+            ScriptContent = r["ScriptContent"] == DBNull.Value ? null : (string)r["ScriptContent"],
         CreatedAt = (DateTime)r["CreatedAt"],
             UpdatedAt = (DateTime)r["UpdatedAt"]
         };
@@ -78,28 +79,45 @@ public partial class DbService
         return (int)cmd.ExecuteScalar();
     }
 
-    public bool UpdateDrama(int dramaId, int userId, string title, string? description, string? coverImage)
+    public string? GetDramaScriptContent(int dramaId)
     {
         using var conn = GetConn(); conn.Open();
-        if (coverImage != null)
-        {
-            using var cmd = new SqlCommand("UPDATE Dramas SET Title=@t, Description=@d, CoverImage=@c, UpdatedAt=GETDATE() WHERE DramaId=@id AND UserId=@uid", conn);
-            cmd.Parameters.AddWithValue("@id", dramaId);
-            cmd.Parameters.AddWithValue("@uid", userId);
-            cmd.Parameters.AddWithValue("@t", title);
-            cmd.Parameters.AddWithValue("@d", description ?? (object)DBNull.Value);
-            cmd.Parameters.AddWithValue("@c", coverImage);
-            return cmd.ExecuteNonQuery() > 0;
-        }
-        else
-        {
-            using var cmd = new SqlCommand("UPDATE Dramas SET Title=@t, Description=@d, UpdatedAt=GETDATE() WHERE DramaId=@id AND UserId=@uid", conn);
-            cmd.Parameters.AddWithValue("@id", dramaId);
-            cmd.Parameters.AddWithValue("@uid", userId);
-            cmd.Parameters.AddWithValue("@t", title);
-            cmd.Parameters.AddWithValue("@d", description ?? (object)DBNull.Value);
-            return cmd.ExecuteNonQuery() > 0;
-        }
+        using var cmd = new SqlCommand("SELECT ScriptContent FROM Dramas WHERE DramaId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", dramaId);
+        try { return cmd.ExecuteScalar() as string; }
+        catch (Microsoft.Data.SqlClient.SqlException) { return null; }   // 列还没建
+    }
+
+    public void SetDramaScriptContent(int dramaId, string? text)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("UPDATE Dramas SET ScriptContent=@s, UpdatedAt=SYSDATETIME() WHERE DramaId=@id", conn);
+        cmd.Parameters.AddWithValue("@s", (object?)text ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", dramaId);
+        try { cmd.ExecuteNonQuery(); }
+        catch (Microsoft.Data.SqlClient.SqlException) { /* 列没建就算了 */ }
+    }
+
+    /// <summary>
+    /// 改漫剧。scriptContent 传 null 表示「这次不动它」——
+    /// 不为这个字段单独开一个接口，省得页面上改个标题还得连带把整篇剧本发回来。
+    /// </summary>
+    public bool UpdateDrama(int dramaId, int userId, string title, string? description, string? coverImage,
+                            string? scriptContent = null)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+UPDATE Dramas SET Title=@t, Description=@d, CoverImage=ISNULL(@c, CoverImage),
+       ScriptContent = CASE WHEN @sc IS NULL THEN ScriptContent ELSE @sc END,
+       UpdatedAt=GETDATE()
+WHERE DramaId=@id AND UserId=@uid", conn);
+        cmd.Parameters.AddWithValue("@id", dramaId);
+        cmd.Parameters.AddWithValue("@uid", userId);
+        cmd.Parameters.AddWithValue("@t", title);
+        cmd.Parameters.AddWithValue("@d", (object?)description ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@c", (object?)coverImage ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@sc", (object?)scriptContent ?? DBNull.Value);
+        return cmd.ExecuteNonQuery() > 0;
     }
 
     public bool DeleteDrama(int dramaId, int userId)

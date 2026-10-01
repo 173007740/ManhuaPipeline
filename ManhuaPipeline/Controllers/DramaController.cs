@@ -41,6 +41,9 @@ public class DramaController : ControllerBase
         if (uid == 0) return Unauthorized();
         if (string.IsNullOrWhiteSpace(req.Title)) return BadRequest(new { message = "请输入漫剧名称" });
         var id = _db.CreateDrama(uid, req.Title, req.Description);
+        // 整部剧本素材：建漫剧时交的这份，后面每集打开流水线立项那格时会预填进去
+        if (!string.IsNullOrWhiteSpace(req.ScriptContent))
+            _db.SetDramaScriptContent(id, req.ScriptContent!.Trim());
         return Ok(new { dramaId = id, message = "创建成功" });
     }
 
@@ -49,7 +52,8 @@ public class DramaController : ControllerBase
     {
         var uid = GetUserId();
         if (uid == 0) return Unauthorized();
-        if (!_db.UpdateDrama(id, uid, req.Title, req.Description, null)) return NotFound(new { message = "漫剧不存在" });
+        if (!_db.UpdateDrama(id, uid, req.Title, req.Description, null, req.ScriptContent))
+            return NotFound(new { message = "漫剧不存在" });
         return Ok(new { message = "更新成功" });
     }
 
@@ -241,4 +245,6 @@ public class CreateDramaRequest
 {
     public string Title { get; set; } = "";
     public string? Description { get; set; }
+    /// <summary>整部剧的剧本素材（选填）。每集的剧本存在各自项目上，这里是它的来源。</summary>
+    public string? ScriptContent { get; set; }
 }

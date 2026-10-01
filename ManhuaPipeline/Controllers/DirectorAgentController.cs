@@ -328,12 +328,17 @@ public class DirectorAgentController : ControllerBase
         if (GetUserId() == 0) return Unauthorized();
         if (projectId <= 0) return BadRequest(new { message = "缺少 projectId" });
         var s = _db.GetProjectScriptContent(projectId);
-        return Ok(new
-        {
-            script = s ?? "",
-            source = _db.GetProjectScriptSource(projectId) ?? "",
-            chars = (s ?? "").Length
-        });
+        if (!string.IsNullOrWhiteSpace(s))
+            return Ok(new { script = s!, source = _db.GetProjectScriptSource(projectId) ?? "", chars = s!.Length });
+
+        /* 这一集还没有剧本时，把整部素材（建 / 改漫剧时录的那份，存在 Dramas 上）递过去：
+           人不必为了同一份剧本在每一集里粘一遍。只做预填，不自动喂给模型 ——
+           12 集每一集都拿整部去跑，等于每集都在写全集。 */
+        var did = _db.GetDramaIdByProject(projectId);
+        if (did <= 0) return Ok(new { script = "", source = "", chars = 0 });
+        var drama = _db.GetDramaScriptContent(did);
+        if (string.IsNullOrWhiteSpace(drama)) return Ok(new { script = "", source = "", chars = 0 });
+        return Ok(new { script = drama!, source = "drama", chars = drama!.Length, wholeDrama = true });
     }
 
     public sealed class ScriptImportBody

@@ -1212,10 +1212,12 @@
       }
       else if (r.script){
         $('#myScript').val(r.script);
-        $('#myScriptState').text('当前已存 ' + r.chars + ' 字 · '
-          + (r.source === 'user'  ? '你的终稿（写剧本那站不会再改它）'
-           : r.source === 'draft' ? '你交的底本（点第 2 步「写剧本」，模型按它整理成稿）'
-                                  : '模型写的'));
+        $('#myScriptState').html(
+            (r.source === 'user'  ? '当前已存 ' + r.chars + ' 字 · 你的终稿（写剧本那站不会再改它）'
+           : r.source === 'draft' ? '当前已存 ' + r.chars + ' 字 · 你交的底本（点第 2 步「写剧本」，模型按它整理成稿）'
+           : r.wholeDrama         ? '<b style="color:#ffb454">这是你在创建 / 编辑漫剧时录的「整部」素材（' + r.chars
+                                    + ' 字），已预填 —— 删到本集这一段再用，别整份交上去：12 集每集都拿全集去跑，等于每集都在写全集</b>'
+                                  : '当前已存 ' + r.chars + ' 字 · 模型写的'));
       }
       else $('#myScriptState').text('这一集还没有剧本');
     });

@@ -331,6 +331,14 @@
                         <textarea data-fk="premise" rows="3" placeholder="这个世界观 / 这一部讲的是什么，几句话说清"
                                   style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
                     </div>
+                    <!-- 整部剧的剧本素材：立项最早的一步就是这里，那时一集都还没建，
+                         所以只能是整部的。之后每一集打开流水线「立项」那格时会自动预填进来，
+                         人删到自己那一集的部分，再交给模型按它改写。 -->
+                    <div style="grid-column:1 / -1;">
+                        <label>整部剧本素材（选填）</label>
+                        <textarea data-fk="scriptContent" rows="6" placeholder="把你写好的整部剧本粘进来；也可以留着，之后在某一集里单独给"
+                                  style="width:100%;box-sizing:border-box;resize:vertical;"></textarea>
+                    </div>
                     <!-- 加了视觉风格之后共九项，两列排下来最后一行只剩它一个，让它占满整行 -->
                     <div style="grid-column:1 / -1;">
                         <label>角色（逗号分隔）</label>
@@ -567,7 +575,10 @@
             function createDrama() {
                 var t = $("#dramaTitleInput").val().trim(); if (!t) { alert("请输入名称"); return }
                 $.ajax({
-                    url: "/api/drama", method: "POST", contentType: "application/json", data: JSON.stringify({ title: t, description: $("#dramaDescInput").val() }), success: function (r) {
+                    url: "/api/drama", method: "POST", contentType: "application/json",
+                    data: JSON.stringify({ title: t, description: $("#dramaDescInput").val(),
+                                           scriptContent: $('#createDramaModal [data-fk="scriptContent"]').val() || null }),
+                    success: function (r) {
                         var did = r.dramaId;
                         /* 立项跟漫剧一起落库：立完项才谈得上跑 P0 出分集。
                            没填的字段不传，那边的语义是「这次不改动」。 */
@@ -607,6 +618,8 @@
                 editDramaCoverFile = null;
                 $.get("/api/drama/" + id, function (dr) {
                     $("#editDramaDescInput").val(dr.description || "");
+                    // 整部剧本素材（建漫剧时录的那份）
+                    $('#editDramaModal [data-fk="scriptContent"]').val(dr.scriptContent || "");
                     if (dr.coverImage) $("#editDramaCoverPreview").html('<img src="' + dr.coverImage + '" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">').show();
                 });
                 /* 立项要等风格下拉填完再回填，否则 set 上去的值会被随后的 empty() 冲掉 */
@@ -632,7 +645,10 @@
                 if (!title) { alert("请输入名称"); return }
                 var desc = $("#editDramaDescInput").val().trim();
                 $.ajax({
-                    url: "/api/drama/" + id, method: "PUT", contentType: "application/json", data: JSON.stringify({ title: title, description: desc }), success: function () {
+                    url: "/api/drama/" + id, method: "PUT", contentType: "application/json",
+                    data: JSON.stringify({ title: title, description: desc,
+                        scriptContent: $('#editDramaModal [data-fk="scriptContent"]').val() || null }),
+                    success: function () {
                         /* 立项跟名称一起存：改了集数、换了个风格，就在这里改，不用再进漫剧页 */
                         $.ajax({
                             url: "/api/director-agent/brief", method: "PUT", contentType: "application/json",
