@@ -1174,6 +1174,53 @@
     updStyleDesc(el);
   }
 
+  /* 「用我自己的剧本」：以前人把剧本粘进项目页那一格，存是存进 Projects.ScriptContent 了，
+     可在流水线上根本没人读它 —— 下游（提取资产 / 分镜 / 提示词）一律取本次运行 P1 步骤的产出，
+     而 P1 一跑完又会拿模型产出把人粘的那份整篇盖掉。于是「我自己写剧本」看着能填、能存，
+     实际一步也接不上，跑出来的还是模型自己发挥的那一版。
+     所以这里不把它当「存一段文本」，而是直接落成本次运行的 P1 产出（后端 runs/{id}/script）：
+     下游照旧取 P1，取到的就是人这一份；同时剧本正本标成 user，P1 跑完不再覆盖。 */
+  function renderMyScript(i){
+    var box = $('#sf' + i);
+    if (!box.length || box.find('#myScript').length) return;
+    box.append('<label class="wide-row"><span class="ft">用我自己的剧本'
+      + ' <span style="color:#4f655b">粘进来就按它走，模型不再自己写；这一格留空、点上面的「剧本生成」才是让模型写</span></span>'
+      + '<textarea id="myScript" rows="10" placeholder="把你写好的剧本整篇粘进来"></textarea>'
+      + '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;">'
+      +   '<button class="go" id="btnMyScript" type="button" style="padding:7px 14px;">用这份剧本</button>'
+      +   '<small id="myScriptState" style="color:#4f655b;"></small>'
+      + '</div></label>');
+    var pid = $('#proj').val();
+    if (pid) $.get('/api/director-agent/script', { projectId: pid }, function(r){
+      if (!r) return;
+      if (r.script){
+        $('#myScript').val(r.script);
+        $('#myScriptState').text('当前已存 ' + r.chars + ' 字 · '
+          + (r.source === 'user' ? '你自己的剧本（跑 P1 不会盖掉它）' : '模型写的'));
+      }
+      else $('#myScriptState').text('这一集还没有剧本');
+    });
+    $('#btnMyScript').click(function(){
+      var t = $('#myScript').val().trim();
+      if (!t){ say('× 剧本是空的', 'lerr'); return; }
+      $('#btnMyScript').prop('disabled', true).text('接入中…');
+      ensureRun(function(rid){
+        $.ajax({ url: '/api/director-agent/runs/' + rid + '/script', method: 'POST',
+                 contentType: 'application/json',
+                 data: JSON.stringify({ projectId: pid ? +pid : null, script: t }) })
+         .done(function(r){
+            say('剧本已接上流水线：' + r.chars + ' 字 · 后面的提取资产 / 分镜 / 提示词都按这份走');
+            $('#myScriptState').text('已接上 · ' + r.chars + ' 字');
+            pollOnce();     // 这一步变成「已完成」，后面的格子按新剧本往下排
+          })
+         .fail(function(xhr){
+            say('× 剧本没接上：' + ((xhr.responseJSON && xhr.responseJSON.message) || xhr.status || ''), 'lerr');
+          })
+         .always(function(){ $('#btnMyScript').prop('disabled', false).text('用这份剧本'); });
+      });
+    });
+  }
+
   // 挑画风时把风格描述摆出来：下拉里只有名字，真正拼进出图提示词的是这段描述，得让人看见挑的是什么
   function styleDescOf(id){
     var hit = IMG_STYLES.filter(function(s){ return String(s.styleId) === String(id); })[0];
@@ -1228,6 +1275,8 @@
       renderStepForm($('#sf' + activeStep), STEPS[activeStep].form);
       // 表单画完才有元素可填：立项的值要等这一步切过来时才回填
       if (STEPS[activeStep].form === 'P0') loadBrief();
+      // 剧本那一格额外给一个「用我自己的剧本」的入口：不然这一步只能是模型自己发挥
+      if (STEPS[activeStep].form === 'P1') renderMyScript(activeStep);
     }
     $('[data-run]').click(function(){ doStep(+$(this).data('run')); });
     renderWork();

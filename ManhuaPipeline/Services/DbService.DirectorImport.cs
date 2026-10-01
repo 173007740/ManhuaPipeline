@@ -373,11 +373,42 @@ FROM DirectorSkillDeliverables WHERE ProjectId=@p ORDER BY DeliverableId DESC", 
         return cmd.ExecuteScalar() as string;
     }
 
-    public void SetProjectScriptContent(int projectId, string? text)
+    /// <summary>
+    /// 剧本来源：user = 人自己写的定稿，ai = 模型跑出来的。
+    /// 列还没建（没执行 Upgrade_剧本来源.sql）时返回 null，调用方按「模型写的」处理。
+    /// </summary>
+    public string? GetProjectScriptSource(int projectId)
     {
         using var conn = GetConn(); conn.Open();
-        using var cmd = new SqlCommand("UPDATE Projects SET ScriptContent=@s, UpdatedAt=SYSDATETIME() WHERE ProjectId=@id", conn);
+        using var cmd = new SqlCommand("SELECT ScriptSource FROM Projects WHERE ProjectId=@id", conn);
+        cmd.Parameters.AddWithValue("@id", projectId);
+        try { return cmd.ExecuteScalar() as string; }
+        catch (Microsoft.Data.SqlClient.SqlException) { return null; }   // 列不存在
+    }
+
+    public void SetProjectScriptSource(int projectId, string? source)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand("UPDATE Projects SET ScriptSource=@s, UpdatedAt=SYSDATETIME() WHERE ProjectId=@id", conn);
+        cmd.Parameters.AddWithValue("@s", (object?)source ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@id", projectId);
+        try { cmd.ExecuteNonQuery(); }
+        catch (Microsoft.Data.SqlClient.SqlException) { /* 列没建就算了，不影响剧本本身 */ }
+    }
+
+    /// <summary>
+    /// 把剧本写回项目。source 传 null 表示「沿用现在的来源」，覆盖 AI 产出时传 N'ai'。
+    /// </summary>
+    public void SetProjectScriptContent(int projectId, string? text, string? source = null)
+    {
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(@"
+UPDATE Projects SET ScriptContent=@s,
+       ScriptSource = CASE WHEN @src IS NULL THEN ScriptSource ELSE @src END,
+       UpdatedAt=SYSDATETIME()
+WHERE ProjectId=@id", conn);
         cmd.Parameters.AddWithValue("@s", (object?)text ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@src", (object?)source ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", projectId);
         cmd.ExecuteNonQuery();
     }

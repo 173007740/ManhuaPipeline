@@ -566,7 +566,18 @@ public class SkillOutputImporter
             var old = _db.GetProjectScriptContent(projectId);
             if (!string.IsNullOrWhiteSpace(old) && old.Trim() != outputText.Trim())
                 _db.InsertDeliverable(runId, stepId, "P1", projectId, episodeId, "覆盖前旧剧本", old, null);
-            _db.SetProjectScriptContent(projectId, outputText);
+
+            /* 人自己写的定稿不覆盖。
+               以前这里无条件整篇盖掉 —— 人在项目页粘的剧本，P1 一跑完就没了，还不出声。
+               现在：来源标了 user（他自己粘的 / 流水线页「用我自己的剧本」导进来的）就留着不动，
+               模型这份照样存成交付物，人自己决定要不要换。
+               要明确换回模型写的，就点「重跑 · 剧本生成」——那次覆盖会把来源改回 ai。 */
+            var src = _db.GetProjectScriptSource(projectId);
+            if (string.Equals(src, "user", StringComparison.OrdinalIgnoreCase))
+                _db.InsertDeliverable(runId, stepId, "P1", projectId, episodeId,
+                                      "模型写的剧本（你的定稿没动）", outputText, null);
+            else
+                _db.SetProjectScriptContent(projectId, outputText, "ai");
         }
 
         return new ImportResult(1, null);

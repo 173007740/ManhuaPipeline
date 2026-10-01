@@ -534,11 +534,15 @@ ORDER BY p.ProjectId";
         cmd.Parameters.AddWithValue("@pid", projectId);
         return (int)cmd.ExecuteScalar();
     }
+    /// <summary>
+    /// 人自己保存剧本（项目页「剧本」那一格）。来源记成 user ——
+    /// 这是他自己写的定稿，P1 跑完不该拿模型产出把它静默盖掉（见 SkillOutputImporter）。
+    /// </summary>
     public void UpdateProjectScript(int id, int userId, string script)
     {
         using var conn = GetConn();
         conn.Open();
-        using var cmd = new SqlCommand("UPDATE Projects SET ScriptContent=@s, UpdatedAt=GETDATE() WHERE ProjectId=@id AND UserId=@uid", conn);
+        using var cmd = new SqlCommand("UPDATE Projects SET ScriptContent=@s, ScriptSource=N'user', UpdatedAt=GETDATE() WHERE ProjectId=@id AND UserId=@uid", conn);
         cmd.Parameters.AddWithValue("@id", id);
         cmd.Parameters.AddWithValue("@uid", userId);
         cmd.Parameters.AddWithValue("@s", script);

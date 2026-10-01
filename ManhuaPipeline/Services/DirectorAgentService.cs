@@ -415,12 +415,14 @@ public class DirectorAgentService
         var anchor = ReuseAnchorSection(runId, stageKey);
         // 本集时长目标：只有分镜（P3）需要——镜长之和要凑到这个数
         var dur = DurationTargetSection(runId, stageKey);
+        // 剧本是人自己写的定稿时，提醒下游别动它
+        var mine = UserScriptSection(runId, stageKey);
 
         var ledger = LedgerSourceOf(stageKey);
         if (ledger != null)
         {
             var l = LastOutputOf(runId, ledger);
-            if (!string.IsNullOrWhiteSpace(l)) return ChainHead(ledger) + l + anchor + dur;
+            if (!string.IsNullOrWhiteSpace(l)) return ChainHead(ledger) + l + anchor + dur + mine;
         }
         var head = "";
         foreach (var k in ExtraSourcesOf(stageKey))
@@ -431,7 +433,31 @@ public class DirectorAgentService
         /* prevOutput 是内存里刚跑出来的那份。空串也算没有——单跑某一步时它常常是空的，
            这时必须走回落，否则跨运行的立项/剧本接不上（见 DramaLevelOutputOf）。 */
         var prev = string.IsNullOrWhiteSpace(prevOutput) ? LastOutputOf(runId, prevStageKey) : prevOutput;
-        return head + ChainHead(prevStageKey) + prev + anchor + dur;
+        return head + ChainHead(prevStageKey) + prev + anchor + dur + mine;
+    }
+
+    /// <summary>
+    /// 剧本是用户自己写的定稿时，明说别动它。
+    ///
+    /// 为什么需要：剧本接上流水线之后（Projects.ScriptSource='user'），
+    /// 下游照样会按自己的判断改——加一场戏、改两句台词、把节奏重排一遍。
+    /// 第 2 集那次就是这样：剧本里写着「静场约 8 秒」，分镜给它排了 5 秒，一集下来少了 33 秒。
+    /// 「我自己固定剧本内容」要防的正是这个，所以拿到剧本这两站（P2a 提取资产、P3 分镜）都要说清。
+    /// </summary>
+    private string UserScriptSection(int runId, string stageKey)
+    {
+        if (!(stageKey.Equals("P2a", StringComparison.OrdinalIgnoreCase)
+           || stageKey.Equals("P3", StringComparison.OrdinalIgnoreCase))) return "";
+
+        var ctx = _db.GetRunContext(runId);
+        if (ctx.ProjectId <= 0) return "";
+        if (!string.Equals(_db.GetProjectScriptSource(ctx.ProjectId), "user", StringComparison.OrdinalIgnoreCase))
+            return "";
+
+        return "\n\n【剧本是用户定稿·引擎注入】上面这份剧本是用户自己写好的定稿，不是模型草稿：\n"
+             + "- 不得增删场次、不得改台词与结局、不得替他优化节奏；剧本里没写的场次不要自己补。\n"
+             + "- 剧本里缺的信息（某个道具没写清、某个场景没交代）在产出里注明「剧本未写」，不要脑补。\n"
+             + "- 分镜按剧本顺序逐场排；剧本写了具体秒数（例如「静场约 8 秒」）照抄进对应镜的时长。";
     }
 
     /// <summary>

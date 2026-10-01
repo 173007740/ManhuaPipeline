@@ -312,6 +312,64 @@ public class DirectorAgentController : ControllerBase
     }
 
     /// <summary>
+    /// 取这一集的剧本正本 + 它是谁写的。
+    /// 页面上「用我自己的剧本」那一格要把已存的剧本读回来，也要说清现在这份是模型写的还是人自己写的。
+    /// </summary>
+    [HttpGet("script")]
+    public IActionResult GetScript([FromQuery] int projectId)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        if (projectId <= 0) return BadRequest(new { message = "缺少 projectId" });
+        var s = _db.GetProjectScriptContent(projectId);
+        return Ok(new
+        {
+            script = s ?? "",
+            source = _db.GetProjectScriptSource(projectId) ?? "",
+            chars = (s ?? "").Length
+        });
+    }
+
+    public sealed class ScriptImportBody
+    {
+        public int ProjectId { get; set; }
+        public string? Script { get; set; }
+    }
+
+    /// <summary>
+    /// 用我自己的剧本：把人写好的剧本直接接上流水线。
+    ///
+    /// 为什么要有这个接口：剧本正本（Projects.ScriptContent）在流水线上根本没人读——
+    /// 下游（P2a 提取资产 / P3 分镜 / P4 提示词）一律从本次运行的 P1 步骤产出取剧本，
+    /// 而 P1 跑完又会拿模型产出把人粘进去的那份整篇盖掉。
+    /// 于是「我自己写剧本」这件事在页面上看起来能填、存得进去，实际一步也接不上。
+    ///
+    /// 这里把它直接落成本次运行的 P1 产出（status=done）：下游照旧取 P1，取到的就是人这一份；
+    /// 同时写回剧本正本并标成 user（P1 跑完不再覆盖，见 SkillOutputImporter）。
+    /// 之后想换成模型写的，点「重跑 · 剧本生成」即可——那次会把来源改回 ai。
+    /// </summary>
+    [HttpPost("runs/{runId:int}/script")]
+    public IActionResult ImportScript(int runId, [FromBody] ScriptImportBody body)
+    {
+        if (GetUserId() == 0) return Unauthorized();
+        var text = (body?.Script ?? "").Trim();
+        if (text.Length == 0) return BadRequest(new { message = "剧本是空的" });
+
+        var pid = body!.ProjectId > 0 ? body.ProjectId : _db.GetRunContext(runId).ProjectId;
+        if (pid <= 0) return BadRequest(new { message = "这次运行没挂项目，先在左边选好落点项目" });
+
+        // 剧本正本：老流水线阶段 3/4/6/7/8 与「补资产提示词」都读这一列
+        _db.UpdateProjectScript(pid, GetUserId(), text);
+
+        // 本次运行的 P1 产出：这才是下游真正会读的那一份
+        var stepId = _db.CreateSkillStep(runId, "P1", "剧本（用户提供）", 20,
+                                         "（用户导入的定稿剧本，这一步没调模型）", null, 0, null);
+        _db.FinishSkillStep(stepId, "done", text, null, null);
+        _db.InsertDeliverable(runId, stepId, "P1", pid, 0, "剧本（用户提供）", text, null);
+
+        return Ok(new { stepId = stepId, chars = text.Length });
+    }
+
+    /// <summary>
     /// 存立项。只传要改的字段，没传的保持原样——
     /// 所以只想换提示词引擎时，请求体里放一个 promptEngine 就够了，别的字段原样不动。
     /// </summary>
