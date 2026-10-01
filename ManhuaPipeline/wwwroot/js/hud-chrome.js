@@ -18,7 +18,7 @@
    时机：脚本在 </head> 里同步引入，此刻 body 还没解析，必须等 DOM 就绪，
    否则 querySelector('.navbar') 只能拿到 null —— 上一版就是这样「改了却看不见」。 */
 (function () {
-  var BRAND_HTML = '<i>幕</i><span><b>MANGA ENGINE</b><small>AI COMIC DIRECTOR OS</small></span>';
+  var BRAND_HTML = '<i>M</i><span><b>MANGA ENGINE</b><small>AI COMIC DIRECTOR OS</small></span>';
 
   // 页面在 pages/ 下就用同级路径，在根目录就加 pages/ —— 跟 /js/app.js 里的判定一致
   var inPages = location.pathname.indexOf('/pages/') >= 0;
