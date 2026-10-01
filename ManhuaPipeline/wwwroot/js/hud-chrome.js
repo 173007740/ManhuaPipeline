@@ -1,64 +1,132 @@
-/* 给页面已有的顶部导航换上 project-editor.html 那一版的皮
+/* 全站顶部导航：统一长得一样、统一放哪几项
    ------------------------------------------------------------------
-   为什么不逐个页面改 HTML：站点里三十来个页面，各自一段写死的 navbar，
-   真改等于把同一套头部复制三十遍——以后改一处就得改三十处。这里运行时统一换。
+   为什么要一个脚本管：站点里三十来个页面，各自一段写死的 navbar，
+   有的五个入口、有的八个，名字还不一致（系统配置 / 个人设置 / 我的资产…）。
+   逐个去改等于把同一套头部复制三十遍，以后调整还得改三十遍。
 
-   换什么（照 /pages/project-editor.html 的顶栏，一字一句对过来）：
-     - 左侧品牌：40px 青色切角方块 + 一个「幕」字，右边双行 MANGA ENGINE / AI COMIC DIRECTOR OS
-     - 中间导航：链接一个都不动，只是换成等宽字、宽⣹分隔、hover 变青、当前项底部红线
-     - 最右：呼吸的圆点 + AUTOSAVE ONLINE
-   不换的：链接地址与文字、页面主体、原来的 sticky 定位（页面没预留 padding，改 fixed 会压住内容）。
+   定下来的样子（2026-10 定的规矩）：
+     左：40px 青色切角方块 + MANGA ENGINE / AI COMIC DIRECTOR OS
+     中：首页 · 我的工作台 · 系统设置      ← 就这三项，各页多出来的入口一律收掉，
+                                            页面之间从工作台 / 项目页进去
+     右：已登录 = 用户名 + 退出；未登录 = 登录 / 注册
+   页面自己的链接、跳转、功能一个都没少，少的只是顶栏上堆着的那串入口。
 
-   时机：脚本在 </head> 里同步引入，此刻 body 还没解析，
-   必须等 DOM 就绪再动手，否则 querySelector('.navbar') 只能拿到 null。 */
+   登录态谁管：各页底部引的 /js/app.js 已经在管（GET /api/auth/me → 显示 #navUser 或 #navGuest）。
+   这里重写用户区的内部，但保留 #navUser / #navGuest / #userName / #btnLogout 这几个 id，
+   app.js 照旧认识；万一某页没引 app.js，末尾那段兜底自己拉一次登录态、自己绑退出。
+
+   时机：脚本在 </head> 里同步引入，此刻 body 还没解析，必须等 DOM 就绪，
+   否则 querySelector('.navbar') 只能拿到 null —— 上一版就是这样「改了却看不见」。 */
 (function () {
-  // 品牌区的字，跟 project-editor.html 顶栏完全一致
   var BRAND_HTML = '<i>幕</i><span><b>MANGA ENGINE</b><small>AI COMIC DIRECTOR OS</small></span>';
+
+  // 页面在 pages/ 下就用同级路径，在根目录就加 pages/ —— 跟 /js/app.js 里的判定一致
+  var inPages = location.pathname.indexOf('/pages/') >= 0;
+  var P = inPages ? '' : 'pages/';
+  var HOME = inPages ? '../index.html' : 'index.html';
+
+  var ITEMS = [
+    { href: HOME, icon: 'home', text: '首页' },
+    { href: P + 'dashboard.html', icon: 'grid_view', text: '我的工作台' },
+    { href: P + 'system-config.html', icon: 'tune', text: '系统设置' }
+  ];
+
+  function icon(name) {
+    return '<span class="material-icons" aria-hidden="true">' + name + '</span>';
+  }
 
   function boot() {
     var nav = document.querySelector('.navbar');
     if (!nav) return;                       // 页面没有这一套导航（例如 project-editor.html），不动
     nav.classList.add('hc-topnav');
 
-    // 导航项可能包在 .nav-inner 里，也可能直接在 .navbar 下，两种都要能处理
     var inner = nav.querySelector('.nav-inner') || nav;
 
     /* 品牌区：整体替换成 project-editor 那一版。
-       原来的 logo 结构各个页面都不一样（有的带 img、有的两行小字、
-       有的用渐变文字），改样式去凑永远凑不齐，干脆换同一个 HTML。
-       跳转地址保留原来的（有的回首页、有的回工作台）。 */
+       各页原来的 logo 结构互不相同（带 img 的、两行小字的、渐变文字的），
+       靠 CSS 去掰永远掰不齐，干脆换同一个 HTML。跳转地址沿用原来的。 */
     var oldBrand = nav.querySelector('.logo, .brand, .navbar-brand');
-    var href = (oldBrand && oldBrand.getAttribute('href')) || '/pages/dashboard.html';
     var brand = document.createElement('a');
     brand.className = 'hc-brand';
-    brand.setAttribute('href', href);
+    brand.setAttribute('href', (oldBrand && oldBrand.getAttribute('href')) || HOME);
     brand.innerHTML = BRAND_HTML;
     if (oldBrand) oldBrand.parentNode.replaceChild(brand, oldBrand);
     else inner.insertBefore(brand, inner.firstChild);
 
-    /* 内联样式是这里的死敌：各页的导航 <a> 上写着 style="padding:8px 16px;font-size:14px..."，
-       内联比任何 CSS 选择器都大，不摘掉上面那些「等宽字 / 分隔线 / 当前项红线」一条都不会生效。
-       只清链接上的内联，不动 #navUser 本身 —— 它上面那句 display:none 是登录状态在管。 */
-    Array.prototype.forEach.call(
-      nav.querySelectorAll('.nav-links > a, #navUser a, #navGuest a, #userName'),
-      function (el) { el.removeAttribute('style'); });
+    /* 用户区先挪出来：它原本长在 .nav-links 里（有的页面是），
+       待会儿要清空那一格，不先挪就跟着一起没了。元素本身保留，只换里面的内容。 */
+    var links = nav.querySelector('.nav-links');
+    if (!links) { links = document.createElement('div'); links.className = 'nav-links'; inner.appendChild(links); }
+    var host = links.parentNode || inner;
+    var userBox = document.getElementById('navUser');
+    var guestBox = document.getElementById('navGuest');
+    if (guestBox) host.insertBefore(guestBox, links.nextSibling);
+    if (userBox) host.insertBefore(userBox, links.nextSibling);
+
+    /* 导航项：只放定下来的这三项。
+       内联样式是这里的死敌 —— 各页的 <a> 上写着 style="padding:8px 16px;font-size:14px..."，
+       内联比任何选择器都大，不清掉等宽字和那些分隔线一条都不会生效。
+       这里直接重写整格，新元素本来就没有内联。 */
+    links.innerHTML = ITEMS.map(function (it) {
+      return '<a href="' + it.href + '">' + icon(it.icon) + it.text + '</a>';
+    }).join('');
+
+    /* 用户区内部：按规矩重写。
+       id 一个都不能改 —— #userName 是 app.js 塞用户名的地方，
+       #btnLogout 是它（document 上委托）绑退出的地方。 */
+    if (userBox) {
+      userBox.innerHTML = '<span id="userName"></span>'
+        + '<a href="#" id="btnLogout">' + icon('logout') + '退出</a>';
+    }
+    if (guestBox) {
+      guestBox.innerHTML = '<a href="' + P + 'login.html">' + icon('account_circle') + '登录</a>'
+        + '<a href="' + P + 'register.html">' + icon('person_add') + '注册</a>';
+    }
 
     // 当前页高亮：只看文件名，?后面的参数不算
-    var here = location.pathname.split('/').pop() || 'dashboard.html';
-    Array.prototype.forEach.call(nav.querySelectorAll('.nav-links > a'), function (a) {
+    var here = location.pathname.split('/').pop() || 'index.html';
+    Array.prototype.forEach.call(links.children, function (a) {
       var h = (a.getAttribute('href') || '').split('/').pop();
       if (h && h === here) a.classList.add('hc-active');
     });
 
-    /* 最右的状态区：放在导航那一组之后（用户区后面），
-       跟 project-editor 一样挂在顶栏右端。已经有就不重复插。 */
+    /* 最右的状态：呼吸的点 + AUTOSAVE ONLINE，跟 project-editor 顶栏同一句 */
     if (!nav.querySelector('.hc-status')) {
       var st = document.createElement('div');
       st.className = 'hc-status';
       st.innerHTML = '<i></i>AUTOSAVE ONLINE';
-      inner.appendChild(st);   // 挂在最后：导航那一组是 margin-left:auto，它自然就落到最右端
+      host.appendChild(st);
     }
+
+    applyLoginState(userBox, guestBox);
   }
+
+  /* 登录态。app.js 已经在做，这里是兜底：页面没引 app.js 时也得有。
+     两者做法一致（同一个接口、同样的显示切换），重复一次没有副作用。 */
+  function applyLoginState(userBox, guestBox) {
+    if (!userBox && !guestBox) return;
+    fetch('/api/auth/me', { credentials: 'same-origin' })
+      .then(function (r) { return r.json(); })
+      .then(function (u) {
+        var ok = u && u.userId;
+        if (userBox) userBox.style.display = ok ? 'flex' : 'none';
+        if (guestBox) guestBox.style.display = ok ? 'none' : 'flex';
+        var nm = document.getElementById('userName');
+        if (ok && nm && !nm.textContent.trim())
+          nm.textContent = (u.nickname || u.username || '').trim();
+      })
+      .catch(function () { });   // 拉不到就维持现状，app.js 那边若跑起来自己会补
+  }
+
+  // 退出：跟 app.js 一样 POST /api/auth/logout 后回首页（委托，元素后来重建也有效）
+  document.addEventListener('click', function (e) {
+    var t = e.target && e.target.closest ? e.target.closest('#btnLogout') : null;
+    if (!t) return;
+    e.preventDefault();
+    fetch('/api/auth/logout', { method: 'POST', credentials: 'same-origin' })
+      .then(function () { location.href = '/'; })
+      .catch(function () { location.href = '/'; });
+  });
 
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
   else boot();

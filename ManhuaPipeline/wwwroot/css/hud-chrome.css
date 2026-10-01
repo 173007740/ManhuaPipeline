@@ -70,11 +70,20 @@
 .navbar.hc-topnav .nav-inner>#navGuest{display:flex;align-items:center;gap:6px;height:100%;
   margin-left:14px;padding-left:14px;border-left:1px solid var(--hc-line)}
 .navbar.hc-topnav #navUser a,.navbar.hc-topnav #navGuest a{display:inline-flex;align-items:center;gap:5px;
-  padding:0 6px;color:var(--hc-muted);text-decoration:none;
+  padding:0 7px;color:var(--hc-muted);text-decoration:none;
   font:400 10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.5px;white-space:nowrap}
 .navbar.hc-topnav #navUser a:hover,.navbar.hc-topnav #navGuest a:hover{color:var(--hc-cyan)}
+.navbar.hc-topnav #navUser #userName{display:inline-flex;align-items:center;color:var(--hc-cyan);
+  padding:0 7px;max-width:190px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.navbar.hc-topnav #navUser #userName img{width:20px;height:20px;border-radius:50%;margin-right:5px;
+  vertical-align:middle;object-fit:cover}
 .navbar.hc-topnav #navUser #btnLogout,.navbar.hc-topnav #navUser #btnLogout:hover{color:var(--hc-red)}
-.navbar.hc-topnav #navUser #userName{color:var(--hc-cyan)}
+.navbar.hc-topnav .material-icons{font-size:14px;line-height:1}
+
+/* 默认按「未登录」显示：app.js 拉到登录态后会自己切换这两个的显示，
+   不给默认值的话两块会短暂同时出现一下。 */
+.navbar.hc-topnav #navUser{display:none}
+.navbar.hc-topnav #navGuest{display:flex}
 
 @media(max-width:1400px){
   .navbar.hc-topnav .nav-links>a{padding:0 13px}
