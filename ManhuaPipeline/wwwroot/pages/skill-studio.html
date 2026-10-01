@@ -440,6 +440,31 @@
       .ss-flow-track button b{display:none}.ss-stats{grid-template-columns:1fr 1fr}.ss-setup{padding:0}
       .ss-step{grid-template-columns:32px 1fr;gap:10px}.ss-step-act{grid-column:1/-1;flex-direction:row}
       .ss-step-form{grid-template-columns:1fr}}
+  /* ── 立项结果（只读卡片）────────────────────────────────
+     立项在项目设置页改，这一格只负责「跑之前核对一眼」。
+     十来个值平铺会看不出哪几项是一边的，所以分了组、用了表格，
+     没填的写「未设置」而不是空着——空着人分不清是没填还是没读出来。 */
+  .bc-card{border:1px solid #16414b;border-radius:5px;overflow:hidden;margin-top:6px;
+    background:linear-gradient(180deg,#04161b 0%,#030f16 100%)}
+  .bc-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:10px 14px;
+    border-bottom:1px solid #12414a;background:rgba(95,248,243,.045)}
+  .bc-eyebrow{font:10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:2px;color:#5ff8f3}
+  .bc-head b{font-size:13px;font-weight:500;color:#dbe9ee}
+  .bc-edit{margin-left:auto;font-size:11px;color:#5ff8f3;text-decoration:none;
+    border:1px solid rgba(95,248,243,.35);border-radius:3px;padding:4px 9px;transition:background .15s}
+  .bc-edit:hover{background:rgba(95,248,243,.12)}
+  .bc-table{width:100%;border-collapse:collapse;font-size:12px}
+  .bc-table th{text-align:left;font:10px/1 ui-monospace,SFMono-Regular,Menlo,monospace;
+    font-weight:400;letter-spacing:1.6px;color:#4f655b;padding:11px 14px 6px;background:rgba(255,255,255,.022)}
+  .bc-table td{padding:7px 14px;border-top:1px solid rgba(22,65,75,.55);vertical-align:top}
+  .bc-table tr:hover td{background:rgba(95,248,243,.035)}
+  .bc-k{width:92px;color:#5a7a82;font-size:11px;white-space:nowrap}
+  .bc-v{color:#dbe9ee;word-break:break-word;line-height:1.6}
+  .bc-empty{color:#3d545a}
+  .bc-script{padding:10px 14px;border-top:1px dashed #1c4a52;font-size:12px;color:#7fa6b0;
+    line-height:1.7;background:rgba(95,248,243,.035)}
+  .bc-script b{color:#5ff8f3;font-weight:500}
+  @media(max-width:760px){.bc-k{width:74px}}
   </style>
 </head>
 <body>
@@ -1190,7 +1215,9 @@
   var BRIEF_CARD = { key: '', html: '', script: '', link: '' };
   function paintBriefCard(){
     $('#briefCardBody').html(BRIEF_CARD.html || '<div style="color:#4f655b;">载入中…</div>');
-    $('#briefScriptLine').html(BRIEF_CARD.script || '');
+    // 剧本那一行只在有话说的时候出现：空着会留一条没内容的色带
+    var $s = $('#briefScriptLine');
+    if (BRIEF_CARD.script) $s.html(BRIEF_CARD.script).show(); else $s.hide();
     $('#briefEditLink').attr('href', BRIEF_CARD.link || 'project-editor.html');
   }
   function renderBriefCard(i){
@@ -1209,13 +1236,15 @@
     var fresh = BRIEF_CARD.key !== key;
     BRIEF_CARD.key = key;
     if (fresh){ BRIEF_CARD.html = ''; BRIEF_CARD.script = ''; }
-    box.append('<div id="briefCard" style="border:1px solid #16383f;background:#04161b;padding:12px 14px;margin-top:4px;">'
-      + '<div style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;">'
-      +   '<span style="font-size:12px;letter-spacing:.5px;color:#8fb3bd;">立项结果（漫剧级，一部填一次）</span>'
-      +   '<a id="briefEditLink" href="project-editor.html" style="font-size:12px;color:#5ff8f3;text-decoration:none;">改立项 →</a>'
+    box.append('<div id="briefCard" class="bc-card">'
+      + '<div class="bc-head">'
+      +   '<span class="bc-eyebrow">PRODUCTION BRIEF</span>'
+      +   '<b>立项结果</b>'
+      +   '<span style="font-size:10px;color:#4f655b;">漫剧级 · 一部填一次</span>'
+      +   '<a id="briefEditLink" class="bc-edit" href="project-editor.html">改立项 →</a>'
       + '</div>'
-      + '<dl id="briefCardBody" style="display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:8px 14px;margin:12px 0 0;font-size:12px;"></dl>'
-      + '<div id="briefScriptLine" style="margin-top:12px;padding-top:10px;border-top:1px dashed rgba(140,180,200,.22);font-size:12px;color:#7fa6b0;line-height:1.7;"></div>'
+      + '<table class="bc-table"><tbody id="briefCardBody"></tbody></table>'
+      + '<div id="briefScriptLine" class="bc-script"></div>'
       + '</div>');
 
     fetchBriefCard(pid);
@@ -1225,6 +1254,7 @@
   function fetchBriefCard(pid){
     var q = DRAMA_ID ? { dramaId: DRAMA_ID } : (pid ? { projectId: pid } : null);
     if (!q){ BRIEF_CARD.html = briefRow('状态', '先在左上选项目'); paintBriefCard(); return; }
+    paintBriefCard();   // 先把骨架（标题条 + 空表）画出来，不然后几秒是一张空卡
     BRIEF_CARD.link = 'project-editor.html' + (DRAMA_ID ? ('?dramaId=' + DRAMA_ID) : '');
 
     $.get('/api/director-agent/brief', q, function(b){
@@ -1236,12 +1266,16 @@
       BRIEF_CARD.link = 'project-editor.html?dramaId=' + (b.dramaId || DRAMA_ID || 0);
       videoStyleName(b.videoStyleId, function(vname){
         BRIEF_CARD.html = [
-          briefRow('题材', b.genre), briefRow('画幅', b.aspect), briefRow('平台', b.platform),
+          briefSection('交付规格'),
+          briefRow('题材', b.genre), briefRow('平台', b.platform), briefRow('画幅', b.aspect),
           briefRow('交付形态', b.delivery),
-          briefRow('图片风格', styleTitleOf(IMG_STYLES, b.artStyleId)), briefRow('视觉风格', vname),
           briefRow('集数', b.episodeCount ? (b.episodeCount + ' 集') : ''),
           briefRow('单集时长', b.episodeDuration ? (b.episodeDuration + ' 秒') : ''),
+          briefSection('视觉与生产'),
+          briefRow('图片风格', styleTitleOf(IMG_STYLES, b.artStyleId)),
+          briefRow('视觉风格', vname),
           briefRow('提示词引擎', b.promptEngine),
+          briefSection('故事'),
           briefRow('核心爽点', b.hook), briefRow('核心设定', b.premise)
         ].join('');
         paintBriefCard();
@@ -1257,15 +1291,19 @@
                 : r.source === 'draft' ? '你给这一集的底本（照它整理成稿）'
                 : r.wholeDrama         ? '整部素材（按本集提纲从中取本集这一段）'
                 :                        '模型写的';
-        BRIEF_CARD.script = '剧本：<b style="color:#5ff8f3">' + how + '</b> · ' + r.chars + ' 字';
+        BRIEF_CARD.script = '剧本来源：<b style="color:#5ff8f3">' + how + '</b> · ' + r.chars + ' 字'
+                          + '<span style="color:#4f655b"> —— 写剧本那一步按这份走</span>';
       }
       paintBriefCard();
     });
   }
+  /* 分组小标题：一张十来行的表没个分界，眼睛找不到「这个是哪一边的」 */
+  function briefSection(t){
+    return '<tr><th colspan="2">' + esc(t) + '</th></tr>';
+  }
   function briefRow(k, v){
-    return '<div style="min-width:0"><span style="display:block;color:#4f655b;font-size:10px;letter-spacing:.5px;">'
-         + esc(k) + '</span><b style="font-weight:400;color:#cfe3ea;word-break:break-all;">'
-         + (v ? esc(String(v)) : '—') + '</b></div>';
+    return '<tr><td class="bc-k">' + esc(k) + '</td><td class="bc-v">'
+         + (v ? esc(String(v)) : '<span class="bc-empty">未设置</span>') + '</td></tr>';
   }
   function styleTitleOf(list, id){
     if (!id) return '';
