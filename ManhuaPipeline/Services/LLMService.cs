@@ -707,6 +707,20 @@ public class LLMService
     /// 本集剧本 / 跨集复用锚点）—— 不带它时，模型只能照资产名和描述自己猜，
     /// 跟 P2c 那一批（吃完整依据）写出来的不是一个口径，同一条资产两套说法。
     /// </summary>
+    /// <summary>
+    /// 这一类资产提示词的固定开头句式（画幅 + 类别底板），跟流水线 P2c 那批一致：
+    /// 重生成 / 补齐补出来的条要跟那批长得像同一种东西，格式必须先统一。
+    /// 风格词不在这里：风格由系统在出图时统一追加，正文不写。
+    /// </summary>
+    private static string AssetPromptHeadOf(string category) => (category ?? "").Trim().ToLowerInvariant() switch
+    {
+        "characters" => "16:9 横屏白底，全风格通用角色 4 View 资产参考图，次世代全身模型拆解，干净无投影纯白背景。",
+        "environments" => "16:9 横屏场景母版，画面纯净无任何人物、无文字、无标注、无机位标记。",
+        "props" => "16:9 横屏白底道具资产静物图，",
+        "effects" => "16:9 横屏白底特效资产图，",
+        _ => ""
+    };
+
     public Task<string> GenerateAssetImagePrompt(
         string category, string name, string? description, string? attributes,
         AssetPromptTemplate template, string apiUrl, string apiKey, string model,
@@ -717,6 +731,19 @@ public class LLMService
            .Append(AssetPromptTemplate.CategoryName(category))
            .Append("」资产写一条可直接交给文生图模型的中文提示词。\n");
         sys.Append("输出要求：只输出这一条提示词本身，不要编号、不要标题、不要解释、不要 Markdown、不要引号。\n");
+
+        /* 开头句式必须与流水线那批（P2c1 角色 / P2c2 场景 / P2c3 道具与特效）一致。
+           那批每条都是「画幅 + 类别底板 + 光位」打头，例如：
+             角色：16:9 横屏白底，全风格通用角色 4 View 资产参考图，…，干净无投影纯白背景。
+             场景：16:9 横屏场景母版，画面纯净无任何人物、无文字、无标注、无机位标记。
+             道具：16:9 横屏白底道具资产静物图，…，自然暖光。
+           而这两个按钮以前不要求，补出来的条直接进本体描写，跟旁边那几条格式对不上 ——
+           人一眼就看出「这条不是那套」。格式统一后，重生成出来的跟流水线写的是同一种东西。
+           风格词不写：风格由系统在出图时统一追加（下面那句「正文里不要再写风格词」）。 */
+        var head = AssetPromptHeadOf(category);
+        if (head.Length > 0)
+            sys.Append("开头必须照抄这个句式：").Append(head)
+               .Append("——光位（自然光 / 自然暖光 / 暖光微距…）按这条资产的情况接在后面，之后才写本体。\n");
         /* 不设字数：写死上限（先是 60~160，放宽到 150~320）都在逼模型砍细节 ——
            实测「外婆旧木铁皮工具箱」被砍到只剩笼统外形，「箱盖半开可见内部工具 /
            箱底拖行刮痕 / 磕地弹开状态」全丢了，跟流水线那批（同集其他道具 237~283 字）对不上。
