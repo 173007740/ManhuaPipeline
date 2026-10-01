@@ -1183,16 +1183,29 @@
   function renderMyScript(i){
     var box = $('#sf' + i);
     if (!box.length || box.find('#myScript').length) return;
-    box.append('<label class="wide-row"><span class="ft">这一集的剧本（选填）'
-      + ' <span style="color:#4f655b">立项阶段就把你手里的稿子交给它：点「当底本交给模型」，写剧本那一步会照这份改写成一版符合流水线格式的剧本（内容一点不动）；'
-      + '点「这份就是终稿」则直接拿它当剧本用。留空＝让模型自己从头写</span></span>'
-      + '<textarea id="myScript" rows="10" placeholder="把你写好的剧本整篇粘进来"></textarea>'
-      + '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">'
-      +   '<button class="go" id="btnMyScript" type="button" style="padding:7px 14px;">用这份剧本</button>'
-      +   '<button class="go" id="btnMyScriptRun" type="button" style="padding:7px 14px;">用这份并往下跑</button>'
-      +   '<button class="go" id="btnMyScriptDraft" type="button" style="padding:7px 14px;">当底本，让模型整理成稿</button>'
-      +   '<small id="myScriptState" style="color:#4f655b;"></small>'
-      + '</div></label>');
+    /* 默认收起：剧本一般在创建 / 编辑漫剧时就录好了（整部素材，Dramas.ScriptContent），
+       每一集会按本集提纲从中取那一段 —— 这一格是「给某一集单独指定」的口子，不是每集必填，
+       摊开着十行的框反而挡住上面的立项字段。状态一行常显，收着也知道剧本从哪来。 */
+    box.append('<div style="border-top:1px dashed rgba(140,180,200,.22);margin-top:12px;padding-top:10px;">'
+      + '<div id="myScriptBar" style="display:flex;align-items:center;gap:8px;cursor:pointer;">'
+      +   '<span class="material-icons" id="myScriptArrow" style="font-size:18px;color:#8fb3bd;">chevron_right</span>'
+      +   '<span style="font-size:12px;letter-spacing:.5px;color:#8fb3bd;">这一集的剧本</span>'
+      + '</div>'
+      + '<div id="myScriptBody" style="display:none;margin-top:8px;">'
+      +   '<textarea id="myScript" rows="10" style="width:100%;box-sizing:border-box;" placeholder="给这一集单独一份：整篇粘进来；留空则沿用创建漫剧时录的整部素材"></textarea>'
+      +   '<div style="display:flex;align-items:center;gap:10px;margin-top:6px;flex-wrap:wrap;">'
+      +     '<button class="go" id="btnMyScript" type="button" style="padding:7px 14px;">这份就是终稿</button>'
+      +     '<button class="go" id="btnMyScriptRun" type="button" style="padding:7px 14px;">用这份并往下跑</button>'
+      +     '<button class="go" id="btnMyScriptDraft" type="button" style="padding:7px 14px;">当底本，让模型整理成稿</button>'
+      +   '</div>'
+      + '</div>'
+      + '<div id="myScriptState" style="font-size:12px;color:#4f655b;margin-top:8px;line-height:1.7;"></div>'
+      + '</div>');
+    $('#myScriptBar').click(function(){
+      var $b = $('#myScriptBody'), willOpen = !$b.is(':visible');
+      $b.stop(true, true).slideToggle(150);
+      $('#myScriptArrow').text(willOpen ? 'expand_more' : 'chevron_right');
+    });
     var pid = $('#proj').val();
     /* 改剧本不是一口气改完的：写着写着要去别的格子看东西，卡片一切走就重画，
        回来时框里的内容会变成库里那份 —— 没保存的那些字就这么没了。
@@ -1213,13 +1226,17 @@
       else if (r.script){
         $('#myScript').val(r.script);
         $('#myScriptState').html(
-            (r.source === 'user'  ? '当前已存 ' + r.chars + ' 字 · 你的终稿（写剧本那站不会再改它）'
-           : r.source === 'draft' ? '当前已存 ' + r.chars + ' 字 · 你交的底本（点第 2 步「写剧本」，模型按它整理成稿）'
-           : r.wholeDrama         ? '<b style="color:#ffb454">这是你在创建 / 编辑漫剧时录的「整部」素材（' + r.chars
-                                    + ' 字），已预填 —— 删到本集这一段再用，别整份交上去：12 集每集都拿全集去跑，等于每集都在写全集</b>'
-                                  : '当前已存 ' + r.chars + ' 字 · 模型写的'));
+            (r.source === 'user'  ? '已存 ' + r.chars + ' 字 · 你的终稿（写剧本那站不会再改它）'
+           : r.source === 'draft' ? '已存 ' + r.chars + ' 字 · 你给这一集的底本（点第 2 步「写剧本」，模型按它整理成稿）'
+           : r.wholeDrama
+               /* 整部素材已经在册：这一集会连同本集提纲一起交给模型，让它从中取本集这一段。
+                  不用在这里删改 —— 这是「已经在创建漫剧时录过」的那条路的正常状态，不是警告。 */
+             ? '<b style="color:#4fbdd4">剧本来自「创建 / 编辑漫剧时录的整部素材」（' + r.chars
+               + ' 字）：写剧本时会把整份连同本集提纲一起交给模型，让它取出本集这一段。'
+               + '不用在这一页改。要给本集单独一份就点上面那行展开。</b>'
+             : '已存 ' + r.chars + ' 字 · 模型写的'));
       }
-      else $('#myScriptState').text('这一集还没有剧本');
+      else $('#myScriptState').text('这一集还没有剧本：会用创建漫剧时录的整部素材；没有素材就让模型自己从头写');
     });
     $('#btnMyScript').click(function(){ saveMyScript(pid, false); });
     /* 当底本：自己写的常常不合流水线的格式（缺页头四行、场号不标准、没人物关系小节、缺节奏秒数），

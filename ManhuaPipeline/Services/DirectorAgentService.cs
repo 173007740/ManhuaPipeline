@@ -442,6 +442,47 @@ public class DirectorAgentService
       + "===剧本底本 开始===\n" + draft + "\n===剧本底本 结束===";
 
     /// <summary>
+    /// 整部剧本素材 + 本集定位信息 = 剧本这一站（P1）的输入。
+    ///
+    /// 人是在创建漫剧时把整部剧本录进来的（Dramas.ScriptContent），那时一集都还没建。
+    /// 逐集跑剧本时不能再让他为每一集重新粘一遍 —— 那份素材在这里整份给出，
+    /// 配上本集提纲（第 N 集标题 / 三幕骨架 / 卡点），让模型自己从中取出本集那一段。
+    ///
+    /// 必须写死「只写本集」：素材里有后几集的线索与结局，不拦住的话每集剧本都在讲全集。
+    /// 内容仍然不许改 —— 这一整轮改动的规矩跟单集底本那版一致。
+    /// </summary>
+    public static string WholeDramaInputText(string whole, ManhuaPipeline.Models.EpisodeOutline? ep)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine("【整部剧本素材·引擎注入】下面「===剧本素材 开始===」到「===剧本素材 结束===」之间，");
+        sb.AppendLine("是用户创建这部漫剧时录入的整部剧本。这次的任务是写出其中");
+        sb.AppendLine(ep != null && ep.EpisodeNumber > 0
+            ? "第 " + ep.EpisodeNumber + " 集：" + (ep.Title ?? "")
+            : "本集的剧本，");
+        sb.AppendLine("把它写成符合这一步产出契约的最终剧本：内容一点不动，格式由你补齐。");
+        sb.AppendLine();
+        sb.AppendLine("- 只写本集。素材里属于其他集的内容一律不许出现在本集剧本里，");
+        sb.AppendLine("　尤其是后面几集的线索、伏笔与结局——本集并不知道它们。");
+        sb.AppendLine("- 必须原样保留：场次顺序、地点日夜、所有台词与旁白、已写明的结局与关键情节点、");
+        sb.AppendLine("　已经写了的秒数 / 节奏标注（例如「静场约 8 秒」）。");
+        sb.AppendLine("- 允许你补：页头四行（【题材】【平台】【总集数】【目标时长】）、标准场号格式、");
+        sb.AppendLine("　人物关系小节、全剧梗概，以及素材没交代但下游要用的场景与道具描写。");
+        sb.AppendLine("- 素材没有分集标记时：按上一集结束到下一集开始之间的内容取本集；");
+        sb.AppendLine("　取不准就照本集提纲取最贴合的那一段，并在下面的清单里写明你按什么划的界。");
+        sb.AppendLine();
+        sb.AppendLine("产出末尾必须单独写这四行：");
+        sb.AppendLine("本集取自素材的哪一段：从第 X 行到第 Y 行（或「第 X 场到第 Y 场」）");
+        sb.AppendLine("改动清单：共 N 处 ——（逐条写清改了什么、为什么）");
+        sb.AppendLine("补充清单：共 N 处 ——（你补了什么、依据是什么）");
+        sb.AppendLine("保留度：素材原句保留约 X%");
+        sb.AppendLine();
+        sb.AppendLine("===剧本素材 开始===");
+        sb.AppendLine(whole);
+        sb.AppendLine("===剧本素材 结束===");
+        return sb.ToString();
+    }
+
+    /// <summary>
     /// 拼某一站的素材：台账类阶段（P2c 三批）只给台账；图册给「台账 + 上一站产出」；其余接上一站。
     /// prevOutput 传内存里刚跑出来的那份——这一步的状态此时还是 running，
     /// 按状态去库里取最新产出会取到空，把刚出来的东西丢了。
@@ -675,20 +716,35 @@ public class DirectorAgentService
             }
         }
 
-        /* 剧本底本：人在立项那一格录入了这一集的剧本，写剧本这一步必须照着它来。
-           不注入的话，P1 的输入只有「一句话前提」+ 立项参数 + 本集提纲，
-           模型拿不到他写的那一版，照样从头写一个 —— 他录入的东西等于白填。
-           只在来源是 draft 时注入：标 user 的那份是终稿（人明确说别改），另有通路。 */
+        /* 剧本：写剧本这一步必须照着人给的那一版来，否则 P1 手里只有「一句话前提 + 立项参数 + 本集提纲」，
+           照样从头写一个 —— 他录的剧本等于白填。两种来源，优先级从高到低：
+             1) 本集自己的剧本（Projects.ScriptContent，来源 draft）= 人明确为这一集交的底本
+             2) 整部剧本素材（Dramas.ScriptContent）= 创建漫剧时录的全剧，让模型按本集提纲从中取本集这一段
+           来源是 user 的那份是终稿（人明确说别改），另有通路，这里不动它。 */
         if (string.Equals(stage.StageKey, "P1", StringComparison.OrdinalIgnoreCase)
-            && !inputText.Contains("剧本底本"))
+            && !inputText.Contains("剧本底本") && !inputText.Contains("整部剧本素材"))
         {
             var dctx = _db.GetRunContext(runId);
-            if (dctx.ProjectId > 0
-                && string.Equals(_db.GetProjectScriptSource(dctx.ProjectId), "draft", StringComparison.OrdinalIgnoreCase))
+            if (dctx.ProjectId > 0)
             {
-                var draft = _db.GetProjectScriptContent(dctx.ProjectId);
-                if (!string.IsNullOrWhiteSpace(draft))
-                    inputText += "\n\n" + DraftInputText(draft!);
+                var mine = _db.GetProjectScriptContent(dctx.ProjectId);
+                var src = _db.GetProjectScriptSource(dctx.ProjectId);
+                if (!string.IsNullOrWhiteSpace(mine)
+                    && string.Equals(src, "draft", StringComparison.OrdinalIgnoreCase))
+                {
+                    inputText += "\n\n" + DraftInputText(mine!);
+                }
+                else if (string.IsNullOrWhiteSpace(mine))
+                {
+                    // 本集还没指定过剧本：用整部素材，按本集提纲定位到这一集
+                    var did = _db.GetDramaIdByProject(dctx.ProjectId);
+                    if (did > 0)
+                    {
+                        var whole = _db.GetDramaScriptContent(did);
+                        if (!string.IsNullOrWhiteSpace(whole))
+                            inputText += "\n\n" + WholeDramaInputText(whole!, _db.GetEpisodeOutlineForProject(dctx.ProjectId));
+                    }
+                }
             }
         }
 
