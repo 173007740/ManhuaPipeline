@@ -94,8 +94,17 @@ public partial class DbService
         using var cmd = new SqlCommand("UPDATE Dramas SET ScriptContent=@s, UpdatedAt=SYSDATETIME() WHERE DramaId=@id", conn);
         cmd.Parameters.AddWithValue("@s", (object?)text ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@id", dramaId);
+        /* 以前这里把 SqlException 静默吞掉（「列没建就算了」）。列确实没建时会走到这里，
+           但别的失败也一样被吞 —— 剧本存不上却一句话不说，是这次排查最费事的地方。
+           改成留痕：落到运行目录下的 db-error.log，人在页面上重试一次就能看到原因。 */
         try { cmd.ExecuteNonQuery(); }
-        catch (Microsoft.Data.SqlClient.SqlException) { /* 列没建就算了 */ }
+        catch (Exception ex)
+        {
+            var msg = DateTime.Now.ToString("s") + " [SetDramaScriptContent] drama=" + dramaId
+                    + " 写入失败：" + ex.Message + "\n";
+            Console.Error.WriteLine(msg);
+            try { System.IO.File.AppendAllText(System.IO.Path.Combine(AppContext.BaseDirectory, "db-error.log"), msg); } catch { }
+        }
     }
 
     /// <summary>
