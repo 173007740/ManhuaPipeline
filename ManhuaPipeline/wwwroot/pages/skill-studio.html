@@ -1352,7 +1352,35 @@
       + '</div>';
   }
 
+  /* 视频参数（比例 / 分辨率 / 像素档 / 音频 / 水印）记住上次选的。
+     这一格是每次进「视频生成」动态重画的，刷一次页面就重建，不存就一律回到默认（像素档 1MP）——
+     而这些参数一部剧定一次就够了，不该每次来都重挑一遍。按项目分开存，免得第 2 集挑的跑到第 3 集去。 */
+  function vpKey(){ return lsKey('skillStudioVidParams'); }
+
+  function saveVidParams(){
+    try {
+      localStorage.setItem(vpKey(), JSON.stringify({
+        ratio: $('#wvRatio').val(), res: $('#wvRes').val(), mp: $('#wvMp').val(),
+        audio: $('#wvAudio').is(':checked'), wm: $('#wvWm').is(':checked')
+      }));
+    } catch (e) { /* 浏览器不让存就算了，不影响出视频 */ }
+  }
+
+  function restoreVidParams(){
+    var s = null;
+    try { s = JSON.parse(localStorage.getItem(vpKey()) || 'null'); } catch (e) { s = null; }
+    if (!s) return;
+    if (s.ratio) $('#wvRatio').val(s.ratio);
+    if (s.res) $('#wvRes').val(s.res);
+    if (s.mp) $('#wvMp').val(s.mp);
+    $('#wvAudio').prop('checked', s.audio !== false);
+    $('#wvWm').prop('checked', !!s.wm);
+  }
+  // 这一格是动态画的，用委托：改一个存一次，不用等提交
+  $(document).on('change', '#wvRatio,#wvRes,#wvMp,#wvAudio,#wvWm', saveVidParams);
+
   function bindVideoPanel(){
+    restoreVidParams();
     renderVidList();
     $('#wvBatch').off('click').on('click', function(){
       var pid = $('#proj').val(); if (!pid) return;
