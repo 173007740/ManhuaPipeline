@@ -1021,6 +1021,11 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
             if (cat === "characters") {
                 h += "<button class='btn btn-small' onclick='showDeriveModal(" + a.assetId + ")' title='以这张角色图为基础，参考一张服装图重新生成角色图（真图生图），并记录派生血缘' style='font-size:11px;background:#0b8f99;color:#fff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-shirt' style='font-size:12px;'></i> 换装派生</button>";
             }
+            /* 跨集直接引图：同一部漫剧里同一个人 / 同一个场景本来就该是同一张图。
+               这里不出图 —— 挑前面几集已经出好的那张，直接拿过来用（跟「出图」按钮走自动锚定、重新生成一张是两条路）。 */
+            if (a.identityId) {
+                h += "<button class='btn btn-small' onclick='showReuseModal(\"" + cat + "\"," + a.assetId + ")' title='从同一身份（同一个人 / 同一个场景）在别的集已经出好的图里挑一张，直接用到这一集，不重新出图' style='font-size:11px;background:#4c1d95;color:#e9d5ff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-clone' style='font-size:12px;'></i> 引用别集的图</button>";
+            }
             h += "<span id='assetImgState_" + a.assetId + "' style='font-size:11px;color:#789096;'></span>";
             h += "<button class='btn btn-small' onclick='showAssetPromptModal(\"" + cat + "\"," + a.assetId + ")' title='查看/编辑这条资产的出图提示词，并预览出图时会拼成的完整提示词' style='font-size:11px;background:#0369a1;color:#fff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-align-left' style='font-size:12px;'></i> 提示词</button>";
             h += "<button class='btn btn-small' id='assetRegenPrompt_" + a.assetId + "' onclick='regenAssetPrompt(this,\"" + cat + "\"," + a.assetId + ")' title='让大模型按「资产提示词模版」重新写这条提示词' style='font-size:11px;background:#b45309;color:#fff;border-radius:6px;padding:4px 10px;border:none;cursor:pointer;white-space:nowrap;'><i class='fas fa-rotate' style='font-size:12px;'></i> 重生成</button>";
@@ -1032,7 +1037,53 @@ function formatSize(b) { if (!b && b !== 0) return ''; if (b < 1024) return b + 
             if (a.imageUrl) { h += "<img src='" + escHtml(a.imageUrl) + "' title='点击看大图' onclick='window.open(this.src)' style='width:100%;aspect-ratio:16/9;object-fit:cover;border-radius:6px;background:#041017;cursor:zoom-in;border:1px solid rgba(255,255,255,0.08);' onerror='this.style.display=\"none\"'>" } else { h += "<div style='width:100%;aspect-ratio:16/9;border:1px dashed rgba(255,255,255,0.18);border-radius:6px;display:flex;align-items:center;justify-content:center;color:#5c7078;font-size:11px;'>暂无图片</div>" }
             h += "</div>";
             h += "</div>";
-        } $("#stageResult").html(h) }) } function loadPrompts() { restoreH3Progress(); autoPollStage9IfRunning();
+        } $("#stageResult").html(h) }) }
+        /* 跨集直接引图：同一个身份（同一个人 / 同一个场景）在别的集已经出好的图，挑一张直接用到这一集。
+           跟「出图」是两条路 —— 出图是拿定妆图当参考重新生成一张（要花一次调用，脸接近但不是同一张）；
+           这里是不出图，直接把那一集那张拿过来用，这一集和那一集是同一张图。 */
+        function showReuseModal(cat, assetId) {
+            $("#reuseModal").remove();
+            var box = $("<div id='reuseModal' style='position:fixed;inset:0;background:rgba(0,0,0,.6);z-index:3000;display:flex;align-items:center;justify-content:center;'></div>");
+            box.html("<div style='background:#061923;border:1px solid #183033;max-width:740px;width:92%;max-height:82vh;overflow:auto;padding:18px 20px;'>"
+                + "<div style='display:flex;justify-content:space-between;align-items:center;margin-bottom:10px;'>"
+                + "<span style='color:#e4fbff;font-weight:600;font-size:15px;'>引用别集已经出好的图</span>"
+                + "<button onclick='$(\"#reuseModal\").remove()' style='background:none;border:0;color:#8ea7ae;font-size:22px;cursor:pointer;'>&times;</button></div>"
+                + "<div id='reuseBody'><p style='color:#789096;'>加载中…</p></div></div>");
+            $("body").append(box);
+            box.on("click", function (e) { if (e.target === this) $(this).remove(); });
+            $.get("/api/project/" + currentProjectId + "/asset/" + cat + "/" + assetId + "/reuse-candidates", function (d) {
+                if (!d || !d.items || d.items.length === 0) {
+                    $("#reuseBody").html("<p style='color:#789096;'>" + escHtml((d && d.message) || "这个身份在别的集还没有出好的图 —— 先到那一集出一张，或点「出图」让系统照着定妆图生成一张") + "</p>");
+                    return;
+                }
+                var h = "<p style='color:#cbd5e1;font-size:13px;margin:0 0 12px;'>同一个身份在别的集已经出好的图（第几集都是同一个人 / 同一个场景），挑一张直接用到这一集 —— 不重新出图，用的就是这一张。</p><div style='display:flex;flex-wrap:wrap;gap:12px;'>";
+                d.items.forEach(function (it) {
+                    h += "<div style='width:200px;border:1px solid #183033;background:rgba(8,17,19,.7);padding:8px;'>"
+                        + "<img src='" + escHtml(it.imageUrl) + "' style='width:100%;aspect-ratio:16/9;object-fit:cover;display:block;background:#041017;'>"
+                        + "<p style='color:#e4fbff;font-size:12px;margin:6px 0 6px;font-weight:600;'>第 " + it.episode + " 集 · " + escHtml(it.name) + "</p>"
+                        + "<button onclick='doReuseImage(\"" + cat + "\"," + assetId + "," + it.projectId + "," + it.assetId + ")' style='width:100%;font-size:12px;background:#4c1d95;color:#e9d5ff;border:none;border-radius:4px;padding:6px 0;cursor:pointer;'>用这一张</button>"
+                        + "</div>";
+                });
+                $("#reuseBody").html(h + "</div>");
+            }).fail(function (x) {
+                $("#reuseBody").html("<p style='color:#ef4444;'>加载失败：" + escHtml((x.responseJSON && x.responseJSON.message) || x.statusText) + "</p>");
+            });
+        }
+        function doReuseImage(cat, assetId, srcProjectId, srcAssetId) {
+            if (!confirm("把那一集这张图直接用到这一集？\n（不重新出图，用的就是这一张，并同步进「我的资产」图库）")) return;
+            $.ajax({
+                url: "/api/project/" + currentProjectId + "/asset/" + cat + "/" + assetId + "/reuse-image",
+                method: "POST", contentType: "application/json",
+                data: JSON.stringify({ sourceProjectId: srcProjectId, sourceAssetId: srcAssetId }),
+                success: function (r) {
+                    $("#reuseModal").remove();
+                    alert(r.message || "已引用");
+                    loadAssets(window._currentAssetStage);
+                },
+                error: function (x) { alert("引用失败：" + ((x.responseJSON && x.responseJSON.message) || x.statusText)); }
+            });
+        }
+        function loadPrompts() { restoreH3Progress(); autoPollStage9IfRunning();
             var statusMap = { pending: "排队等待", queued: "排队等待", running: "正在生成", processing: "正在生成", succeeded: "成功", completed: "成功", failed: "失败", expired: "任务超时", cancelled: "已取消", enhancing: "增强中", unknown: "状态未知", null: "等待生成" };
             var statusColor = { pending: "#f59e0b", queued: "#f59e0b", running: "#3b82f6", processing: "#3b82f6", succeeded: "#10b981", completed: "#10b981", failed: "#ef4444", expired: "#6b7280", cancelled: "#789096", enhancing: "#f59e0b", unknown: "#789096" };
             function fmtStatus(s) { var label = statusMap[s] || s || "等待生成"; var color = statusColor[s] || "#789096"; return "<span style='background:" + color + "22;color:" + color + ";border:1px solid " + color + "44;border-radius:4px;padding:2px 8px;font-size:12px;font-weight:500;'>" + label + "</span>" } var sb = "<div id='videoParamBar' style='background:rgba(5,232,240,0.1);border:1px solid rgba(5,232,240,0.25);border-radius:8px;padding:13px 18px;margin-bottom:16px;display:flex;align-items:center;gap:14px 24px;flex-wrap:wrap;'>"; sb += "<span style='color:#6af7ff;font-weight:600;font-size:13px;'>⚙️ 视频参数</span>"; sb += "<label style='color:#cbd5e1;font-size:13px;'>比例 <select id=vidRatio style='background:#061923;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value=16:9 selected>16:9</option><option value=9:16>9:16</option><option value=1:1>1:1</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'><input type=checkbox id=vidWatermark style='margin-right:4px;'>水印</label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'><input type=checkbox id=vidAudio checked style='margin-right:4px;'>音频</label><label style='color:#cbd5e1;font-size:13px;'>分辨率 <select id=vidResolution style='background:#061923;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value='480p'>480p</option><option value='720p' selected>720p</option><option value='1080p'>1080p</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;' title='ComfyUI 引擎的出图像素档：画幅按这个档位算宽高，档位越高越清晰也越慢、越吃显存'>像素档 <select id=vidMp style='background:#061923;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;'><option value='0.5'>0.5MP</option><option value='1' selected>1MP</option><option value='1.5'>1.5MP</option><option value='2'>2MP</option></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;'>风格 <select id=vidStyle style='background:#061923;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;min-width:130px;'></select></label>"; sb += "<label style='color:#cbd5e1;font-size:13px;display:inline-flex;align-items:center;gap:8px;'>项目标签 <input id=projectTagsInput value='" + escHtml(window.projectTags || "") + "' placeholder='纸上山河,古风' style='background:#061923;color:#e2e8f0;border:1px solid #475569;border-radius:4px;padding:4px 8px;font-size:13px;width:230px;box-sizing:border-box;'></label>";

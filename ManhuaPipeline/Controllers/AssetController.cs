@@ -222,6 +222,104 @@ public class AssetController : ControllerBase
         });
     }
 
+    // ==================== 跨集直接引用同一张图（不重新出图） ====================
+    // 出图前的自动锚定是「拿前面那集那张当参考图，重新出一张」——要花一次调用，出来的脸接近但不是同一张。
+    // 这里给的是另一条路：同一部漫剧里同一个人 / 同一个场景本来就该是同一张图，
+    // 让人直接挑「用第几集那张」，不重新出图，直接把那张拿过来用，并同步进「我的资产」图库。
+
+    /// <summary>列出同一个身份在别的集已经出好的图，供人挑选。</summary>
+    [HttpGet("{category}/{assetId}/reuse-candidates")]
+    public IActionResult ReuseCandidates(int projectId, string category, int assetId)
+    {
+        var access = CheckProjectAccess(projectId);
+        if (access != null) return access;
+        category = (category ?? "").Trim().ToLowerInvariant();
+        var table = AssetImageSupport.TableOf(category);
+        if (string.IsNullOrEmpty(table)) return BadRequest(new { message = "类别不支持：" + category });
+
+        var identityId = _db.GetAssetIdentityId(table!, assetId);
+        if (identityId <= 0)
+            return Ok(new
+            {
+                identityId = 0,
+                items = Array.Empty<object>(),
+                message = "这条资产没有跨集身份（手工加的，或这一集还没认过人），没法从别的集引图"
+            });
+
+        var list = _db.GetIdentityImageCandidates(identityId, projectId, table!);
+        return Ok(new
+        {
+            identityId,
+            items = list.Select(x => new
+            {
+                assetId = x.AssetId, projectId = x.ProjectId, episode = x.Episode,
+                name = x.Name, imageUrl = x.ImageUrl
+            })
+        });
+    }
+
+    public class ReuseImageRequest
+    {
+        public int SourceProjectId { get; set; }
+        public int SourceAssetId { get; set; }
+    }
+
+    /// <summary>
+    /// 把同一身份在别的集那张图直接用到这一集这条资产上（不重新出图）。
+    /// 图文件复制一份落到本集名下，不跟原集共用同一个文件 —— 免得哪一集删图把别人那张也带没了。
+    /// </summary>
+    [HttpPost("{category}/{assetId}/reuse-image")]
+    public IActionResult ReuseImage(int projectId, string category, int assetId,
+                                    [FromBody] ReuseImageRequest? req)
+    {
+        var access = CheckProjectAccess(projectId);
+        if (access != null) return access;
+        var uid = GetUserId();
+        category = (category ?? "").Trim().ToLowerInvariant();
+        var table = AssetImageSupport.TableOf(category);
+        if (string.IsNullOrEmpty(table)) return BadRequest(new { message = "类别不支持：" + category });
+        if (req == null || req.SourceAssetId <= 0) return BadRequest(new { message = "没选要引用哪一张" });
+
+        var asset = ResolveAssetForImage(projectId, category, assetId);
+        if (asset == null) return NotFound(new { message = "资产不存在" });
+
+        var identityId = _db.GetAssetIdentityId(table!, assetId);
+        var srcIdentity = _db.GetAssetIdentityId(table!, req.SourceAssetId);
+        if (identityId <= 0 || srcIdentity <= 0 || identityId != srcIdentity)
+            return BadRequest(new { message = "选的那条跟这一条不是同一个身份（不是同一个人 / 同一个场景），不能互相引用" });
+
+        var srcUrl = _db.GetAssetImageUrl(table!, req.SourceAssetId);
+        if (string.IsNullOrWhiteSpace(srcUrl)) return NotFound(new { message = "那一集那条资产没有图" });
+
+        var full = ManhuaPipeline.Services.AppPaths.ResolveUpload(srcUrl!);
+        if (full == null || !System.IO.File.Exists(full))
+            return NotFound(new { message = "那一集那张图的文件已经不在了：" + srcUrl });
+
+        var data = System.IO.File.ReadAllBytes(full);
+        var ext = System.IO.Path.GetExtension(full);
+        if (string.IsNullOrEmpty(ext)) ext = ".png";
+        var (newUrl, size) = ImageService.SaveLocalImage(data, ext, asset.Value.Name, _logger);
+
+        _db.UpdateAssetImage(projectId, category, assetId, newUrl);
+        var libraryId = AssetImageSupport.SyncToReferenceLibrary(
+            _db, _logger, uid, projectId, category, assetId, asset.Value.Name, newUrl, size);
+
+        var srcEp = _db.GetProjectById(req.SourceProjectId)?.EpisodeNumber;
+        _logger.LogInformation(
+            "[AssetImage] 跨集引用 projectId={ProjectId} {Category}#{AssetId} ← 第 {Ep} 集 #{SrcAssetId}，已同步图库 libraryAssetId={LibId}",
+            projectId, category, assetId, srcEp, req.SourceAssetId, libraryId);
+
+        return Ok(new
+        {
+            success = true,
+            imageUrl = newUrl,
+            libraryAssetId = libraryId,
+            fromEpisode = srcEp,
+            message = (srcEp.HasValue ? "已引用第 " + srcEp.Value + " 集那张图" : "已引用别的集那张图")
+                      + "，并存入「我的资产」图库（可被「自动绑定参考图」按资产名命中）。"
+        });
+    }
+
     // ==================== 出图任务队列（后台出图：关页面/刷新也会跑完） ====================
     // 说明：上面那个同步接口保留作兼容/回退；页面默认走下面这套排队接口——
     // 入队后由 AssetImageQueueService 依次执行，与浏览器无关，关页面/刷新/换设备都会跑完。

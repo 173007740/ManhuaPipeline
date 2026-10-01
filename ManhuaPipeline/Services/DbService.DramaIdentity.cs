@@ -189,6 +189,45 @@ public partial class DbService
         cmd.ExecuteNonQuery();
     }
 
+    /// <summary>这条资产当前那张图的站内地址（/uploads/...），没有图返回 null。</summary>
+    public string? GetAssetImageUrl(string table, int assetId)
+    {
+        if (string.IsNullOrEmpty(table) || assetId <= 0) return null;
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand($"SELECT ImageUrl FROM {table} WHERE AssetId=@a", conn);
+        cmd.Parameters.AddWithValue("@a", assetId);
+        var v = cmd.ExecuteScalar();
+        if (v is null or DBNull) return null;
+        var s = (string)v;
+        return string.IsNullOrWhiteSpace(s) ? null : s;
+    }
+
+    /// <summary>
+    /// 同一个身份在**别的集**已经出好的图：给人手工挑「这一集直接用第几集那张」用。
+    /// 跟自动锚定的区别在这儿 —— 自动锚定是拿那张当参考图重新出一张，
+    /// 这里是不出图，直接把那一集那张拿过来用（同一张脸，不用再花一次调用）。
+    /// </summary>
+    public List<(int AssetId, int ProjectId, int Episode, string Name, string ImageUrl)> GetIdentityImageCandidates(
+        int identityId, int excludeProjectId, string table)
+    {
+        var list = new List<(int, int, int, string, string)>();
+        if (identityId <= 0 || string.IsNullOrEmpty(table)) return list;
+
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand($@"
+SELECT a.AssetId, a.ProjectId, ISNULL(p.EpisodeNumber,0), a.Name, a.ImageUrl
+FROM {table} a JOIN Projects p ON p.ProjectId = a.ProjectId
+WHERE a.IdentityId=@id AND a.ProjectId<>@pid AND ISNULL(a.ImageUrl,'')<>''
+ORDER BY ISNULL(p.EpisodeNumber,0), a.AssetId", conn);
+        cmd.Parameters.AddWithValue("@id", identityId);
+        cmd.Parameters.AddWithValue("@pid", excludeProjectId);
+
+        using var r = cmd.ExecuteReader();
+        while (r.Read())
+            list.Add((r.GetInt32(0), r.GetInt32(1), r.GetInt32(2), r.GetString(3), r.GetString(4)));
+        return list;
+    }
+
     /// <summary>
     /// 这一集这个身份的条目：给 P2c 注入用——「上一集已经出过图的同名角色 / 场景 / 道具」。
     /// 取最近一集有锚图的那些，按集号升序。
