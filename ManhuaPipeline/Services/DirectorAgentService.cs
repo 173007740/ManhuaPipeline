@@ -413,12 +413,14 @@ public class DirectorAgentService
     {
         // 跨集复用锚点：只有出提示词这三批（P2c*）需要——这一步才决定资产长什么样
         var anchor = ReuseAnchorSection(runId, stageKey);
+        // 本集时长目标：只有分镜（P3）需要——镜长之和要凑到这个数
+        var dur = DurationTargetSection(runId, stageKey);
 
         var ledger = LedgerSourceOf(stageKey);
         if (ledger != null)
         {
             var l = LastOutputOf(runId, ledger);
-            if (!string.IsNullOrWhiteSpace(l)) return ChainHead(ledger) + l + anchor;
+            if (!string.IsNullOrWhiteSpace(l)) return ChainHead(ledger) + l + anchor + dur;
         }
         var head = "";
         foreach (var k in ExtraSourcesOf(stageKey))
@@ -429,7 +431,41 @@ public class DirectorAgentService
         /* prevOutput 是内存里刚跑出来的那份。空串也算没有——单跑某一步时它常常是空的，
            这时必须走回落，否则跨运行的立项/剧本接不上（见 DramaLevelOutputOf）。 */
         var prev = string.IsNullOrWhiteSpace(prevOutput) ? LastOutputOf(runId, prevStageKey) : prevOutput;
-        return head + ChainHead(prevStageKey) + prev + anchor;
+        return head + ChainHead(prevStageKey) + prev + anchor + dur;
+    }
+
+    /// <summary>
+    /// 本集成片时长目标（立项里定的「单集时长（秒）」，一部剧每集一样）。
+    ///
+    /// 为什么必须注入：分镜（P3）的输入只有剧本和图册，模型根本不知道这一集该多长，
+    /// 于是自己定了两档（过场 5 秒 / 长镜 11 秒）往下排 —— 第 2 集排出来 147 秒，
+    /// 而立项定的是 180 秒，整整少 33 秒（18%）。成片时长是交付口径，差这么多等于没按立项做。
+    ///
+    /// 只给目标不给做法：怎么凑（补镜还是排长）由它按内容决定，但必须自己加一遍并写在末尾。
+    /// 立项没填时长就不注入——那时宁可让它按内容排，也不塞一个编出来的数。
+    /// </summary>
+    private string DurationTargetSection(int runId, string stageKey)
+    {
+        if (!stageKey.Equals("P3", StringComparison.OrdinalIgnoreCase)) return "";
+
+        var ctx = _db.GetRunContext(runId);
+        if (ctx.ProjectId <= 0) return "";
+        var brief = _db.GetDramaBrief(_db.GetDramaIdByProject(ctx.ProjectId));
+        var sec = brief?.EpisodeDuration ?? 0;
+        if (sec <= 0) return "";
+
+        var lo = Math.Max(1, (int)Math.Round(sec * 0.95));
+        var hi = (int)Math.Round(sec * 1.05);
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine();
+        sb.AppendLine("【本集成片时长目标·引擎注入】这一集的目标成片时长是 " + sec + " 秒（立项定的，每集一样）。");
+        sb.AppendLine("分镜表里各镜时长之和必须落在 " + lo + "~" + hi + " 秒（±5%）之内：");
+        sb.AppendLine("- 排完自己把镜长加一遍。不够就补镜、或把该长的镜排长；超了就压。差一截就交付等于没按立项做。");
+        sb.AppendLine("- 单个镜头 3~8 秒。剧本里明确写了秒数的节奏标注（例如「静场约 8 秒」「间隔约 6 秒」）照抄进对应镜的时长，");
+        sb.AppendLine("　不要换成自己那套档位；需要更长（长镜头、静场）按剧本标注走，单镜最多不超过 12 秒。");
+        sb.AppendLine("- 产出末尾必须单独写一行校验：「时长校验：共 N 镜 · 合计 X 秒 · 目标 " + sec + " 秒 · 偏差 Y 秒」。");
+        return sb.ToString();
     }
 
     /// <summary>
