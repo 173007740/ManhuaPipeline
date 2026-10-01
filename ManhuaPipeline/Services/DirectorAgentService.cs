@@ -411,11 +411,14 @@ public class DirectorAgentService
     /// </summary>
     private string BuildChainInput(int runId, string stageKey, string prevStageKey, string? prevOutput = null)
     {
+        // 跨集复用锚点：只有出提示词这三批（P2c*）需要——这一步才决定资产长什么样
+        var anchor = ReuseAnchorSection(runId, stageKey);
+
         var ledger = LedgerSourceOf(stageKey);
         if (ledger != null)
         {
             var l = LastOutputOf(runId, ledger);
-            if (!string.IsNullOrWhiteSpace(l)) return ChainHead(ledger) + l;
+            if (!string.IsNullOrWhiteSpace(l)) return ChainHead(ledger) + l + anchor;
         }
         var head = "";
         foreach (var k in ExtraSourcesOf(stageKey))
@@ -426,7 +429,55 @@ public class DirectorAgentService
         /* prevOutput 是内存里刚跑出来的那份。空串也算没有——单跑某一步时它常常是空的，
            这时必须走回落，否则跨运行的立项/剧本接不上（见 DramaLevelOutputOf）。 */
         var prev = string.IsNullOrWhiteSpace(prevOutput) ? LastOutputOf(runId, prevStageKey) : prevOutput;
-        return head + ChainHead(prevStageKey) + prev;
+        return head + ChainHead(prevStageKey) + prev + anchor;
+    }
+
+    /// <summary>
+    /// 跨集复用锚点：这一集的「杨彦刚」跟上一集那个是同一个人（身份层按名字认的），
+    /// 把前面几集已经出好的定妆图摆到模型面前，让它照着写——
+    /// 以前每一集各自凭剧本描述一张脸，12 集下来杨彦刚是 12 张不同的脸。
+    ///
+    /// 只在出图提示词这三批（P2c1 角色 / P2c2 场景 / P2c3 道具与特效）注入：这一步才定形象。
+    /// 名字对不上身份的（比如这一集才第一次出现的角色）自然不会出现在这里。
+    /// </summary>
+    private string ReuseAnchorSection(int runId, string stageKey)
+    {
+        if (!stageKey.StartsWith("P2c", StringComparison.OrdinalIgnoreCase)) return "";
+
+        var ctx = _db.GetRunContext(runId);
+        var dramaId = _db.GetRunDramaId(runId);
+        if (ctx.ProjectId <= 0 || dramaId <= 0) return "";
+
+        var list = _db.GetEpisodeAnchors(dramaId, ctx.ProjectId);
+        if (list.Count == 0) return "";
+
+        var sb = new System.Text.StringBuilder();
+        sb.AppendLine();
+        sb.AppendLine();
+        sb.AppendLine("【跨集复用锚点·引擎注入】同一部漫剧里，下面这些角色 / 场景 / 道具在前面几集已经出过图，");
+        sb.AppendLine("它们在这一集里还是同一个（身份层按名字认的，别名也算）。写这一集的提示词时照着已经出好的那张写：");
+        sb.AppendLine("人物的脸型、发型、配色与服装基调，场景的结构与材质，道具的造型与材质，一律与那张保持一致；");
+        sb.AppendLine("不要把这一个在这一集写成另一个模样，也不要换一套配色。");
+
+        foreach (var a in list.Take(40))
+        {
+            var kind = a.Category switch
+            {
+                "character" => "角色",
+                "environment" => "场景",
+                "prop" => "道具",
+                "effect" => "特效",
+                _ => "资产"
+            };
+            sb.AppendLine($"- [{kind}] {a.Name} —— 第 {a.Episode} 集已出图：{a.ImageUrl}");
+            if (!string.IsNullOrWhiteSpace(a.Prompt))
+            {
+                var p = a.Prompt!.Replace("\r", " ").Replace("\n", " ").Trim();
+                if (p.Length > 300) p = p[..300] + "…";
+                sb.AppendLine("　　那一集用的提示词：" + p);
+            }
+        }
+        return sb.ToString();
     }
 
     /// <summary>给第 idx 个阶段找素材：默认接上一个阶段的产出，P2c 三批则回头拿台账。</summary>

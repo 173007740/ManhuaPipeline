@@ -32,10 +32,81 @@ public class AssetImageRunner
         bool Ok, string? ImageUrl, int LibraryAssetId, string? UsedPrompt, string? Error);
 
     /// <summary>队列任务入口：任务里带来源图时走「参考图派生」，否则走原来的纯文生图。</summary>
-    public Task<GenerateOutcome> GenerateForTaskAsync(AssetImageTask task, CancellationToken ct) =>
-        string.IsNullOrWhiteSpace(task.SourceImageUrl)
+    public Task<GenerateOutcome> GenerateForTaskAsync(AssetImageTask task, CancellationToken ct)
+    {
+        TryBindIdentityAnchor(task);        // 没指定参考图时，看能不能拿同身份在前几集那张定妆图来锚定
+        return string.IsNullOrWhiteSpace(task.SourceImageUrl)
             ? GenerateAsync(task, ct)
             : GenerateDerivedAsync(task, ct);
+    }
+
+    /// <summary>
+    /// 出图前自动挂锚图：这条资产还没出过图，而同一个身份（漫剧复用资产身份层）在别的集
+    /// 已经出好一张定妆图 —— 就把那张作为参考图带上，走派生路径出来的脸 / 结构 / 造型
+    /// 跟前面几集是同一套。以前每一集各自凭提示词出，12 集下来就是 12 张不同的脸。
+    ///
+    /// 三条不插手的规矩：
+    ///   1. 人手工指定了参考图 → 听人的；
+    ///   2. 这条资产已经出过图 → 这次是「重新出」，由人决定要不要换形象；
+    ///   3. 锚点就是本集自己出的 → 没必要拿自己参考自己。
+    /// </summary>
+    private void TryBindIdentityAnchor(AssetImageTask task)
+    {
+        if (!string.IsNullOrWhiteSpace(task.SourceImageUrl)) return;
+        try
+        {
+            var table = AssetImageSupport.TableOf(task.Category);
+            if (string.IsNullOrEmpty(table)) return;
+
+            var asset = AssetImageSupport.ResolveAsset(_db, task.ProjectId, task.Category, task.AssetId);
+            if (asset == null) return;
+            if (!string.IsNullOrWhiteSpace(asset.ImageUrl)) return;      // 已经出过图，不替人决定
+
+            var identityId = _db.GetAssetIdentityId(table!, task.AssetId);
+            if (identityId <= 0) return;
+
+            var (url, _, srcProject, srcAsset) = _db.GetIdentityAnchor(identityId);
+            if (string.IsNullOrWhiteSpace(url) || srcProject <= 0 || srcProject == task.ProjectId) return;
+
+            task.SourceImageUrl = url;
+            task.SourceProjectId = srcProject;
+            task.SourceAssetId = srcAsset;
+            var ep = _db.GetProjectById(srcProject)?.EpisodeNumber;
+            task.SourceNote = "跨集复用：照着" + (ep.HasValue ? "第 " + ep.Value + " 集" : "前面一集")
+                              + "同身份那张定妆图出，形象与它保持一致";
+
+            _logger.LogInformation(
+                "[AssetImage] 跨集锚定 projectId={ProjectId} {Category}#{AssetId} 身份={IdentityId} 参考第 {Ep} 集的定妆图",
+                task.ProjectId, task.Category, task.AssetId, identityId, ep);
+        }
+        catch (Exception ex)
+        {
+            // 锚不上就照原样出，不能因为取锚点出错连图都出不了
+            _logger.LogWarning(ex, "[AssetImage] 取跨集锚点失败，按普通出图走 projectId={ProjectId} {Category}#{AssetId}",
+                task.ProjectId, task.Category, task.AssetId);
+        }
+    }
+
+    /// <summary>
+    /// 出图成功后登记锚点：这个身份的第一张图就是它的定妆图（后面几集照着它出）。
+    /// 已有锚点的不会被顶掉 —— 要换锚点是人在页面上手动换的事。
+    /// </summary>
+    private void RegisterIdentityAnchor(AssetImageTask task, string localPath, string? prompt)
+    {
+        try
+        {
+            var table = AssetImageSupport.TableOf(task.Category);
+            if (string.IsNullOrEmpty(table)) return;
+            var identityId = _db.GetAssetIdentityId(table!, task.AssetId);
+            if (identityId <= 0) return;
+            _db.SetIdentityAnchor(identityId, localPath, prompt, task.ProjectId, task.AssetId);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogWarning(ex, "[AssetImage] 登记身份锚点失败（不影响出图结果） projectId={ProjectId} {Category}#{AssetId}",
+                task.ProjectId, task.Category, task.AssetId);
+        }
+    }
 
     /// <summary>
     /// 本次出图要用的参数：任务里带了就照它执行（入队时的快照，改配置不影响在跑的任务），
@@ -105,6 +176,7 @@ public class AssetImageRunner
                 firstPath = localPath;
                 firstLibId = libraryId;
                 _db.UpdateAssetImage(task.ProjectId, task.Category, task.AssetId, localPath);
+                RegisterIdentityAnchor(task, localPath, prompt);   // 这个身份的第一张图 → 定为定妆锚图
             }
 
             _logger.LogInformation(
@@ -201,6 +273,7 @@ public class AssetImageRunner
                 firstPath = localPath;
                 firstLibId = libraryId;
                 _db.UpdateAssetImage(task.ProjectId, task.Category, task.AssetId, localPath);
+                RegisterIdentityAnchor(task, localPath, prompt);   // 同上：第一张图定为这个身份的定妆锚图
                 if (derivationId > 0) _db.CompleteCharacterCardDerivation(derivationId, localPath);
             }
 

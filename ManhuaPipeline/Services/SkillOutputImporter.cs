@@ -133,6 +133,9 @@ public class SkillOutputImporter
            不清的话，模型这次把「外婆（照片/回忆态）」写成「外婆」，就又多出一个角色。 */
         _db.DeleteAllAssets(projectId);
 
+        // 项目没挂在漫剧下（手工建的项目）就没有跨集复用一说，身份层跳过
+        var dramaId = _db.GetDramaIdByProject(projectId);
+
         int n = 0, skipped = 0;
         var seen = new HashSet<string>(StringComparer.OrdinalIgnoreCase);   // 同一批里的重名只建一次
         foreach (var it in items)
@@ -140,7 +143,17 @@ public class SkillOutputImporter
             var table = DbService.AssetTableOf(it.Category);
             if (string.IsNullOrEmpty(table)) { skipped++; continue; }   // AUD 声音资产不出图也没有表
             if (!seen.Add(table + " " + it.Name)) { skipped++; continue; }
-            _db.AddAsset(projectId, table, it.Name, it.Desc);
+            /* 先认人：这一集抽到的「杨彦刚」跟上一集抽到的是同一个人（同一个 IdentityId），
+               不是各起一份。认上了，出图才知道该照着哪一集那张定妆图出——
+               不然 12 集下来就是 12 张不同的脸。 */
+            var identityId = 0;
+            if (dramaId > 0)
+            {
+                var cat = DbService.IdentityCategoryOf(it.Category);
+                if (!string.IsNullOrEmpty(cat))
+                    identityId = _db.GetOrCreateDramaIdentity(dramaId, cat, it.Name, it.Desc);
+            }
+            _db.AddAsset(projectId, table, it.Name, it.Desc, identityId);
             n++;
         }
 

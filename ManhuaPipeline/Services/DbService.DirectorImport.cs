@@ -176,15 +176,22 @@ WHERE TABLE_NAME=@t AND COLUMN_NAME=@c", conn);
         return Convert.ToInt32(cmd.ExecuteScalar()) > 0;
     }
 
-    public int AddAsset(int projectId, string table, string name, string? description)
+    /// <summary>
+    /// 建一条资产。identityId 是它在漫剧里的身份（见 DbService.DramaIdentity）：
+    /// 同一部剧里「杨彦刚」这个人只有一个身份，每集这条只是这个身份在这一集的一份实例。
+    /// 手工加的资产可以不传，那就是没有身份，不参与跨集复用。
+    /// </summary>
+    public int AddAsset(int projectId, string table, string name, string? description, int identityId = 0)
     {
         if (string.IsNullOrEmpty(table)) return 0;
         using var conn = GetConn(); conn.Open();
         using var cmd = new SqlCommand(
-            $"INSERT INTO {table}(ProjectId, Name, Description, CreatedAt) OUTPUT INSERTED.AssetId VALUES(@p,@n,@d,GETDATE())", conn);
+            $"INSERT INTO {table}(ProjectId, Name, Description, IdentityId, CreatedAt) " +
+            "OUTPUT INSERTED.AssetId VALUES(@p,@n,@d,@i,GETDATE())", conn);
         cmd.Parameters.AddWithValue("@p", projectId);
         cmd.Parameters.AddWithValue("@n", name);
         cmd.Parameters.AddWithValue("@d", (object?)description ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@i", identityId > 0 ? identityId : (object)DBNull.Value);
         return (int)cmd.ExecuteScalar();
     }
 

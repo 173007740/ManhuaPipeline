@@ -9,9 +9,23 @@ namespace ManhuaPipeline.Services;
 /// </summary>
 public static class AssetImageSupport
 {
-    /// <summary>资产卡上可用于出图的字段。</summary>
+    /// <summary>
+    /// 资产卡上可用于出图的字段。ImageUrl 是这条资产当前那张图 —— 跨集复用要用到：
+    /// 还没出过图的才需要拿前面几集那张定妆图来锚定，已经出过的由人决定要不要重出。
+    /// </summary>
     public sealed record AssetImageFields(
-        string Name, string? Description, string? Attributes, string? ImagePrompt, string? NegativePrompt);
+        string Name, string? Description, string? Attributes, string? ImagePrompt, string? NegativePrompt,
+        string? ImageUrl = null);
+
+    /// <summary>出图用的类别名 → 资产表名。跨集复用要按表查这条资产绑的是哪个身份。</summary>
+    public static string TableOf(string? category) => (category ?? "").ToLowerInvariant() switch
+    {
+        "characters" => "CharacterAssets",
+        "environments" => "EnvironmentAssets",
+        "props" => "PropAssets",
+        "effects" => "EffectAssets",
+        _ => ""
+    };
 
     public static AssetImageFields? ResolveAsset(DbService db, int projectId, string category, int assetId)
     {
@@ -20,22 +34,22 @@ public static class AssetImageSupport
             case "characters":
             {
                 var a = db.GetCharacterAssets(projectId).FirstOrDefault(x => x.AssetId == assetId);
-                return a == null ? null : new AssetImageFields(a.Name, a.Description, a.Attributes, a.ImagePrompt, a.NegativePrompt);
+                return a == null ? null : new AssetImageFields(a.Name, a.Description, a.Attributes, a.ImagePrompt, a.NegativePrompt, a.ImageUrl);
             }
             case "props":
             {
                 var a = db.GetPropAssets(projectId).FirstOrDefault(x => x.AssetId == assetId);
-                return a == null ? null : new AssetImageFields(a.Name, a.Description, null, a.ImagePrompt, a.NegativePrompt);
+                return a == null ? null : new AssetImageFields(a.Name, a.Description, null, a.ImagePrompt, a.NegativePrompt, a.ImageUrl);
             }
             case "environments":
             {
                 var a = db.GetEnvAssets(projectId).FirstOrDefault(x => x.AssetId == assetId);
-                return a == null ? null : new AssetImageFields(a.Name, a.Description, null, a.ImagePrompt, a.NegativePrompt);
+                return a == null ? null : new AssetImageFields(a.Name, a.Description, null, a.ImagePrompt, a.NegativePrompt, a.ImageUrl);
             }
             case "effects":
             {
                 var a = db.GetEffectAssets(projectId).FirstOrDefault(x => x.AssetId == assetId);
-                return a == null ? null : new AssetImageFields(a.Name, a.Description, null, a.ImagePrompt, a.NegativePrompt);
+                return a == null ? null : new AssetImageFields(a.Name, a.Description, null, a.ImagePrompt, a.NegativePrompt, a.ImageUrl);
             }
             default:
                 return null;
