@@ -191,9 +191,14 @@ GROUP BY CONVERT(varchar(10), t.CreatedAt, 23) ORDER BY D", conn))
         var list = new List<ImageRow>();
         /* 画布节点与资产出图任务混在一张清单里，按时间倒序取最近这些条。
            末列是「来源」：画布那条写「画布 · 画板名」，资产那条写「资产出图 · 项目名」，
-           一眼看出这张图是画布上出的还是资产卡上出的。 */
+           一眼看出这张图是画布上出的还是资产卡上出的。
+
+           At 在这一层转成 varchar(19)（样式 120 = yyyy-mm-dd hh:mi:ss）：
+           它原本是 datetime —— 对着日期时间列调 GetString 会抛 InvalidCastException，
+           页面打开直接 500（ChkCast_Helper 那个错就是从这儿来的）。
+           排序照旧用子查询里那个原始的 At，不受这一层转换影响。 */
         using (var cmd = new SqlCommand(@"
-SELECT TOP (@lim) Id, Title, Kind, St, ErrorMsg, At, Src
+SELECT TOP (@lim) Id, Title, Kind, St, ErrorMsg, CONVERT(varchar(19), At, 120) AS At, Src
 FROM (
     SELECT n.Id                                     AS Id,
            ISNULL(n.Title,'')                       AS Title,
