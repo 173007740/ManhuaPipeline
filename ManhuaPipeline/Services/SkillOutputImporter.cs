@@ -60,7 +60,9 @@ public class SkillOutputImporter
             "imagePrompt 填中文正式提示词全文，不要把英文提示词填进来。",
         "frames" =>
             "产出末尾必须附一个 ```json 块，格式：\n[{\"unitNumber\":\"1.1\",\"shotNumber\":\"1.1-1\",\"shotSize\":\"中景\",\"camera\":\"机位\",\"characters\":\"出场角色\"," +
-            "\"duration\":\"3s\",\"description\":\"画面内容\",\"startState\":\"起始状态\",\"singleAction\":\"本镜唯一动作\"," +
+            // 镜长只填数字（秒）。以前示例写的是「3s」，模型照抄成「11s」「5s」存进库，
+            // nvarchar 求和时转不了数字，整集的时长统计全是错的。
+            "\"duration\":3,\"description\":\"画面内容\",\"startState\":\"起始状态\",\"singleAction\":\"本镜唯一动作\"," +
             "\"endState\":\"结束状态\",\"nextConnection\":\"为何进入下一镜\",\"forbiddenChanges\":\"不得变化的项\",\"newInformation\":\"信息增量\"}]\n" +
             "shotNumber 必须是「单元号-序号」，单元号形如 集.单元。",
         _ => null
@@ -436,7 +438,7 @@ public class SkillOutputImporter
                 ShotSize = Str(e, "shotSize"),
                 Camera = Str(e, "camera"),
                 Characters = Str(e, "characters"),
-                Duration = Str(e, "duration"),
+                Duration = SecOf(Str(e, "duration")),
                 Description = Str(e, "description"),
                 Composition = Str(e, "composition"),
                 Dialogue = Str(e, "dialogue"),
@@ -504,7 +506,7 @@ public class SkillOutputImporter
                 ShotSize = Col(header, cells, "景别"),
                 Camera = Col(header, cells, "机位", "运镜"),
                 Composition = Col(header, cells, "站位", "站位四要素"),
-                Duration = Col(header, cells, "镜长", "时长"),
+                Duration = SecOf(Col(header, cells, "镜长", "时长")),
                 Description = Col(header, cells, "画面内容", "画面描述", "内容"),
                 Dialogue = Col(header, cells, "台词", "对白"),
                 Scene = unitScene.Length > 0 ? unitScene : null
@@ -668,6 +670,21 @@ public class SkillOutputImporter
     {
         if (!e.TryGetProperty(name, out var v)) return null;
         return v.ValueKind == JsonValueKind.String ? v.GetString() : v.ToString();
+    }
+
+    /// <summary>
+    /// 镜长只留秒数：模型爱写「11s」「3 秒」「约 5s」这类，存进去之后
+    /// SUM 一算就是错的（nvarchar 转不了 int，TRY_CAST 全变 0）——
+    /// 实测第 2 集 27 个镜里 20 个是「11s」「5s」，SQL 求和只算出 59 秒（实际 225 秒）。
+    /// 页面上任何「总时长」都靠这一列，存错就等于没有。
+    /// </summary>
+    private static string? SecOf(string? raw)
+    {
+        if (string.IsNullOrWhiteSpace(raw)) return raw;
+        var m = Regex.Match(raw!, @"\d+(\.\d+)?");
+        if (!m.Success) return raw;                       // 一个数字都没有，原样留着，不强造
+        var d = double.Parse(m.Value, System.Globalization.CultureInfo.InvariantCulture);
+        return ((int)Math.Round(d)).ToString();
     }
 
     /// <summary>按「## 」标题切块，每块带上自己的标题行，供 md 兜底解析按资产归类。</summary>
