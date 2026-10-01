@@ -265,9 +265,10 @@
                 <textarea id="dramaDescInput" placeholder="输入描述" rows="2"></textarea>
                 <!-- 立项跟着漫剧一起建：一部漫剧一份，存进 Dramas 那一行。
                      建完进漫剧页点「跑立项并生成分集」，就按这些参数跑 P0、按产出建单集项目。
-                     这几项是最常用的一批，交付形态 / 爽点 / 核心设定建完在漫剧页补。 -->
-                <div style="margin:14px 0 8px;font-size:12px;letter-spacing:1px;color:var(--primary-light);">立项参数（最常用几项，其余建完在漫剧页补）</div>
-                <div style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;">
+                     这一套字段编辑弹窗是克隆过去的（见底部 JS），改这里两边一起变。
+                     还差一项没在这里：交付形态（delivery），建完在漫剧页定。 -->
+                <div style="margin:14px 0 8px;font-size:12px;letter-spacing:1px;color:var(--primary-light);">立项参数</div>
+                <div class="drama-brief-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px 12px;">
                     <!-- 画幅 / 目标平台以前是手填文本框，同一个平台会被写成「抖音」「douyin」「抖音短视频」好几种，
                          下游按值比对时一条也对不上。改成下拉，取值与立项页、流水线那套一致。 -->
                     <div>
@@ -368,7 +369,7 @@
             </div>
         </div>
         <div id="editDramaModal" class="modal-overlay" style="display:none;">
-            <div class="modal">
+            <div class="modal" style="width:760px;max-width:92%;max-height:90vh;overflow-y:auto;">
                 <header>
                     <h3><span class="material-icons" style="font-size:inherit;vertical-align:middle">edit</span> 编辑漫剧</h3>
                     <button class="modal-close" onclick="$('#editDramaModal').hide()" title="关闭">&times;</button>
@@ -385,6 +386,11 @@
                     <input type="file" id="editDramaCoverInput" accept="image/*" style="position:absolute;top:0;left:0;width:100%;height:100%;opacity:0;cursor:pointer;">
                 </div>
                 <div id="editDramaCoverPreview" style="display:none;margin-bottom:12px;"><img style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;"></div>
+                <!-- 立项参数：以前这个弹窗只有名称 / 描述 / 封面 —— 建漫剧时能填的画幅、平台、题材、
+                     两个风格、集数、时长、核心爽点、核心设定、提示词引擎、角色，建完在这里一项都看不到，
+                     要改只能再进漫剧页。字段是从新建弹窗克隆过来的（见底部 JS），两边永远同一套。 -->
+                <div style="margin:14px 0 8px;font-size:12px;letter-spacing:1px;color:var(--primary-light);">立项参数</div>
+                <div class="drama-brief-grid-slot"></div>
                 <div class="modal-actions">
                     <button class="btn btn-outline" onclick="$('#editDramaModal').hide()">取消</button>
                     <button class="btn btn-primary" onclick="saveEditDrama()"><span class="material-icons" style="font-size:inherit;vertical-align:middle">check</span> 保存</button>
@@ -487,19 +493,24 @@
             }
             /* 两个风格下拉每次开弹窗都重拉一次：风格库是会长出来的，缓存一次就漏掉后加的。
                图片风格 = 画面长什么样（资产出图拼进提示词），视觉风格 = 影像什么调子（一部剧定一次）。 */
-            function loadDramaStyles() {
-                $.get("/api/image-style", function (list) {
-                    var sel = $('#createDramaModal [data-fk="artStyle"]').empty().append('<option value="">未设置</option>');
+            /* 两个弹窗（新建 / 编辑）里都有一套立项字段，风格下拉也要都填。
+               两个请求都回来才回调 —— 编辑弹窗要回填已存的风格，下拉还没填就 set 值会白设。 */
+            function loadDramaStyles(cb) {
+                var a = $.get("/api/image-style", function (list) {
+                    var sel = $('#createDramaModal [data-fk="artStyle"], #editDramaModal [data-fk="artStyle"]')
+                        .empty().append('<option value="">未设置</option>');
                     (list || []).forEach(function (s) {
                         sel.append('<option value="' + s.styleId + '">' + escHtml(s.styleName || s.name || '') + '</option>');
                     });
                 });
-                $.get("/api/video-style", function (list) {
-                    var sel = $('#createDramaModal [data-fk="videoStyle"]').empty().append('<option value="">未设置</option>');
+                var v = $.get("/api/video-style", function (list) {
+                    var sel = $('#createDramaModal [data-fk="videoStyle"], #editDramaModal [data-fk="videoStyle"]')
+                        .empty().append('<option value="">未设置</option>');
                     (list || []).forEach(function (s) {
                         sel.append('<option value="' + s.styleId + '">' + escHtml(s.styleName || s.name || '') + '</option>');
                     });
                 });
+                $.when(a, v).done(function () { if (cb) cb(); });
             }
             function showCreateDrama() {
                 $("#dramaTitleInput").val(""); $("#dramaDescInput").val(""); $("#dramaCoverInput").val(""); $("#coverPreview").hide();
@@ -512,25 +523,46 @@
                 loadDramaStyles();
             }
             /* 立项字段 → 一条立项。数字转成数字（集数是字符串没法比大小），
-               角色在表单里是一段文本，进库存成 json 数组。 */
-            function dramaBriefFromForm() {
+               角色在表单里是一段文本，进库存成 json 数组。
+               传弹窗选择器：新建和编辑各有自己的一套字段。 */
+            function dramaBriefFromForm(sel) {
                 function num(v) { var n = parseInt(v, 10); return isNaN(n) ? null : n; }
-                var chars = String($('#createDramaModal [data-fk="characters"]').val() || '').split(/[,，、]/)
+                function val(k) { return $(sel + ' [data-fk="' + k + '"]').val(); }
+                var chars = String(val('characters') || '').split(/[,，、]/)
                     .map(function (s) { return s.trim() }).filter(function (s) { return s });
                 return {
-                    aspect: $('#createDramaModal [data-fk="aspect"]').val() || null,
-                    platform: $('#createDramaModal [data-fk="platform"]').val() || null,
-                    genre: $('#createDramaModal [data-fk="genre"]').val() || null,
-                    artStyleId: $('#createDramaModal [data-fk="artStyle"]').val() ? +$('#createDramaModal [data-fk="artStyle"]').val() : null,
-                    episodeCount: num($('#createDramaModal [data-fk="episodeCount"]').val()),
-                    episodeDuration: num($('#createDramaModal [data-fk="episodeDuration"]').val()),
+                    aspect: val('aspect') || null,
+                    platform: val('platform') || null,
+                    genre: val('genre') || null,
+                    artStyleId: val('artStyle') ? +val('artStyle') : null,
+                    episodeCount: num(val('episodeCount')),
+                    episodeDuration: num(val('episodeDuration')),
                     charactersJson: chars.length ? JSON.stringify(chars) : null,
-                    hook: $('#createDramaModal [data-fk="hook"]').val() || null,
-                    premise: $('#createDramaModal [data-fk="premise"]').val() || null,
-                    promptEngine: $('#createDramaModal [data-fk="promptEngine"]').val() || null,
-                    videoStyleId: $('#createDramaModal [data-fk="videoStyle"]').val()
-                        ? +$('#createDramaModal [data-fk="videoStyle"]').val() : null
+                    hook: val('hook') || null,
+                    premise: val('premise') || null,
+                    promptEngine: val('promptEngine') || null,
+                    videoStyleId: val('videoStyle') ? +val('videoStyle') : null
                 };
+            }
+
+            /* 已存的立项回写进表单（编辑弹窗打开时）。
+               没有立项（建的时候一项没填）就只给默认值，其余留空。 */
+            function fillBriefForm(sel, b) {
+                function set(k, v) { $(sel + ' [data-fk="' + k + '"]').val(v == null ? '' : v); }
+                var has = b && b.exists;
+                set('aspect', has ? (b.aspect || '16:9 横屏') : '16:9 横屏');
+                set('platform', has ? (b.platform || '抖音') : '抖音');
+                set('promptEngine', has ? (b.promptEngine || 'SD') : 'SD');
+                set('genre', has ? b.genre : '');
+                set('artStyle', has && b.artStyleId ? String(b.artStyleId) : '');
+                set('videoStyle', has && b.videoStyleId ? String(b.videoStyleId) : '');
+                set('episodeCount', has ? b.episodeCount : '');
+                set('episodeDuration', has ? b.episodeDuration : '');
+                set('hook', has ? b.hook : '');
+                set('premise', has ? b.premise : '');
+                var chars = [];
+                if (has) { try { var p = JSON.parse(b.charactersJson || '[]'); if (Object.prototype.toString.call(p) === '[object Array]') chars = p; } catch (e) { } }
+                set('characters', chars.join('，'));
             }
             function createDrama() {
                 var t = $("#dramaTitleInput").val().trim(); if (!t) { alert("请输入名称"); return }
@@ -541,7 +573,7 @@
                            没填的字段不传，那边的语义是「这次不改动」。 */
                         $.ajax({
                             url: "/api/director-agent/brief", method: "PUT", contentType: "application/json",
-                            data: JSON.stringify($.extend({ dramaId: did }, dramaBriefFromForm()))
+                            data: JSON.stringify($.extend({ dramaId: did }, dramaBriefFromForm('#createDramaModal')))
                         });
                         var file = $("#dramaCoverInput")[0].files[0];
                         if (file) { var fd = new FormData(); fd.append("file", file); $.ajax({ url: "/api/drama/" + did + "/cover", method: "POST", data: fd, processData: false, contentType: false, success: function () { $("#createDramaModal").hide(); loadDramas() } }) } else { $("#createDramaModal").hide(); loadDramas() }
@@ -558,6 +590,14 @@
 
 
 
+            /* 编辑弹窗里的立项字段直接克隆新建弹窗那一套（连同 data-fk），
+               不另写一份 HTML —— 两处各写一遍迟早漏（刚加的核心爽点 / 核心设定就是这样只在新建那边）。 */
+            $(function () {
+                $('.drama-brief-grid-slot').each(function () {
+                    $(this).empty().append($('#createDramaModal .drama-brief-grid').clone());
+                });
+            });
+
             var editDramaCoverFile = null;
             function showEditDrama(id, title) {
                 $("#editDramaId").val(id);
@@ -568,6 +608,12 @@
                 $.get("/api/drama/" + id, function (dr) {
                     $("#editDramaDescInput").val(dr.description || "");
                     if (dr.coverImage) $("#editDramaCoverPreview").html('<img src="' + dr.coverImage + '" style="max-width:100%;max-height:160px;border-radius:8px;object-fit:cover;">').show();
+                });
+                /* 立项要等风格下拉填完再回填，否则 set 上去的值会被随后的 empty() 冲掉 */
+                loadDramaStyles(function () {
+                    $.get("/api/director-agent/brief", { dramaId: id }, function (b) {
+                        fillBriefForm('#editDramaModal', b);
+                    });
                 });
                 $("#editDramaModal").css("display", "flex");
             }
@@ -587,6 +633,11 @@
                 var desc = $("#editDramaDescInput").val().trim();
                 $.ajax({
                     url: "/api/drama/" + id, method: "PUT", contentType: "application/json", data: JSON.stringify({ title: title, description: desc }), success: function () {
+                        /* 立项跟名称一起存：改了集数、换了个风格，就在这里改，不用再进漫剧页 */
+                        $.ajax({
+                            url: "/api/director-agent/brief", method: "PUT", contentType: "application/json",
+                            data: JSON.stringify($.extend({ dramaId: +id }, dramaBriefFromForm('#editDramaModal')))
+                        });
                         if (editDramaCoverFile) {
                             var fd = new FormData();
                             fd.append("file", editDramaCoverFile);
