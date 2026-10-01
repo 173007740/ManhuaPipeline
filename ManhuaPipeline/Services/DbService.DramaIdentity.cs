@@ -189,6 +189,23 @@ public partial class DbService
         cmd.ExecuteNonQuery();
     }
 
+    /// <summary>
+    /// 这个项目在这一类里都有哪些资产名。给「提示词没对上」的报错用：
+    /// 光说「名字对不上」人不知道该改成什么，把表上现有的名字摆出来才看得出差在哪。
+    /// </summary>
+    public List<string> GetAssetNames(string table, int projectId)
+    {
+        var list = new List<string>();
+        if (string.IsNullOrEmpty(table) || projectId <= 0) return list;
+        using var conn = GetConn(); conn.Open();
+        using var cmd = new SqlCommand(
+            $"SELECT Name FROM {table} WHERE ProjectId=@p ORDER BY AssetId", conn);
+        cmd.Parameters.AddWithValue("@p", projectId);
+        using var r = cmd.ExecuteReader();
+        while (r.Read()) list.Add(r.GetString(0));
+        return list;
+    }
+
     /// <summary>这条资产当前那张图的站内地址（/uploads/...），没有图返回 null。</summary>
     public string? GetAssetImageUrl(string table, int assetId)
     {

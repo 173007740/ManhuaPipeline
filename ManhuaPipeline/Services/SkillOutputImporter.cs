@@ -211,7 +211,8 @@ public class SkillOutputImporter
         }
         foreach (var t in touched) _db.ClearAssetPrompts(projectId, t);
 
-        int n = 0, missed = 0;
+        int n = 0;
+        var missed = new List<(string Table, string Category, string Name)>();   // 一条都没对上的，最后要说清是哪条
         var claimed = new HashSet<string>(StringComparer.Ordinal);   // 已经回填过的资产，后面的条目不再覆盖
         foreach (var it in items)
         {
@@ -248,11 +249,36 @@ public class SkillOutputImporter
                     n++; written = true; break;
                 }
             }
-            if (!written) missed++;
+            if (!written) missed.Add((table!, it.Category, it.Name));
         }
 
-        if (n == 0) return new ImportResult(0, "没匹配到可回填的资产（提示词里的名字跟台账对不上）");
-        return new ImportResult(n, missed > 0 ? missed + " 条名字对不上台账，已跳过" : null);
+        if (n == 0) return new ImportResult(0, MissMessage(projectId, missed));
+        return new ImportResult(n, missed.Count > 0 ? MissMessage(projectId, missed) : null);
+    }
+
+    /// <summary>
+    /// 没写进去的时候说清楚：**是哪一条、它在提示词里叫什么、这一类资产在表上叫什么**。
+    /// 以前只报一句「N 条名字对不上台账，已跳过」——人不知道是哪条，也不知道该改成什么名字，
+    /// 只能一遍遍点重跑，而重跑多少次结果都一样（模型每次起的名都不一样）。
+    /// 把两边的名字都摆出来，人一眼就能看出差在哪、该改哪边。
+    /// </summary>
+    private string MissMessage(int projectId, List<(string Table, string Category, string Name)> missed)
+    {
+        var sb = new System.Text.StringBuilder();
+        sb.Append(missed.Count).Append(" 条没写进资产（提示词里的名字跟台账对不上）：");
+
+        foreach (var m in missed.Take(3))
+        {
+            var names = _db.GetAssetNames(m.Table, projectId);
+            sb.Append(m.Category).Append("「").Append(m.Name).Append("」");
+            sb.Append(names.Count > 0
+                ? " —— 这一类在资产表上叫：" + string.Join("、", names.Take(8))
+                : " —— 这一类在资产表里一条都没有");
+            sb.Append("；");
+        }
+        if (missed.Count > 3) sb.Append("其余 ").Append(missed.Count - 3).Append(" 条同理；");
+        sb.Append("改哪边都行，对上名字就能写进去（定稿清单不得改名，见 P2b 契约）");
+        return sb.ToString().TrimEnd('；');
     }
 
     /// <summary>
