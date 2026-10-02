@@ -59,7 +59,7 @@
 
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
 <!-- 背景跟工作台 / 导演流水线同一份（右上刻度环 / 左下同心圆 / 斜向扫光） -->
-<link rel="stylesheet" href="/css/hud-bg.css?v=1">
+<link rel="stylesheet" href="/css/hud-bg.css?v=2">
 <style>
   /* 关掉 admin-theme.css 自带的那三层背景特效：body::before 是 54px 网格 + 居中二进制大字，
      html::after 是斜向青光，html::before 是左下同心圆环 —— 这三层 hud-bg.css 里没有对应物，
@@ -74,7 +74,7 @@
 </head>
 <body>
     <!-- 动画背景的挂点（css/hud-bg.css 认这个 id）：内容层 .container 由 admin-theme.css 抬在 z-index 1 -->
-    <div id="hudFx" aria-hidden="true"></div>
+    <div id="hudFx" aria-hidden="true"><span class="hud-radar"></span><span class="hud-rings"></span><span class="hud-scan"></span></div>
     <nav class="navbar">
         <div class="nav-inner">
             <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">

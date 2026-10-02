@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="/css/hud-static.css?v=2">
     <!-- 动画背景：必须在 hud-static 之后 —— 那份里有一串 animation:none 把同类动画全关掉了，
          靠「后加载」才盖得回来。 -->
-    <link rel="stylesheet" href="/css/hud-bg.css?v=1">
+    <link rel="stylesheet" href="/css/hud-bg.css?v=2">
     <link rel="stylesheet" href="/css/dashboard-v3.css?v=2">
     <link rel="stylesheet" href="/css/dashboard-fullscreen.css?v=2">
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
@@ -64,7 +64,7 @@
 </head>
 <body>
     <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
-    <div id="hudFx" aria-hidden="true"></div>
+    <div id="hudFx" aria-hidden="true"><span class="hud-radar"></span><span class="hud-rings"></span><span class="hud-scan"></span></div>
     <div id="shell">
         <nav class="navbar">
             <div class="nav-inner">

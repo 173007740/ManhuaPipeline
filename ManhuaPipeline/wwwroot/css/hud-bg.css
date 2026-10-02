@@ -1,26 +1,30 @@
 /* ============================================================================
-   全站统一的「指挥中心」动画背景（三层）
+   全站统一的「指挥中心」背景 —— 三层，全部用真实 DOM 元素（不是伪元素）
 
-     右上刻度环   hud-orbit          48s 一圈   —— 就是看着像雷达盘在转的那层
-     左下同心圆   hud-orbit-reverse  72s 一圈（反向）
-     斜向扫光     hud-scan            9s 一趟
+     .hud-radar   右上刻度环    hud-orbit          48s 一圈（就是那个像雷达盘的）
+     .hud-rings   左下同心圆    hud-orbit-reverse  72s 一圈（反向）
+     .hud-scan    斜向扫光      hud-scan            9s 一趟
 
-   来历：这三层原本只写在 dashboard.html 的内联 <style> 里。skill-studio 那页
-   用的是 admin-theme.css 自带的一套（多一层 54px 网格 + 居中二进制大字，而且
-   它是挂在 html::before / html::after 上的），两边看着就像两个站。抽成这份公共
-   文件，谁要谁引，改一次全站都跟着变 —— 各页各抄一份的结果就是「这页的圈比那页大」。
+   【为什么不用伪元素】最初这三层是画在 body::after / #hudFx::before / #hudFx::after 上的。
+   问题是这三个挂载点是「公共地」：hud-static.css 和 admin-theme.css 都在上面画自己的东西，
+   最后还各自甩一句 animation:none / 对 #hudFx 无效的规则，谁后加载谁说话 ——
+   级联一乱就整层不见，而且排查时看 CSS 完全看不出问题（这次就卡在这儿好几轮）。
+   改成真实元素 + 自己的 class 之后：没有任何别的样式表能匹配到这三个名字，
+   谁关伪元素都跟它无关。这是「宁可调控件，不去争挂载点」。
 
-   用法两步：
-     1. <link rel="stylesheet" href="/css/hud-bg.css?v=1">
-     2. 页面里放一个 <div id="hudFx" aria-hidden="true"></div>
-   内容层要抬到背景之上（背景是 fixed + z-index 0），下面最后两条已经照顾到
-   常见的 .page / #shell 写法，自定义外壳记得自己给 position:relative;z-index:1。
-
-   引了这份就不要再让 admin-theme.css 那套开着 —— 两层同心圆叠在一起会重影。
+   用法两步（页面里）：
+     1. <link rel="stylesheet" href="/css/hud-bg.css?v=2">
+     2. <div id="hudFx" aria-hidden="true">
+          <span class="hud-radar"></span><span class="hud-rings"></span><span class="hud-scan"></span>
+        </div>
+   内容层要抬到背景之上（背景是 fixed + z-index 0），下面最后两条照顾了常见的
+   .page / #shell 写法；自定义外壳记得自己给 position:relative; z-index:1。
    ============================================================================ */
 
-body::after {
-    content: ""; position: fixed; z-index: 0; pointer-events: none;
+#hudFx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
+
+.hud-radar {
+    position: fixed; z-index: 0; pointer-events: none;
     width: min(74vw, 980px); aspect-ratio: 1; right: -20vw; top: 8vh; border-radius: 50%; opacity: .42;
     background: repeating-conic-gradient(from 0deg, #05e8f0 0 1deg, transparent 1deg 7deg);
     -webkit-mask: repeating-radial-gradient(circle, transparent 0 9%, #000 9.2% 9.45%, transparent 9.7% 16%, #000 16.2% 16.45%, transparent 16.7% 27%, #000 27.2% 27.5%, transparent 27.8% 38%, #000 38.2% 38.55%, transparent 38.8% 47%, #000 47.2% 47.7%, transparent 48%);
@@ -29,18 +33,16 @@ body::after {
     filter: drop-shadow(0 0 9px #05e8f055);
 }
 
-#hudFx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-
-#hudFx::before {
-    content: ""; position: absolute; left: -25vw; bottom: -54vw;
+.hud-rings {
+    position: absolute; left: -25vw; bottom: -54vw;
     width: min(88vw, 1100px); aspect-ratio: 1; border-radius: 50%;
     border: 1px solid #05e8f02c;
     box-shadow: 0 0 0 42px #05e8f008, 0 0 0 43px #05e8f021, 0 0 0 105px #ff385205, 0 0 0 106px #ff385222;
     animation: hud-orbit-reverse 72s linear infinite;
 }
 
-#hudFx::after {
-    content: ""; position: absolute; top: 56px; left: 0; right: 0; bottom: 0;
+.hud-scan {
+    position: absolute; top: 56px; left: 0; right: 0; bottom: 0;
     background: linear-gradient(115deg, transparent 0 38%, #05e8f008 48%, #05e8f025 49%, transparent 50% 100%);
     background-size: 220% 100%;
     animation: hud-scan 9s ease-in-out infinite;
@@ -51,12 +53,12 @@ body::after {
 @keyframes hud-scan { 0%, 18% { background-position: 180% 0 } 75%, 100% { background-position: -80% 0 } }
 
 @media (prefers-reduced-motion: reduce) {
-    body::after, #hudFx::before, #hudFx::after { animation: none }
+    .hud-radar, .hud-rings, .hud-scan { animation: none }
 }
 
 /* 内容层要在特效之上：背景是 fixed + z-index 0，这里给 1 */
 main.page, #shell { position: relative; z-index: 1; }
 
-/* hud-static.css 自带一层同心圆（.page::before），跟这里的 #hudFx::before 重了 ——
+/* hud-static.css 自带一层同心圆（.page::before），跟这里的 .hud-rings 重了 ——
    引了这份文件就把它关掉，否则两道圈叠着转。 */
 .page::before { display: none; }
