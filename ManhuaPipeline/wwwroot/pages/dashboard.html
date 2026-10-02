@@ -16,6 +16,12 @@
     <link rel="stylesheet" href="/css/dashboard-v3.css?v=2">
     <link rel="stylesheet" href="/css/dashboard-fullscreen.css?v=2">
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
+<!-- 全站统一背景（css/hud-bg-radar.css）：只留右侧那个 7 秒一圈的雷达盘。
+     放最后是因为它开头会先把四个伪元素清一遍 —— hud-static.css 的 body::after
+     是右上刻度环 48s（跟 hud-bg.css 的 .hud-radar 是同一个东西，两份都在画），
+     hud-bg.css 的 .hud-radar 与 .hud-rings 也一并在这里关掉。
+     这一页是其它页面的参照，之前漏加了，导致它反而比别的页面多两个在转的。 -->
+<link rel="stylesheet" href="/css/hud-bg-radar.css?v=2">
     <script src="/js/hud-chrome.js?v=10"></script>
     <style>
         /* 动画背景（右上刻度环 / 左下同心圆 / 斜向扫光）搬到 /css/hud-bg.css 了 ——
