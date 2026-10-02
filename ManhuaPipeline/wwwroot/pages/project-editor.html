@@ -6,6 +6,10 @@
 <title>项目设置 · 漫剧立项</title>
 <link rel="stylesheet" href="/css/hud-static.css">
 <link rel="stylesheet" href="/css/project-editor.css">
+<!-- 顶栏交给全站统一那套（跟首页 / 工作台一致）：首页 / 我的工作台 / 系统设置 + 右侧用户名与退出。
+     这一页原本是自己写死的一排（工作台 / 导演流水线 / 项目管理 + AUTOSAVE ONLINE），没跟大部队走。 -->
+<link rel="stylesheet" href="/css/hud-chrome.css?v=10">
+<script src="/js/hud-chrome.js?v=10"></script>
 <style>
   /* 补充样式：静态原型里 .panel / .status 没有落在 css 上，这里补齐 */
   .panel{border:1px solid #16414b;background:#031017ed}
@@ -28,11 +32,16 @@
 </style>
 </head>
 <body>
-<header class="topnav">
-  <a class="brand" href="/pages/dashboard.html"><i>M</i><span><b>MANGA ENGINE</b><small>AI COMIC DIRECTOR OS</small></span></a>
-  <nav><a href="/pages/dashboard.html">工作台</a><a href="/pages/skill-studio.html">导演流水线</a><a href="/pages/project-manage.html">项目管理</a></nav>
-  <div class="system"><i></i>AUTOSAVE ONLINE</div>
-</header>
+<!-- 这一格由 /js/hud-chrome.js 统一改造（品牌方块 + 三项导航 + 用户区），
+     logo 的 href 会被沿用 —— 这里写 ../index.html，跟其它页面保持一致。 -->
+<nav class="navbar">
+  <div class="nav-inner">
+    <a href="../index.html" class="logo" style="text-decoration:none;">MANGA ENGINE</a>
+    <div class="nav-links" id="navLinks"></div>
+    <span id="navUser" style="display:none;"></span>
+    <span id="navGuest"></span>
+  </div>
+</nav>
 <main class="pe-shell">
   <aside class="pe-sidebar">
     <a class="pe-back" href="/pages/dashboard.html">← 返回工作台</a>
