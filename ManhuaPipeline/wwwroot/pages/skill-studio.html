@@ -492,14 +492,18 @@
     <!-- hud-bg.css：右上刻度环、左下同心圆、斜向扫光（工作台也引了这份） -->
     <link rel="stylesheet" href="/css/hud-bg.css?v=2">
     <style>
-      /* 背景层数收一收，这一页只留两个在转的：右侧雷达盘（7s）+ 右上刻度环（48s）。
-         1. 左下同心圆（.hud-rings，72s 反向转）去掉 —— 它跟雷达盘分布在屏幕两头，
-            两个圆同时在转，视线会被拉散。
-         2. hud-static.css 的 body::after 和 hud-bg.css 的 .hud-radar 是同一个东西：
-            同几何（right:-20vw / top:8vh / min(74vw,980px)）、同关键帧（hud-orbit 48s）、
-            连 mask 都逐段一致。hud-bg.css 本来就是从 hud-static 那几层抽出来重写的，
-            两份同时加载就成了两个完全同步的环，白画一层。保留 hud-bg.css 那份
-            （它同时还管斜向扫光），把 hud-static 这份关掉。 */
+      /* 背景只留一个在转的：右侧那个 7 秒一圈的雷达盘（html::after，radar-sweep）。
+         其余转的全关掉：
+         1. .hud-radar —— 右上刻度环，hud-orbit 48s 一圈。跟雷达盘同在右侧，
+            两个圆各自转，看着就是「两个转的特效」，去掉。
+         2. .hud-rings —— 左下同心圆，hud-orbit-reverse 72s 反向转。同样去掉。
+         3. body::after —— hud-static.css 那份右上刻度环，跟 .hud-radar 是同一个东西
+            （同几何 right:-20vw/top:8vh/min(74vw,980px)、同关键帧 hud-orbit 48s、mask 逐段一致）。
+            hud-bg.css 本来就是从 hud-static 这几层抽出来重写的，两份同时加载会画两遍。
+            用 content:none 而不是 display:none —— 上面那条给 admin-theme 的重置规则也吃这个选择器，
+            content:none 只掐生成，不会把 hud-static 其它层连带关掉。
+         斜向扫光 .hud-scan 不是旋转，保留；粒子星图、网格大字、星点也保留。 */
+      .hud-radar { display: none; }
       .hud-rings { display: none; }
       body::after { content: none; }
     </style>
