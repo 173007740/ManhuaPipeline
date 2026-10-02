@@ -24,23 +24,19 @@
     .syscfg-side .sub{color:var(--text-muted);font-size:11px;padding:2px 12px 8px;line-height:1.5;}
     .syscfg-main{flex:1;min-width:0;min-height:0;display:flex;background:var(--bg-glass);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;}
     #sysFrame{width:100%;height:100%;border:none;display:block;background:transparent;}
+    /* admin-theme.css 自带四层背景伪元素（54px 网格大字 / 斜向青光 / 左下同心圆 / 右上刻度环），
+       平时由 hud-bg-radar.css 接管（它开头会先清一遍再定义自己那三层）。这一页不引那份，
+       就得自己关掉 —— 否则去掉雷达之后，这四层又冒出来，等于另一套背景。 */
+    html::before, html::after, body::before, body::after { display: none; }
   </style>
 
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
-<!-- 背景跟工作台 / 导演流水线 / 系统报告同一份（右上刻度环 / 左下同心圆 / 斜向扫光）
-     这一页原本还有一层粒子画布（#particleWrap，也是 z-index 0），两者同层共存：点归点、环归环 -->
-<link rel="stylesheet" href="/css/hud-bg.css?v=2">
-<!-- 这里原先有一段内联样式，把 body::before / html::before / html::after 设成 display:none，
-     当年是为了关掉 admin-theme.css 自带的背景层。现在背景统一由 /css/hud-bg-radar.css 管：
-     它开头会先把这四个伪元素清一遍（content:none + inset:auto），再定义自己那三层，
-     这段规则不但多余 —— 而且 html::after 正是雷达盘的挂载点，留着会把雷达关掉，所以整段删除。 -->
+    <!-- 这一页不画背景：它是个壳，正文全在 #sysFrame 这个 iframe 里（config.html），
+         而内嵌那页自带一整套背景（hud-bg-radar.css + 粒子画布），壳再画一层就是重影 ——
+         雷达、扫光、粒子全叠两遍。所以 hud-bg.css / hud-bg-radar.css 都不引，只留纯色深底。 -->
     <script src="/js/hud-chrome.js?v=10"></script>
-    <link rel="stylesheet" href="/css/hud-bg-radar.css?v=2">
 </head>
 <body>
-  <!-- 动画背景的挂点（css/hud-bg.css 认这个 id） -->
-  <div id="hudFx" aria-hidden="true"><span class="hud-radar"></span><span class="hud-rings"></span><span class="hud-scan"></span></div>
-  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
   <div style="position:relative;z-index:1;height:100vh;display:flex;flex-direction:column;">
   <nav class="navbar">
     <div class="nav-inner">
@@ -130,45 +126,5 @@
         });
     });
 </script>
-<script>
-(function() {
-    var c = document.getElementById("particleCanvas");
-    if (!c) return;
-    c.style.top = "0"; c.style.width = "100%"; c.style.pointerEvents = "none";
-    var ctx = c.getContext("2d");
-    var W, H;
-    function resize(){ W=c.width=window.innerWidth; H=c.height=window.innerHeight; }
-    resize(); window.addEventListener("resize", resize);
-    var p = [], COUNT = 70;
-    var colors = ["rgba(5,232,240,", "rgba(0,170,180,", "rgba(106,247,255,"];
-    for (var i = 0; i < COUNT; i++) p.push({
-      x:Math.random()*W, y:Math.random()*H, r:Math.random()*2+1.2,
-      dx:(Math.random()-0.5)*0.4, dy:(Math.random()-0.5)*0.4-0.15,
-      color:colors[Math.floor(Math.random()*3)], alpha:Math.random()*0.4+0.15
-    });
-    var DIST = 130;
-    !function anim(){
-      ctx.clearRect(0,0,W,H);
-      for (var i = 0; i < COUNT; i++) {
-        var q = p[i]; q.x += q.dx; q.y += q.dy;
-        if (q.x < 0 || q.x > W) q.dx *= -1;
-        if (q.y < 0 || q.y > H) q.dy *= -1;
-        ctx.beginPath(); ctx.arc(q.x, q.y, q.r, 0, Math.PI*2);
-        ctx.fillStyle = q.color + q.alpha + ")"; ctx.fill();
-        for (var j = i+1; j < COUNT; j++) {
-          var r = p[j], dx = q.x - r.x, dy = q.y - r.y, d = Math.sqrt(dx*dx+dy*dy);
-          if (d < DIST) {
-            var a = (1 - d/DIST) * 0.2;
-            ctx.beginPath(); ctx.moveTo(q.x, q.y); ctx.lineTo(r.x, r.y);
-            ctx.strokeStyle = "rgba(5,232,240," + a + ")"; ctx.lineWidth = 0.6; ctx.stroke();
-          }
-        }
-      }
-      requestAnimationFrame(anim);
-    }();
-  })();
-
-</script>
-<script src="/js/particle-bg.js?v=2"></script>
 </body>
 </html>
