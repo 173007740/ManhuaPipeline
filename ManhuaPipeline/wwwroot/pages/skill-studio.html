@@ -21,12 +21,14 @@
              --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
              min-height:calc(100vh - 64px);color:var(--t1);position:relative;z-index:1;
              font:13px/1.65 system-ui,-apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
-             /* 底色改半透明：admin-theme.css 那层全站 HUD 特效（54px 网格 + 二进制大字 + 右侧光环 + 斜扫光）
-                是 fixed z-index 0。.ss-root 抬到 z-index 1 之后，底色要是实色就把特效全挡住了，
-                降到 .62 才能让网格和光环透过页面看见。 */
+             /* 底色留半透明：背景特效（css/hud-bg.css 那三层）是 fixed z-index 0，
+                .ss-root 抬到 z-index 1 之后，底色要是实色就把它们全蒙住了。
+                原来写的是 .62 —— 那是给 admin-theme 那套「54px 网格 + 二进制大字」留的，
+                网格铺满整屏，蒙掉大半还看得见；换成 hud-bg 的刻度环之后线条本来就稀疏，
+                .62 一蒙几乎没了，降到 .28 才透得出来。 */
              background:radial-gradient(900px 430px at 78% -8%,rgba(5,232,240,.07),transparent 70%),
                         radial-gradient(700px 460px at 10% 108%,rgba(106,247,255,.06),transparent 70%),
-                        rgba(5,8,9,.62);
+                        rgba(5,8,9,.28);
              display:grid;grid-template-columns:262px 1fr;}
     .ss-root *{box-sizing:border-box}
     .ss-root button,.ss-root select,.ss-root textarea,.ss-root input{font:inherit}
@@ -468,9 +470,20 @@
   </style>
 
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
+<!-- 背景换成跟工作台同一份（css/hud-bg.css）：右上那个慢慢转的刻度环、左下同心圆、斜向扫光。 -->
+<link rel="stylesheet" href="/css/hud-bg.css?v=1">
+<style>
+  /* 关掉 admin-theme.css 自带的那四层背景特效（54px 网格 + 居中二进制大字 / 右侧刻度环 /
+     斜向青光 / 左下同心圆环）。它跟 hud-bg.css 是两套，同时开着会叠成两层同心圆、两道扫光，
+     转起来看着发糊。
+     注意：只关这一页的，不动 admin-theme.css 本身 —— 别的页面还在用那套。 */
+  body::before, body::after, html::before, html::after { display: none; }
+</style>
     <script src="/js/hud-chrome.js?v=10"></script>
 </head>
 <body>
+  <!-- 动画背景的挂点（css/hud-bg.css 认这个 id）：内容层在它上面，z-index 1 -->
+  <div id="hudFx" aria-hidden="true"></div>
   <div style="position:relative;z-index:1;">
 <nav class="navbar">
     <div class="nav-inner">

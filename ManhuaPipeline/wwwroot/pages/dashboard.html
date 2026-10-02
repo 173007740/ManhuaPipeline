@@ -10,45 +10,18 @@
          dashboard-v3 是工作台自己的版式，fullscreen 是把这一屏在宽屏上撑开的补丁），
          不再引 style.css / admin-theme.css —— 两套皮肤混在一页上，卡片颜色和描边会对不上。 -->
     <link rel="stylesheet" href="/css/hud-static.css?v=2">
+    <!-- 动画背景：必须在 hud-static 之后 —— 那份里有一串 animation:none 把同类动画全关掉了，
+         靠「后加载」才盖得回来。 -->
+    <link rel="stylesheet" href="/css/hud-bg.css?v=1">
     <link rel="stylesheet" href="/css/dashboard-v3.css?v=2">
     <link rel="stylesheet" href="/css/dashboard-fullscreen.css?v=2">
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
     <script src="/js/hud-chrome.js?v=10"></script>
     <style>
-        /* 动画背景：hud-static 自带一层同心圆（.page::before），我们原来还给这一页打了三层
-           （右上刻度环 / 左下同心圆 / 斜向扫光）。两套一起开会重影，这里把 hud-static 那层关掉。 */
-        .page::before { display: none; }
-
-        body::after {
-            content: ""; position: fixed; z-index: 0; pointer-events: none;
-            width: min(74vw, 980px); aspect-ratio: 1; right: -20vw; top: 8vh; border-radius: 50%; opacity: .42;
-            background: repeating-conic-gradient(from 0deg, #05e8f0 0 1deg, transparent 1deg 7deg);
-            -webkit-mask: repeating-radial-gradient(circle, transparent 0 9%, #000 9.2% 9.45%, transparent 9.7% 16%, #000 16.2% 16.45%, transparent 16.7% 27%, #000 27.2% 27.5%, transparent 27.8% 38%, #000 38.2% 38.55%, transparent 38.8% 47%, #000 47.2% 47.7%, transparent 48%);
-            mask: repeating-radial-gradient(circle, transparent 0 9%, #000 9.2% 9.45%, transparent 9.7% 16%, #000 16.2% 16.45%, transparent 16.7% 27%, #000 27.2% 27.5%, transparent 27.8% 38%, #000 38.2% 38.55%, transparent 38.8% 47%, #000 47.2% 47.7%, transparent 48%);
-            animation: hud-orbit 48s linear infinite;
-            filter: drop-shadow(0 0 9px #05e8f055);
-        }
-        #hudFx { position: fixed; inset: 0; z-index: 0; pointer-events: none; overflow: hidden; }
-        #hudFx::before {
-            content: ""; position: absolute; left: -25vw; bottom: -54vw;
-            width: min(88vw, 1100px); aspect-ratio: 1; border-radius: 50%;
-            border: 1px solid #05e8f02c;
-            box-shadow: 0 0 0 42px #05e8f008, 0 0 0 43px #05e8f021, 0 0 0 105px #ff385205, 0 0 0 106px #ff385222;
-            animation: hud-orbit-reverse 72s linear infinite;
-        }
-        #hudFx::after {
-            content: ""; position: absolute; top: 56px; left: 0; right: 0; bottom: 0;
-            background: linear-gradient(115deg, transparent 0 38%, #05e8f008 48%, #05e8f025 49%, transparent 50% 100%);
-            background-size: 220% 100%;
-            animation: hud-scan 9s ease-in-out infinite;
-        }
-        @keyframes hud-orbit { to { transform: rotate(360deg) } }
-        @keyframes hud-orbit-reverse { to { transform: rotate(-360deg) } }
-        @keyframes hud-scan { 0%, 18% { background-position: 180% 0 } 75%, 100% { background-position: -80% 0 } }
-        @media (prefers-reduced-motion: reduce) { body::after, #hudFx::before, #hudFx::after { animation: none } }
-
-        /* 内容层要在特效之上：背景是 fixed + z-index 0，这里给 1 */
-        main.page, #shell { position: relative; z-index: 1; }
+        /* 动画背景（右上刻度环 / 左下同心圆 / 斜向扫光）搬到 /css/hud-bg.css 了 ——
+           skill-studio 等页面也要同一份，各页各抄一份的结果是改一处忘一处。
+           那份文件里顺带关掉了 hud-static 自带的同心圆（.page::before），
+           不关会跟这里的 #hudFx::before 叠成两道圈。 */
 
         /* 封面：dv3 的美术块是给「首字 + 渐变底」设计的，有封面图时铺满即可。
            铺了图就把那个首字藏掉 —— 照片上再压一个汉字反而看不清两边。 */
