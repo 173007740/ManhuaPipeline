@@ -118,14 +118,14 @@
             <input type="text" id="q" placeholder="搜索音色名 / 标签 / 备注" style="flex:1;min-width:200px;max-width:420px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
             <!-- admin-theme.css 里 select 是 width:100%，撑满整行后三个筛选控件各占一行。
                  这里用内联样式把宽度收回来（内联优先级高于那条），让搜索框和两个下拉并排。 -->
-            <select id="catFilter" style="width:auto;min-width:132px;flex:0 0 auto;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
+            <select id="catFilter" style="width:400px;flex:0 1 400px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
                 <option value="">全部分类</option>
                 <option value="动漫">动漫</option>
                 <option value="游戏">游戏</option>
                 <option value="写实">写实</option>
                 <option value="仙侠">仙侠</option>
             </select>
-            <select id="tagFilter" style="width:auto;min-width:132px;flex:0 0 auto;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
+            <select id="tagFilter" style="width:400px;flex:0 1 400px;background:var(--bg-card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:9px 12px;font-size:13px;">
                 <option value="">全部标签</option>
             </select>
             <button class="btn btn-outline btn-small" id="btnReload"><span class="material-icons" style="font-size:inherit;vertical-align:middle">refresh</span> 刷新</button>
