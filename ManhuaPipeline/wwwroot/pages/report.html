@@ -41,6 +41,14 @@
         table.rpt { width: 100%; border-collapse: collapse; font-size: 13px; }
         table.rpt th, table.rpt td { padding: 9px 12px; text-align: left; border-bottom: 1px solid var(--border); }
         table.rpt th { background: rgba(255,255,255,.04); color: var(--text-muted); font-weight: 600; white-space: nowrap; font-size: 12px; }
+        /* 四列统计表（按天出图 / 按节点类型）：列宽钉死，两张表的「总数 / 成功 / 失败」才对得齐。
+           默认是 auto 布局，列宽按内容算 —— 第一列一个放日期、一个放类型名，宽窄不一样，
+           后面三列就被挤到不同的位置，两张表并排看是错开的。 */
+        table.rpt.stat4 { table-layout: fixed; }
+        table.rpt.stat4 th:nth-child(1) { width: 40%; }
+        table.rpt.stat4 th:nth-child(2),
+        table.rpt.stat4 th:nth-child(3),
+        table.rpt.stat4 th:nth-child(4) { width: 20%; }
         table.rpt td { color: var(--text); }
         table.rpt tbody tr:hover td { background: rgba(255,255,255,.02); }
 
@@ -135,8 +143,8 @@
             return '<div class="stat-box"><div class="k">' + k + '</div><div class="v"' + (color ? ' style="color:' + color + '"' : "") + ">" + v + "</div></div>";
         }
 
-        function table(headers, rows) {
-            var h = "<div class='table-wrap'><table class='rpt'><thead><tr>";
+        function table(headers, rows, cls) {
+            var h = "<div class='table-wrap'><table class='rpt" + (cls ? " " + cls : "") + "'><thead><tr>";
             headers.forEach(function (t) { h += "<th>" + t + "</th>"; });
             h += "</tr></thead><tbody>";
             if (!rows.length) h += "<tr><td colspan='" + headers.length + "' style='color:var(--text-muted);'>这段时间没有数据</td></tr>";
@@ -168,12 +176,12 @@
             h += '<div style="font-size:15px;font-weight:600;color:var(--text);margin:4px 0 10px;">按天出图</div>';
             h += table(["日期", "总数", "成功", "失败"], (im.byDay || []).map(function (r) {
                 return [esc(r.date), num(r.total), num(r.done), num(r.failed)];
-            }));
+            }), "stat4");
 
             h += '<div style="font-size:15px;font-weight:600;color:var(--text);margin:18px 0 10px;">按节点类型</div>';
             h += table(["类型", "总数", "成功", "失败"], (im.byType || []).map(function (r) {
                 return [esc(r.nodeType), num(r.total), num(r.done), num(r.failed)];
-            }));
+            }), "stat4");
 
             /* 来源：画布上出的写「画布 · 画板名」，资产卡上点的出图写「资产出图 · 项目名」——
                以前清单里只有画布节点，资产卡出的图一条也没有，看着像没出过。 */
