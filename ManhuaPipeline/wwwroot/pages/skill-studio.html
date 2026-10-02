@@ -469,18 +469,22 @@
   @media(max-width:760px){.bc-k{width:74px}}
   </style>
 
+    <!-- admin-theme.css 自带四层背景特效（网格 + 二进制大字 / 右上刻度环 / 左下同心圆 / 斜向青光）。
+         这一页要的是工作台同款背景，那四层由下面这份 hud-static.css 提供，所以先把 admin-theme 的关掉。
+         用 content:none 而不是 display:none —— 只掐掉「生成伪元素」这一步，
+         后面 hud-static.css 里显式写的 content 就能把它自己的四层重新生成出来（同选择器，后者优先）。
+         顺序不能动：这条必须在 admin-theme.css 之后、hud-static.css 之前。 -->
+    <style>
+      body::before, body::after, html::before, html::after { content: none; }
+    </style>
+
+    <!-- 工作台同款背景，就是这个页面「雷达在背景转」的来源：
+         html::after 雷达盘 7s 一圈 / body::after 右上刻度环 48s / body::before 54px 网格 + 二进制大字 / html::before 星点。
+         另外 html,body{background:var(--bg)} 会把 style.css 那两个大径向渐变盖成纯色深底，跟工作台一致。 -->
+    <link rel="stylesheet" href="/css/hud-static.css?v=2">
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
-<!-- 背景换成跟工作台同一份（css/hud-bg.css）：右上那个慢慢转的刻度环、左下同心圆、斜向扫光。 -->
-<link rel="stylesheet" href="/css/hud-bg.css?v=2">
-<style>
-  /* 关掉 admin-theme.css 自带的那三层背景特效：body::before 是 54px 网格 + 居中二进制大字，
-     html::after 是斜向青光，html::before 是左下同心圆环 —— hud-bg.css 里没有对应物，留着就是叠影。
-     body::after 是 admin-theme 自己描的「右上刻度环」，但它跟 hud-bg.css 里 .hud-radar
-     是同一处几何、同一套关键帧动画。两边同时跑会叠成两个完全同步的环，看着没区别，
-     但白白多画一层、而且判定/排查时容易误会。现在统一用 hud-bg.css 那一版，
-     关掉 admin-theme 的副本，右上那个刻度环只留一份在转。 */
-  body::before, body::after, html::before, html::after { display: none; }
-</style>
+    <!-- hud-bg.css：右上刻度环、左下同心圆、斜向扫光（工作台也引了这份） -->
+    <link rel="stylesheet" href="/css/hud-bg.css?v=2">
     <script src="/js/hud-chrome.js?v=10"></script>
 </head>
 <body>
