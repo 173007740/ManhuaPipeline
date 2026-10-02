@@ -475,14 +475,18 @@
 <style>
   /* 关掉 admin-theme.css 自带的那三层背景特效：body::before 是 54px 网格 + 居中二进制大字，
      html::after 是斜向青光，html::before 是左下同心圆环 —— hud-bg.css 里没有对应物，留着就是叠影。
-     唯独 body::after 不能关 —— 那是「右上刻度环」（在转的那个雷达）的挂载点，
-     hud-bg.css 画在同一个伪元素上、且加载在后，会自然覆盖 admin-theme 那份。
-     注意：只关这一页的，不动 admin-theme.css 本身 —— 别的页面还在用那套。 */
-  body::before, html::before, html::after { display: none; }
+     body::after 是 admin-theme 自己描的「右上刻度环」，但它跟 hud-bg.css 里 .hud-radar
+     是同一处几何、同一套关键帧动画。两边同时跑会叠成两个完全同步的环，看着没区别，
+     但白白多画一层、而且判定/排查时容易误会。现在统一用 hud-bg.css 那一版，
+     关掉 admin-theme 的副本，右上那个刻度环只留一份在转。 */
+  body::before, body::after, html::before, html::after { display: none; }
 </style>
     <script src="/js/hud-chrome.js?v=10"></script>
 </head>
 <body>
+  <!-- 粒子星图层：dashboard.html 同款，从 /js/particle-bg.js 共用。
+       放在最前面，跟 hudFx 一起作为 fixed z-index 0 背景，pointer-events:none 不吃点击。 -->
+  <div id="particleWrap" style="position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0;"><canvas id="particleCanvas" style="position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;"></canvas></div>
   <!-- 动画背景的挂点（css/hud-bg.css 认这个 id）：内容层在它上面，z-index 1 -->
   <div id="hudFx" aria-hidden="true"><span class="hud-radar"></span><span class="hud-rings"></span><span class="hud-scan"></span></div>
   <div style="position:relative;z-index:1;">
@@ -2168,5 +2172,6 @@
     startPoll();
   }
   </script>
+<script src="/js/particle-bg.js?v=2"></script>
 </body>
 </html>
