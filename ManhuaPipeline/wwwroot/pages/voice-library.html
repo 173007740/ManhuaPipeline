@@ -20,25 +20,22 @@
 
         .voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
         .voice-card { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
-        /* 封面不再铺满整张卡片，改成右上角一块小图。
+        /* 封面不再铺满整张卡片，改成头部右侧一块 120 的方图。
            以前的做法是 background-size:cover 铺底 + 一层暗色渐变压着保证文字可读，
-           结果整张卡片的底色被图吃掉，卡片之间看着很乱、文字也发灰。
-           现在是绝对定位的小方块，不占卡片高度，底色仍是原来的半透明玻璃底。 */
+           整张卡片的玻璃底被图吃掉，卡片之间看着很乱、文字也发灰。
+           现在是 .vhead 一行两栏：左边文字、右边图，音频和按钮仍在下面各占整行 ——
+           图放大到 120 之后就不能再绝对定位了，否则会压住音频播放条。 */
+        .voice-card .vhead { display: flex; align-items: flex-start; gap: 12px; }
+        .voice-card .vhead-left { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
         .voice-card .cover-thumb {
-          position: absolute;
-          top: 8px;
-          right: 8px;
-          width: 56px;
-          height: 56px;
+          width: 120px;
+          height: 120px;
           border-radius: 8px;
           object-fit: cover;          /* 头像多是竖图，裁成方块不变形 */
           flex: none;
           border: 1px solid var(--border);
           background: #061018;
-          z-index: 2;
         }
-        /* 音色名给右上角的小图让出位置，长名字照旧省略号截断 */
-        .voice-card.has-cover .name { padding-right: 68px; }
         .voice-card .name { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .voice-card .meta { font-size: 11px; color: var(--text-muted); line-height: 1.8; }
         .voice-card .file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -298,20 +295,26 @@
             $("#empty").hide();
             items.forEach(function (v) {
                 var $c = $('<div class="voice-card"></div>');
-                if (v.imageUrl) {
-                    // 封面走右上角的小方块（.cover-thumb），不再整块铺底
-                    $c.addClass("has-cover");
-                    $c.append('<img class="cover-thumb" src="' + esc(v.imageUrl) + '" alt="封面" title="封面图" loading="lazy">');
-                }
-                $c.append('<div class="name" title="' + esc(v.name) + '">' + esc(v.name) + "</div>");
+                // 头部一行：左边是名字和几行信息，右边是封面图（有封面时）。
+                // 图放大到 120 后不能再绝对定位了 —— 会压住下面的音频播放条，
+                // 所以让它跟文字并排占一行，音频和按钮仍然独占整行。
+                var $head = $('<div class="vhead"></div>');
+                var $left = $('<div class="vhead-left"></div>');
+                $left.append('<div class="name" title="' + esc(v.name) + '">' + esc(v.name) + "</div>");
                 // 卡片信息分三行：分类/标签 → 文件名 → 更新日期
                 var chips = (v.category ? '<span class="catchip">' + esc(v.category) + "</span> " : "")
                     + (v.tag ? '<span class="tagchip">' + esc(v.tag) + "</span>" : "");
-                if (chips) $c.append('<div class="meta">' + chips + "</div>");
-                $c.append('<div class="meta file" title="' + esc(v.originalFileName || "") + '">'
+                if (chips) $left.append('<div class="meta">' + chips + "</div>");
+                $left.append('<div class="meta file" title="' + esc(v.originalFileName || "") + '">'
                     + esc(v.originalFileName || "（无文件名）") + "</div>");
-                $c.append('<div class="meta">更新于 ' + esc(v.updatedAt) + "</div>");
-                if (v.note) $c.append('<div class="note">' + esc(v.note) + "</div>");
+                $left.append('<div class="meta">更新于 ' + esc(v.updatedAt) + "</div>");
+                if (v.note) $left.append('<div class="note">' + esc(v.note) + "</div>");
+                $head.append($left);
+                if (v.imageUrl) {
+                    $c.addClass("has-cover");
+                    $head.append('<img class="cover-thumb" src="' + esc(v.imageUrl) + '" alt="封面" title="封面图" loading="lazy">');
+                }
+                $c.append($head);
                 $c.append('<audio controls preload="none" src="' + esc(v.audioUrl) + '"></audio>');
                 var act = $('<div class="row-act"></div>');
                 act.append('<button class="btn btn-outline btn-small btn-edit" data-id="' + v.id + '">编辑</button>');
