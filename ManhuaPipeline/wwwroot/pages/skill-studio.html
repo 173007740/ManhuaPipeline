@@ -491,6 +491,18 @@
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
     <!-- hud-bg.css：右上刻度环、左下同心圆、斜向扫光（工作台也引了这份） -->
     <link rel="stylesheet" href="/css/hud-bg.css?v=2">
+    <style>
+      /* 背景层数收一收，这一页只留两个在转的：右侧雷达盘（7s）+ 右上刻度环（48s）。
+         1. 左下同心圆（.hud-rings，72s 反向转）去掉 —— 它跟雷达盘分布在屏幕两头，
+            两个圆同时在转，视线会被拉散。
+         2. hud-static.css 的 body::after 和 hud-bg.css 的 .hud-radar 是同一个东西：
+            同几何（right:-20vw / top:8vh / min(74vw,980px)）、同关键帧（hud-orbit 48s）、
+            连 mask 都逐段一致。hud-bg.css 本来就是从 hud-static 那几层抽出来重写的，
+            两份同时加载就成了两个完全同步的环，白画一层。保留 hud-bg.css 那份
+            （它同时还管斜向扫光），把 hud-static 这份关掉。 */
+      .hud-rings { display: none; }
+      body::after { content: none; }
+    </style>
     <script src="/js/hud-chrome.js?v=10"></script>
 </head>
 <body>
