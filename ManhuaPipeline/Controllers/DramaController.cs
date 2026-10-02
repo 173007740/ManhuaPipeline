@@ -180,7 +180,8 @@ public class DramaController : ControllerBase
         // 按立项里填的总集数截一刀：填 1 集就只该有 1 集
         list = _db.ClampEpisodeOutline(id, list);
 
-        var (created, updated) = _db.BuildEpisodeProjects(uid, id, list);
+        // 内容类型按立项那份落成：立项里改了「广告」，新生成的每一集就是广告项目
+        var (created, updated) = _db.BuildEpisodeProjects(uid, id, list, _db.GetContentType(id));
         return Ok(new { created, updated, total = list.Count });
     }
 
@@ -243,7 +244,7 @@ public class DramaController : ControllerBase
                 }
 
                 _db.SaveEpisodeOutline(id, list);
-                _db.BuildEpisodeProjects(uid, id, list);
+                _db.BuildEpisodeProjects(uid, id, list, _db.GetContentType(id));
                 _db.UpdateSkillRun(runId, "P0", "done");
             }
             catch (Exception ex)

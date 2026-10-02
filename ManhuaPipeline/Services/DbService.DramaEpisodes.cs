@@ -248,6 +248,23 @@ VALUES(@uid,@did,@t,@d,1,@pt,@no)", conn, tx);
         return (created, updated);
     }
 
+    /* 写进 P0 文本时给模型看的标签。带上英文代号（ad / mv）是因为规则库里定的就是这两个代号，
+       模型读到「广告」两个字未必联想起【广告项目结构规则】那一段，两个都写它才对得上号。 */
+    private static string TypeLabel(string t) => t switch
+    {
+        "ad" => "广告（ad）",
+        "mv" => "歌曲MV（mv）",
+        _ => "短剧（drama）"
+    };
+
+    /// <summary>动作强度三档：R1 写实克制 / R2 商业高燃 / R3 玄幻大招。</summary>
+    private static string ActionLevelLabel(string lv) => lv switch
+    {
+        "R1" => "R1 写实克制",
+        "R3" => "R3 玄幻大招",
+        _ => "R2 商业高燃"
+    };
+
     /// <summary>项目简介 = 三幕骨架 + 本集卡点。卡片上只显示两行，骨架放前面。</summary>
     private static string? ComposeProjectDescription(EpisodeOutline e)
     {
@@ -288,6 +305,13 @@ VALUES(@uid,@did,@t,@d,1,@pt,@no)", conn, tx);
 
         Line("画幅", b.Aspect);
         Line("交付形态", b.Delivery);
+        /* 内容类型与动作强度：写进这份文本有两个作用 ——
+           一、跑 P0 时它是输入，立项这一步就知道自己在做什么类型的片子；
+           二、逐集跑剧本时这份文本会原样作为「立项锁定参数」塞进每一站的末尾，
+               所以 P1 写剧本、P2 提资产、P3 分镜、P4 提示词全都看得见这两个值，
+               不用给每个环节单独再传一遍（ExecuteStepAsync 里那条 p0 兜底就是这么做的）。 */
+        Line("内容类型", TypeLabel(NormalizeProjectType(b.ProjectType)));
+        Line("动作强度", ActionLevelLabel(NormalizeActionLevel(b.ActionLevel)));
         Line("题材", b.Genre);
         Line("画风方向", styleName.Length > 0 ? styleName : b.Genre);
         Line("核心爽点", b.Hook);

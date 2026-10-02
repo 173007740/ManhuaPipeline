@@ -748,6 +748,31 @@ public class DirectorAgentService
             }
         }
 
+        /* 内容类型与动作强度：立项那两格决定了这部片子按什么规矩写。
+           两个值本身已经随【立项锁定参数】进了 inputText，但模型只看到「内容类型：广告」这四个字，
+           未必知道这意味着什么——规则条文要单独再说一遍，它才会照着做。
+
+           两套规则分着用，别混：
+           - P0 立项 / P1 剧本层：BuildScriptStageTypeRulesText（管情节结构、信息投放、结尾落点）
+           - 活动强度档：三阶段都注入，因为它同时约束「写剧本要不要给势能」和「打戏打到什么程度」
+             分镜层那套定义则是另一种表达（Stage 4/5/9 各自注入），这里不重复。 */
+        var dimSb = new StringBuilder();
+        var dimCtx = _db.GetRunContext(runId);
+        var dimDid = dimCtx.ProjectId > 0 ? _db.GetDramaIdByProject(dimCtx.ProjectId)
+                                          : _db.GetRunDramaId(runId);
+        if (dimDid > 0)
+        {
+            var dimBrief = _db.GetDramaBrief(dimDid);
+            var dimType = DbService.NormalizeProjectType(dimBrief?.ProjectType);
+            var dimKey = stage.StageKey ?? "";
+            var isScriptStage = string.Equals(dimKey, "P0", StringComparison.OrdinalIgnoreCase)
+                                || dimKey.StartsWith("P1", StringComparison.OrdinalIgnoreCase);
+
+            if (isScriptStage)
+                dimSb.Append(AgentService.BuildScriptStageTypeRulesText(dimType));
+            dimSb.Append(AgentService.BuildActionLevelRulesText(dimBrief?.ActionLevel));
+        }
+
         var build = BuildPrompt(packId, stage);
         var cost = CostOf(packId, stage);
         int stepId = _db.CreateSkillStep(runId, stage.StageKey, stage.Name, stage.SortOrder,
@@ -756,7 +781,8 @@ public class DirectorAgentService
         /* 类型覆盖要贴在最后：规则库里 SD 与 H3 两套文档是同时加载的，
            不点明本次走哪套，模型必然被字数多的那套带跑。放在末尾说的话权重最高。 */
         var sys = build.SystemPrompt + "\n\n# 输入（用户提供的素材）\n" + inputText
-                  + PromptTypeOverride(inputText);
+                  + PromptTypeOverride(inputText)
+                  + (dimSb.Length > 0 ? "\n\n" + dimSb.ToString() : "");
 
         // 分镜这一站要连着调好几次 LLM（列清单 + 分批写），调用参数收在一处，下面只管发指令
         async Task<string> CallLlm(string userMsg, bool jsonMode = false)

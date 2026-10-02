@@ -1185,7 +1185,7 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
         string? keyframeAnchor = null,
         int projectId = 0)
     {
-        var seedancePrompt = BuildSeedanceSystemPrompt(stylePrompt, skillText, fightText, charNames, _db.GetProjectType(projectId));
+        var seedancePrompt = BuildSeedanceSystemPrompt(stylePrompt, skillText, fightText, charNames, _db.GetProjectType(projectId), _db.GetActionLevelForProject(projectId));
 
         var userMsg = "【镜头规划】\n" + shotPlan + "\n\n【角色资产名单】\n" + charNames + "\n\n【道具资产名单】\n" + propNames + "\n\n【场景资产名单】\n" + envNames + "\n\n【特效资产名单】\n" + effectNames + "\n\n【角色关键词】\n" + charKeywords + "\n\n【道具关键词】\n" + propKeywords + "\n\n【场景关键词】\n" + envKeywords + "\n\n【特效关键词】\n" + effectKeywords + "\n\n【镜头衔接分析】\n" + shotAnalysis;
         if (!string.IsNullOrWhiteSpace(skillText))
@@ -1241,7 +1241,90 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
         return sb.ToString();
     }
 
-    private static string BuildSeedanceSystemPrompt(string stylePrompt, string skillText, string fightText, string charNames, string? projectType = null)
+    /// <summary>
+    /// 内容类型规则 · 剧本层（P0 立项 / P1 剧本用）。
+    ///
+    /// 为什么会有第二套：上面那套 AppendProjectTypeRules 全是**分镜层**的话术——
+    /// 「产品必须以参考图外观出现」「每处的取景/® 光影」之类，兑现不了。
+    /// 同样的类型到了写剧本这一步，要约束的是另一回事：情节结构、信息投放、结尾落点。
+    /// 把分镜那套提前塞进 P1，模型只会产出一份「像广告一样的空壳」。
+    /// 短剧（drama）不注入任何内容：它就是这套系统改造前的默认行为。
+    /// </summary>
+    public static string BuildScriptStageTypeRulesText(string? projectType)
+    {
+        var t = DbService.NormalizeProjectType(projectType);
+        if (t == "drama") return "";
+
+        var sb = new StringBuilder();
+        if (t == "ad")
+        {
+            sb.Append("【内容类型：广告（剧本层规则）】\n");
+            sb.Append("1. 三步链必须在剧本里就存在，缺一步这一集不成立：一、产品出场（清晰完整可辨认）；二、被使用或效果真的发生；三、使用者反应（处境、表情或动作的具体变化）。\n");
+            sb.Append("2. 产品是角色之一而非背景：它必须有被人拿起来、用下去的具体动作，禁止只做虚化一闪而过、禁止全程没有人碰它。\n");
+            sb.Append("3. 卖点必须化作事件：写清「在使用前是什么样、使用后变成什么样」这个对比本身，而不是让人物夸它。这句对比是靠使用-later 画面演的，不要写成台词。\n");
+            sb.Append("4. 结尾必须落在「使用者处境被改变」这个结果上，禁止停在「他若有所思」「画面渐渐暗下」这类无结论收尾。\n");
+            sb.Append("5. 产品名按立项给的正式名称写，禁止缩写、改名或自己起别名；品牌 Logo、包装文字、价格、联系方式一律不写进剧本（后期叠加）。\n\n");
+        }
+        else if (t == "mv")
+        {
+            sb.Append("【内容类型：歌曲MV（剧本层规则）】\n");
+            sb.Append("1. 歌词是唯一的台词来源：本项目是演唱对口型，禁止为 MV 新写对白、旁白或解说性台词。\n");
+            sb.Append("2. 按乐句组织段落，不按叙事因果：一句歌词（或一组连续短乐句）对应一个段落，禁止把并列意象用「因为…所以…」「随后他决定…」串成故事。\n");
+            sb.Append("3. 允许时空跳跃，但同一母题反复出现时画面元素必须一致（同一个场景、同一套服装、同一种光），这是 MV 唯一的一致性锚点。\n");
+            sb.Append("4. 每个段落都必须有持续运动（走位、物体运动、光影变化），禁止把段落写成静态摆拍式的画面描述。\n");
+            sb.Append("5. 唱歌比说话慢：段落长度按乐句实际演唱时长取，禁止按说话语速的字数上限去压缩。\n\n");
+        }
+        return sb.ToString();
+    }
+
+    /// <summary>
+    /// 动作强度三档规则（R1 写实克制 / R2 商业高燃 / R3 玄幻大招）。
+    ///
+    /// 三档差别不是为了「打得更好看」，是为了**别对所有题材套同一套高燃套路**——
+    /// 拍悬疑暗杀却要 0.5 秒开局硬撞加全套气爆，片子一下就散了。
+    /// 立项没填时按 R2（技能包里 R2 就是默认档），这里不允许模型自己挑。
+    ///
+    /// 开头的总纲铁律对三档一律适用：AI 视频没有「静止表演」能力，
+    /// 「对峙两秒 / 蓄势待发 / 特写定格」这类静止段会被渲染成角色呆立、节奏拖沓。
+    /// </summary>
+    public static string BuildActionLevelRulesText(string? actionLevel)
+    {
+        var lv = DbService.NormalizeActionLevel(actionLevel);
+
+        var sb = new StringBuilder();
+        sb.Append("【动作强度档：" + (lv == "R1" ? "R1 写实克制" : lv == "R3" ? "R3 玄幻大招" : "R2 商业高燃") + "】\n");
+        sb.Append("0. 总纲（三档通用）：AI 视频没有静止表演能力——禁止写「对峙 N 秒」「蓄势待发」「悬停」「特写定格」「留白」这类静止段，"
+                + "模型只会渲染成角色呆立几秒。一切蓄力必须在运动中完成：边打边蓄、上升途中蓄、后撤中蓄；神态挂载在动作瞬间（甩剑转身时冷笑），不单独成段。"
+                + "唯一允许的停顿是命中瞬间 1~2 帧的微停顿（Hit-Stop），其余静止默认禁用。\n");
+
+        if (lv == "R1")
+        {
+            sb.Append("1. 不强制开局硬撞：1.5 秒内发生有效接触即可，允许靠走位、环境或试探建立张力。\n");
+            sb.Append("2. 近景机枪对招为可选项，写了才写，不写不扣分。\n");
+            sb.Append("3. 弱化气爆与光效：以真实受力反馈为主（踉跄、格挡震麻、重心失控、擦痕），禁止为冲击感凭空加大招特效。\n");
+            sb.Append("4. 允许克制收势或悬念收尾——这是 R1 相对高档位唯一的自由：不必强行停在最高潮那一帧。\n");
+        }
+        else if (lv == "R3")
+        {
+            sb.Append("1. 开局 0.5 秒内必须发生硬撞：两种对立招式的正面碰撞，第一帧建议双人同框中近景，不要远景铺垫。\n");
+            sb.Append("2. 必有一段 2~3 秒上半身近景对招，逐击写清「攻击部位 → 招式名 → 防守方具体反应」，禁止写「快速连击」这种抽象词。\n");
+            sb.Append("3. 8~12 秒区间必须出现一次局势逆转、破防爆发或破绽抓取，让情绪有反弹点。\n");
+            sb.Append("4. 特效拉满：法相、法宝、领域、能量具象、清场级连锁反应按本片世界观写足，每次必须落到具体形态（丝/雾/环/浪/弧光/粒子/纹路）不能只写抽象能量词。\n");
+            sb.Append("5. 最后一帧必须停在最高潮定格：终结技命中、重创失衡、冲击波炸裂、碎石掀飞或撞塌地形，禁止以收势、落地、发丝飘落、气焰消散这类平缓画面收尾。\n");
+        }
+        else
+        {
+            sb.Append("1. 开局 0.5 秒内必须发生硬撞：两种对立招式的正面碰撞，第一帧建议双人同框中近景，不要远景铺垫。\n");
+            sb.Append("2. 必有一段 2~3 秒上半身近景对招，逐击写清「攻击部位 → 招式名 → 防守方具体反应」，禁止写「快速连击」这种抽象词。\n");
+            sb.Append("3. 8~12 秒区间必须出现一次局势逆转、破防爆发或破绽抓取，让情绪有反弹点。\n");
+            sb.Append("4. 最后一帧必须停在最高潮定格：终结技命中、重创失衡、冲击波炸裂、碎石掀飞或撞塌地形，禁止以收势、落地、发丝飘落、气焰消散这类平缓画面收尾。\n");
+            sb.Append("5. 可以有实效也有保留：命中反馈要写足（受击者反应 + 环境反应 + 镜头反应），但没有必要每一下都升级成必杀。\n");
+        }
+        sb.Append('\n');
+        return sb.ToString();
+    }
+
+    private static string BuildSeedanceSystemPrompt(string stylePrompt, string skillText, string fightText, string charNames, string? projectType = null, string? actionLevel = null)
     {
         var sb = new StringBuilder();
         sb.Append("你是一位好莱坞顶级影视提示词架构师，精通所有大模型 prompt 逻辑，善于把需求转化为高质量、可执行的提示词；同时是专业的 Seedance 2.0 视频生成提示词工程师。要求：清晰结构化排版，无废话、不闲聊、不凑字数；严格依据给定的【镜头规划】与角色/道具/场景资产名单输出，禁止自行增删剧情、角色、道具、场景与台词。\n\n");
@@ -1288,6 +1371,10 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
         sb.Append("【风格卡固定铁律】\n1. @图N 行最后一段是风格卡，名称固定为「光影质感」，禁止改写成 冷月雨夜、葬天台冷暗光影、冷月七色法光、冷月光 等场景化名称，只允许写「@图N [光影质感]光影质感参考，保持冷月光、体积光、强明暗对比、电影级材质一致」。\n\n");
         sb.Append("【特效与氛围去水转化表（全类型通用）】\n视频模型无法渲染抽象能量词与空泛氛围词：裸写「能量/灵力/气息/波动/光芒大作/强光/氛围感/高级感」只会生成模糊光雾、发光软管或原地空转的空镜。任何特效、光影、氛围描写都必须落到四要素：形态（丝/雾/环/浪/弧光/光带/粒子/纹路）、边界（清晰轮廓还是渐隐消散）、运动（喷射/环绕/炸开/汇聚/流淌的方向与速度）、材质（半透明/流动/带碎屑/带电弧/金属反光）。禁用左列裸写，改写为右列具体形态：\n- 光柱/能量柱 → 有明确边缘与流速的倾泻光带、洪流状下压\n- 光芒大作/强光/光晕 → 环状弧光扩散、光丝如雨落下、边缘清晰的柔光带\n- 能量波动/震荡 → 可见空气波纹荡开、涟漪状折射扭曲\n- 强大气场/威压/压迫感 → 尘环沿地面向外推进、碎石弹起、衣袍发丝被持续吹起\n- 力量汇聚/蓄力 → 光尘向一点螺旋汇聚、周围空气扭曲\n- 能量爆发/炸裂 → 环形冲击波荡开 + 碎屑飞散 + 地面掀起尘环\n- 剑气/刀光 → 有锋利边缘的斩击弧光、带残影拖尾的清晰轨迹\n- 氛围感/高级感/质感 → 落为具体的光、材质与运动（如 冷白侧光从百叶窗缝隙切开、金属台面拉出细长高光、尘埃在光柱中缓慢浮动）\n每个特效或氛围描写至少给出「形态 + 运动 + 环境反馈」三项，禁止只写抽象名词加程度副词（如「强大的能量」「惊人的气势」「极具氛围感」）；技能库技能以其视频版提示词或参考图中的具体形态为准，同样禁止退化成抽象能量词。\n\n");
         AppendProjectTypeRules(sb, projectType);
+        /* 动作强度档（R1/R2/R3）：这一层直接决定每一下打到什么烈度、最后一帧能不能平缓收尾。
+           它跟上面的内容类型是两件事——内容是广告照样可以有 R3 级别的大招，
+           是短剧也可以按 R1 克制拍，两个维度互不干涉。 */
+        sb.Append(BuildActionLevelRulesText(actionLevel));
         sb.Append("【后期叠加规则（屏幕/文件类文字一律留白）】\n1. 手机屏幕、短信、聊天记录、来电显示、新闻推送、头条、文件、卷宗、书信、纸条、告示、榜单、地图、监控画面、时间码、系统面板等「文字类画面元素」，画面只画洁净留白（无字符）的屏幕/纸面/面板，文字内容一律后期叠加，禁止在画面中生成任何可读文字或字符。\n2. 含这类元素的镜头，「约束：」行必须写明「视频中只保留屏幕留白，文字后期叠加」。\n3. 正文只描述设备材质、反光、持握方式与人物看屏幕的反应（如「指尖停在屏幕上」「屏幕冷光映亮侧脸」「纸页被指腹压出褶皱」），禁止把短信/新闻/文件的具体文字写进时间块正文。\n4. 与剧情相关的信息内容一律用人物反应、对话或内心独白承载，不依赖画面中的文字；需要后期叠加的清单条目由系统单独维护，不要在提示词里补写文字内容。\n\n");
         sb.Append("【质感层规则（Mx-Shell 式五段，融入既有行，禁止新增字段行）】\n1. 质感锚点只能写进既有行：机位/镜头/景深/材质/瑕疵写进 [X-Ys] 时间块正文，光色写进「灯光：」行，技术参数写进「约束：」行；禁止因此新增字段行，禁止压缩时间块数量或牺牲动作密度。\n2. 镜头/胶片锚点：每个镜头至少给出一个具体的镜头或胶片锚点（如 IMAX 胶片机+Panavision C 系 35mm f/4、Sony Venice+Canon K-35、Kodak 35mm 漂白旁路、Canon EF 85mm f/1.2 人像镜头、超广角 18mm 低角度），禁止只写「电影级镜头」「高级感」这类空词。\n3. 光色锚点：「灯光：」行必须写具体光行为与色温倾向（低饱和灰蓝、低照度高反差、青橙对比、暖调实用光源、侧逆光、轮廓光、体积雾中的丁达尔光），禁止只写「光影唯美」。\n4. 材质锚点：画面元素写到物理材质（湿混凝土、磨损金属、油污关节、布料浮尘、皮肤细纹、裂纹玻璃、胶片颗粒、光雾、不完美反射），禁止一味写「干净」「锃亮」。\n5. 瑕疵锚点（反过度美化）：人物、服装、道具、环境各至少给出 2 处真实瑕疵（发丝翘起、领口褶皱、指节擦伤、衣角磨白、鞋面泥点、道具磨痕、墙面剥落、地面积水），禁止全身全道具无瑕的塑料感画面。\n6. 镜头浮动：手持、主观、跟拍类镜头写「手持拍摄，全程保持极其轻微的、如呼吸般的镜头浮动，增强临场感，禁止变成剧烈晃动」；固定机位、证据与线索特写一律用固定机位稳定呈现，禁止无理由晃动。\n7. 声音策略：每个镜头正文都要体现「无配乐，仅现场同期声」，并点出本镜头的具体制作音（呼吸、脚步、布料摩擦、玻璃裂响、雨声、远处警笛、手机震动、灯管嗡鸣、金属刮擦、低频轰鸣、门轴声、人群嘈杂），禁止写「热血BGM」「史诗配乐」「悲壮配乐」，也禁止为此单独输出「音效：」字段行。\n8. 反空洞褒义词：禁止「史诗、震撼、高级、完美、炫酷、大片感、电影级」等词单独出现——出现时必须与具体机位、光、材质或运动细节绑定，否则删掉；@图N 行的「光影质感」风格卡原文与「约束：」行的固定参数不受本条限制。\n9. 收尾克制：镜头结尾停在「变化之后的状态」上，环境声继续，保留破损、不完整、不安的细节，切在目光、声音、道具状态或未解决的威胁上；除分镜明确要求外，禁止堆爆炸、强光、胜利姿势或新增剧情动作。\n10. 与既有规则冲突时以既有规则为准：运镜强度仍按镜头类型执行（文戏稳定缓推、打斗快速推拉摇移）、@图N 绑定顺序与字数上限不变，质感层只是把描述写具体，不新增人物、道具、剧情与字段行。\n\n");
         return sb.ToString();
@@ -1998,7 +2085,7 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
         var shotLabel = (p?.ShotLabel ?? shot?.ShotLabel) ?? "未知";
         var lyricTrack = projectId > 0 ? _db.GetLyricTrackText(projectId) : "";
         if (!string.IsNullOrWhiteSpace(lyricTrack)) userMsg.AppendLine("\n" + lyricTrack);
-        var raw = await _llm.CallAsync(apiUrl, apiKey, model, BuildH3SystemPrompt(fromScript, stylePrompt ?? DefaultStylePrompt, !string.IsNullOrWhiteSpace(refAssetText), voiceRefs.Count > 0, _db.GetProjectType(projectId)), userMsg.ToString(), thinkingMode: thinkingMode);
+        var raw = await _llm.CallAsync(apiUrl, apiKey, model, BuildH3SystemPrompt(fromScript, stylePrompt ?? DefaultStylePrompt, !string.IsNullOrWhiteSpace(refAssetText), voiceRefs.Count > 0, _db.GetProjectType(projectId), _db.GetActionLevelForProject(projectId)), userMsg.ToString(), thinkingMode: thinkingMode);
         // 绑定一致性程序校验：素材绑定行 / <Subject N> 定义 / 正文引用必须一一对应。
         // 素材说明只要写了绑定行（@图片1..N），自身即绑定权威，无论有无 SD 锁定表都硬校验；
         // 不一致时先自动补纯漏写的定义，其余错位携带校验错误让模型带着错误信息重生成。
@@ -2044,7 +2131,7 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
                 userMsg.AppendLine();
                 userMsg.AppendLine("【修正要求】（上一次生成未通过参考图绑定一致性校验，请按规则修正后重新输出完整 H3 文本，不要输出任何解释）");
                 userMsg.AppendLine(string.Join("\n", bindingIssues.Select(i => "- " + i)));
-                raw = await _llm.CallAsync(apiUrl, apiKey, model, BuildH3SystemPrompt(fromScript, stylePrompt ?? DefaultStylePrompt, !string.IsNullOrWhiteSpace(refAssetText), voiceRefs.Count > 0, _db.GetProjectType(projectId)), userMsg.ToString(), thinkingMode: thinkingMode);
+                raw = await _llm.CallAsync(apiUrl, apiKey, model, BuildH3SystemPrompt(fromScript, stylePrompt ?? DefaultStylePrompt, !string.IsNullOrWhiteSpace(refAssetText), voiceRefs.Count > 0, _db.GetProjectType(projectId), _db.GetActionLevelForProject(projectId)), userMsg.ToString(), thinkingMode: thinkingMode);
                 llmCalls++;
                 continue;
             }
@@ -2217,7 +2304,7 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
         return name + "（随身物品：" + string.Join("、", items) + "，已画在本角色卡内、随本卡一起生效，禁止为它们单独占参考图槽）";
     }
 
-    private static string BuildH3SystemPrompt(bool fromScript, string stylePrompt, bool hasRefAssets, bool hasVoiceRefs = false, string? projectType = null)
+    private static string BuildH3SystemPrompt(bool fromScript, string stylePrompt, bool hasRefAssets, bool hasVoiceRefs = false, string? projectType = null, string? actionLevel = null)
     {
         var sb = new StringBuilder();
         if (fromScript)
@@ -2333,6 +2420,7 @@ public async Task<string> BuildPrompt(int projectId, string apiUrl, string apiKe
         sb.Append("11. 色调锚定与防偏色纪律（硬约束）：(a) detailed_description 开头的风格句是【项目风格】原文引用，照抄其中的色温词不算违规；除该句之外，逐镜头描述里禁止反复铺陈暖/冷色形容词（英文 warm / amber / golden / yellow / cool / blue，中文 暖/暖金/金黄/偏黄/冷/蓝 等同义表达），禁止用同义词在多个镜头重复强调同一色温；(b) 本流程不设画面风格参考图：逐镜头描述的光线与色温依据优先取主要环境/场景参考图的实测观感，与风格文本措辞不一致时一律服从参考图实测；(c) 参考图明显偏黄/偏冷时，正文逐镜头的肤色、环境光、背景光一律沿用该基准色温，禁止额外堆叠同类色温词或反向夸大（如参考图偏黄时不得再用 暖/暖金/golden/warm 反复强调各处光线）。\n");
         sb.Append("12. 字幕纪律（最高优先级硬约束，分镜线与 SD 线均适用）：无论源文本（Stage 5 分镜脚本或已有 SD 提示词）是否出现字幕类内容，本提示词正文一律禁止生成/保留任何字幕——包括「字幕淡入/浮现」「白色/白字字幕」「片头/时间地点字幕」及分镜『对话/台词』字段中形如「字幕：民国二十六年初夏…」的画面文字。具体判定：①「对话/台词」为「字幕：…」或仅含画面文字时，一律视为无台词镜头，不写 <d>、不分配 (Sx)，该行文字不得以任何形式出现在正文或作为说话内容；②正文（summary/detailed_description 等）禁止出现“字幕淡入/浮现/白字字幕”等作为画面动作或氛围的描述——源文本这类措辞属于后期合层提示，不是视频画面可生成的元素，一律不照搬；③源文本时代/地点信息若仅由字幕承担，改用画面元素（场景、光线、道具、服装）在正文中交代，不得写成字幕；④负向约束 no subtitles 仍保留在首句风格句。\n");
         AppendProjectTypeRules(sb, projectType);
+        sb.Append(BuildActionLevelRulesText(actionLevel));
         return sb.ToString();
     }
 

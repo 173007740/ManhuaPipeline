@@ -314,7 +314,8 @@ public class DirectorAgentController : ControllerBase
             artStyleId = b.ArtStyleId, hook = b.Hook, premise = b.Premise, platform = b.Platform,
             episodeCount = b.EpisodeCount, episodeDuration = b.EpisodeDuration,
             charactersJson = b.CharactersJson, promptEngine = b.PromptEngine,
-            videoStyleId = b.VideoStyleId
+            videoStyleId = b.VideoStyleId,
+            projectType = b.ProjectType, actionLevel = b.ActionLevel
         });
     }
 
@@ -430,7 +431,8 @@ public class DirectorAgentController : ControllerBase
 
         var id = _db.UpsertDramaBrief(did, body.Status, body.Aspect, body.Delivery, body.Genre,
             body.ArtStyleId, body.Hook, body.Premise, body.Platform, body.EpisodeCount,
-            body.EpisodeDuration, body.CharactersJson, body.PromptEngine, body.VideoStyleId);
+            body.EpisodeDuration, body.CharactersJson, body.PromptEngine, body.VideoStyleId,
+            body.ProjectType, body.ActionLevel);
         return Ok(new { dramaId = id });
     }
 
@@ -453,6 +455,11 @@ public class DirectorAgentController : ControllerBase
         public string? PromptEngine { get; set; }
         /// <summary>视觉风格（VideoStyles）：整部漫剧的影像调性。跟 ArtStyleId（图片风格）各管一段。</summary>
         public int? VideoStyleId { get; set; }
+        /// <summary>内容类型：drama 短剧（默认）/ ad 广告 / mv 歌曲MV。决定结构规则与时间轴来源。
+        /// 写在这里是漫剧级的——新建单集项目时按它落成 Projects.ProjectType。</summary>
+        public string? ProjectType { get; set; }
+        /// <summary>动作强度档：R1 写实克制 / R2 商业高燃（默认）/ R3 玄幻大招。</summary>
+        public string? ActionLevel { get; set; }
     }
 
     /// <summary>取某一步的完整产出（原文 + 结构化结果 + 本次实际加载了哪些规则）。</summary>

@@ -449,7 +449,7 @@ public class LLMService
     }
 
     // ========== 5. Storyboard ==========
-    public async Task<string> PlanShots(string unitContent, string apiUrl, string apiKey, string model, string? cameraText = null, string? skillText = null, string? fightText = null, string? directorPlanText = null, string? envText = null, string? thinkingMode = null, System.Collections.Generic.IReadOnlyList<string>? complianceFeedback = null, string? projectType = null, string? lyricTrackText = null)
+    public async Task<string> PlanShots(string unitContent, string apiUrl, string apiKey, string model, string? cameraText = null, string? skillText = null, string? fightText = null, string? directorPlanText = null, string? envText = null, string? thinkingMode = null, System.Collections.Generic.IReadOnlyList<string>? complianceFeedback = null, string? projectType = null, string? lyricTrackText = null, string? actionLevel = null)
     {
         var directiveText = cameraText;
         if (string.IsNullOrWhiteSpace(unitContent)) return "";
@@ -495,6 +495,13 @@ public class LLMService
                     var projectTypeRules = AgentService.BuildProjectTypeRulesText(projectType);
                     if (!string.IsNullOrWhiteSpace(projectTypeRules))
                         systemPrompt += "\n\n" + projectTypeRules;
+                    /* 动作强度档（R1/R2/R3）：决定这一组镜头要不要硬撞、要不要气爆、能不能平缓收尾。
+                       不写死这一档的话，模型默认会往「打得最热闹」那边走——
+                       悬疑暗杀也会被它拍成商业高燃。drama 的类型规则是「不注入」，
+                       这一档必须有默认值，所以统一由 NormalizeActionLevel 兜到 R2。 */
+                    var actionLevelRules = AgentService.BuildActionLevelRulesText(actionLevel);
+                    if (!string.IsNullOrWhiteSpace(actionLevelRules))
+                        systemPrompt += "\n\n" + actionLevelRules;
                     var userMsg = eps[ei];
                     if (!string.IsNullOrWhiteSpace(lyricTrackText))
                         userMsg += "\n\n" + lyricTrackText;

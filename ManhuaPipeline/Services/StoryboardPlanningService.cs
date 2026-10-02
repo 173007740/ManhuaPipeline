@@ -104,7 +104,7 @@ public class StoryboardPlanningService
             });
 
             var request = BuildFallbackRequest(stage4Text, cameraText, skillText, fightSummary);
-            var result = await _llm.PlanShots(stage4Text, apiUrl, apiKey, model, cameraText, skillText, fightSummary, envText: envText, thinkingMode: thinkingMode, projectType: projectType, lyricTrackText: _db.GetLyricTrackText(projectId));
+            var result = await _llm.PlanShots(stage4Text, apiUrl, apiKey, model, cameraText, skillText, fightSummary, envText: envText, thinkingMode: thinkingMode, projectType: projectType, lyricTrackText: _db.GetLyricTrackText(projectId), actionLevel: _db.GetActionLevelForProject(projectId));
             LogCall(projectId, model, "整段自由分镜", "-", request, result);
             if (IsRefusalOrPlaceholder(result)) return "";
             if (!StoryboardFrameParser.HasAnyShot(result)) return "";
@@ -495,7 +495,7 @@ public class StoryboardPlanningService
                 Message = $"正在生成单元 {unit.UnitNumber} 的自由分镜"
             });
             var request = BuildFreeDramaRequest(planText, cameraText, directorText);
-            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, null, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
+            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, null, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId), actionLevel: _db.GetActionLevelForProject(projectId));
             LogCall(projectId, model, "自由分镜（运镜原子可选）", unit.UnitNumber, request, result);
             return result;
         }
@@ -509,7 +509,7 @@ public class StoryboardPlanningService
             Message = $"正在生成单元 {unit.UnitNumber} 的分镜"
         });
         var nonCombatRequest = BuildNonCombatRequest(planText, skillText, cameraText, directorText);
-        var nonCombatResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
+        var nonCombatResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, null, directorText, envText, thinkingMode: thinkingMode, complianceFeedback: complianceFeedback, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId), actionLevel: _db.GetActionLevelForProject(projectId));
         LogCall(projectId, model, "非打斗分镜（技能库+运镜原子）", unit.UnitNumber, nonCombatRequest, nonCombatResult);
         return nonCombatResult;
     }
@@ -556,7 +556,7 @@ public class StoryboardPlanningService
                 Message = $"单元 {unit.UnitNumber} 意图提取失败，按自由分镜生成"
             });
             var request = BuildFallbackRequest(planText, cameraText, skillText, fightSummary);
-            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
+            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId), actionLevel: _db.GetActionLevelForProject(projectId));
             LogCall(projectId, model, "打斗自由回退（意图失败）", unit.UnitNumber, request, result);
             return result;
         }
@@ -637,7 +637,7 @@ public class StoryboardPlanningService
                 Message = $"单元 {unit.UnitNumber} 未匹配到模板，按自由分镜生成"
             });
             var request = BuildFallbackRequest(planText, cameraText, skillText, fightSummary);
-            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
+            var result = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId), actionLevel: _db.GetActionLevelForProject(projectId));
             LogCall(projectId, model, "打斗自由回退（未匹配模板）", unit.UnitNumber, request, result);
             return result;
         }
@@ -689,7 +689,7 @@ public class StoryboardPlanningService
                     Message = $"单元 {unit.UnitNumber} 受控生成重试失败，按自由分镜重试"
                 });
                 var fallbackRequest = BuildFallbackRequest(planText, cameraText, skillText, fightSummary);
-                var fallbackResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId));
+                var fallbackResult = await _llm.PlanShots(planText, apiUrl, apiKey, model, cameraText, skillText, fightSummary, directorText, envText, thinkingMode: thinkingMode, projectType: _db.GetProjectType(projectId), lyricTrackText: _db.GetLyricTrackText(projectId), actionLevel: _db.GetActionLevelForProject(projectId));
                 LogCall(projectId, model, "打斗自由回退（受控失败）", unit.UnitNumber, fallbackRequest, fallbackResult);
                 return fallbackResult;
             }

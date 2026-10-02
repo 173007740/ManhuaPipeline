@@ -92,6 +92,21 @@
           <label>单集时长（秒）<input type="number" name="episodeDuration" min="1" placeholder="例如 180">
             <span class="pe-field-note">按秒填：90 秒 / 180 秒 / 300 秒。这个数会被拿去校验每集分镜的总时长（±5%）</span></label>
         </div>
+        <!-- 内容类型与动作强度：这两格会一路带到每一站的提示词里。
+             内容类型定的是「这部片子按什么结构走」，动作强度定的是「打戏打到什么程度」，
+             两个维度互不干涉 —— 广告照样可以有 R3 大招，短剧也可以按 R1 克制拍。 -->
+        <div class="pe-grid two" style="margin-top:12px">
+          <label>内容类型<select name="projectType">
+              <option value="drama">短剧（drama）</option>
+              <option value="ad">广告（ad）</option>
+              <option value="mv">歌曲 MV（mv）</option></select>
+            <span class="pe-field-note">决定结构规则与时间轴来源：短剧按三幕因果、MV 按乐句、广告按产品三步链</span></label>
+          <label>动作强度<select name="actionLevel">
+              <option value="R2">R2 商业高燃</option>
+              <option value="R1">R1 写实克制</option>
+              <option value="R3">R3 玄幻大招</option></select>
+            <span class="pe-field-note">R1 允许克制收尾；R2 强制 0.5 秒开局硬撞 + 2~3 秒近景对招；R3 再加一记大招终结</span></label>
+        </div>
       </section>
 
       <!-- 03 故事设定 -->
@@ -276,7 +291,8 @@
         delivery: val('delivery'), platform: val('platform'), promptEngine: val('promptEngine'),
         episodeCount: val('episodeCount'), episodeDuration: val('episodeDuration'),
         hook: val('hook'), premise: val('premise'), characters: val('characters'),
-        scriptContent: val('scriptContent'), artStyle: pickVal('artStyle'), videoStyle: pickVal('videoStyle')
+        scriptContent: val('scriptContent'), artStyle: pickVal('artStyle'), videoStyle: pickVal('videoStyle'),
+        projectType: val('projectType'), actionLevel: val('actionLevel')
       }));
     } catch (e) { }
   }
@@ -323,7 +339,11 @@
       hook: val('hook') || null,
       premise: val('premise') || null,
       charactersJson: chars.length ? JSON.stringify(chars) : null,
-      promptEngine: val('promptEngine') || null
+      promptEngine: val('promptEngine') || null,
+      // 内容类型与动作强度：立项定的，会被写进 P0 输入文本，
+      // 因此跑 P1 剧本 / P2 资产 / P3 分镜 / P4 提示词时每一站都看得见这两个值
+      projectType: val('projectType') || 'drama',
+      actionLevel: val('actionLevel') || 'R2'
     };
   }
   function saveBrief(id, after) {
@@ -395,6 +415,7 @@
       setVal('genre', b.genre); setVal('promptEngine', b.promptEngine);
       setVal('episodeCount', b.episodeCount); setVal('episodeDuration', b.episodeDuration);
       setVal('hook', b.hook); setVal('premise', b.premise);
+      setVal('projectType', b.projectType); setVal('actionLevel', b.actionLevel);
       var chars = [];
       try { var p = JSON.parse(b.charactersJson || '[]'); if (p instanceof Array) chars = p; } catch (e) { }
       setVal('characters', chars.join('，'));

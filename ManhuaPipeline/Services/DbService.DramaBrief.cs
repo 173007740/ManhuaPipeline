@@ -15,13 +15,20 @@ public partial class DbService
     /// VideoStyleId = 这部漫剧的「视觉风格」（VideoStyles 里挑的那条：整部剧的影像调性）。
     /// 跟 ArtStyleId（图片风格，资产出图用）是两回事，两个字段各管一段：
     /// 一个定画面长什么样（图），一个定影像什么调子（视频）。
+    ///
+    /// ProjectType / ActionLevel = 内容类型（短剧/广告/MV）与动作强度档（R1/R2/R3）。
+    /// 这两项 Dramas 与 Projects 上都有一份，含义不同两件事：
+    ///   立项这份是「整部漫剧的定调」——新建单集项目时按它写入 Projects；
+    ///   Projects 那份是「这一集的」——人可以在项目上单独改（比如整部是短剧、某一集是 MV）。
+    /// 为空按立项/技能包的默认值处理，读的地方统一走 dw 里的归一化函数。
     /// </summary>
     public sealed record DramaBriefRow(
         int DramaId, string Status,
         string? Aspect, string? Delivery, string? Genre, int? ArtStyleId,
         string? Hook, string? Premise, string? Platform,
         int? EpisodeCount, int? EpisodeDuration, string? CharactersJson, string? PromptEngine,
-        int? VideoStyleId = null);
+        int? VideoStyleId = null,
+        string? ProjectType = null, string? ActionLevel = null);
 
     /// <summary>
     /// 项目 → 所属漫剧。立项挂在漫剧层，可流水线和页面手里拿的都是 projectId
@@ -44,7 +51,8 @@ public partial class DbService
         using var conn = GetConn(); conn.Open();
         using var cmd = new SqlCommand(@"
 SELECT DramaId, Status, Aspect, Delivery, Genre, ArtStyleId, Hook, Premise, Platform,
-       EpisodeCount, EpisodeDuration, CharactersJson, PromptEngine, VideoStyleId
+       EpisodeCount, EpisodeDuration, CharactersJson, PromptEngine, VideoStyleId,
+       ProjectType, ActionLevel
 FROM Dramas WHERE DramaId = @did", conn);
         cmd.Parameters.AddWithValue("@did", dramaId);
 
@@ -57,7 +65,8 @@ FROM Dramas WHERE DramaId = @did", conn);
             r.IsDBNull(6) ? null : r.GetString(6), r.IsDBNull(7) ? null : r.GetString(7),
             r.IsDBNull(8) ? null : r.GetString(8), r.IsDBNull(9) ? null : r.GetInt32(9),
             r.IsDBNull(10) ? null : r.GetInt32(10), r.IsDBNull(11) ? null : r.GetString(11),
-            r.IsDBNull(12) ? null : r.GetString(12), r.IsDBNull(13) ? null : r.GetInt32(13));
+            r.IsDBNull(12) ? null : r.GetString(12), r.IsDBNull(13) ? null : r.GetInt32(13),
+            r.IsDBNull(14) ? null : r.GetString(14), r.IsDBNull(15) ? null : r.GetString(15));
     }
 
     /// <summary>
@@ -70,7 +79,8 @@ FROM Dramas WHERE DramaId = @did", conn);
                                 string? hook, string? premise, string? platform,
                                 int? episodeCount, int? episodeDuration,
                                 string? charactersJson, string? promptEngine,
-                                int? videoStyleId = null)
+                                int? videoStyleId = null,
+                                string? projectType = null, string? actionLevel = null)
     {
         if (dramaId <= 0) return 0;
         using var conn = GetConn(); conn.Open();
@@ -89,6 +99,8 @@ UPDATE Dramas SET
     CharactersJson  = COALESCE(@chars,  CharactersJson),
     PromptEngine    = COALESCE(@engine, PromptEngine),
     VideoStyleId    = COALESCE(@vsid,   VideoStyleId),
+    ProjectType     = COALESCE(@pt,     ProjectType),
+    ActionLevel     = COALESCE(@alv,    ActionLevel),
     UpdatedAt       = SYSDATETIME()
 WHERE DramaId = @did", conn);
         cmd.Parameters.AddWithValue("@did", dramaId);
@@ -105,8 +117,35 @@ WHERE DramaId = @did", conn);
         cmd.Parameters.AddWithValue("@chars", (object?)charactersJson ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@engine", (object?)promptEngine ?? DBNull.Value);
         cmd.Parameters.AddWithValue("@vsid", (object?)videoStyleId ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@pt", (object?)projectType ?? DBNull.Value);
+        cmd.Parameters.AddWithValue("@alv", (object?)actionLevel ?? DBNull.Value);
         cmd.ExecuteNonQuery();
         return dramaId;
+    }
+
+    /// <summary>
+    /// 取立项定的内容类型（短剧 / 广告 / MV）。立项在漫剧层，所以只认 dramaId。
+    /// 没有立项记录或没填，一律按 drama —— 跟 NormalizeProjectType 的兜底同一个口径。
+    /// </summary>
+    public string GetContentType(int dramaId)
+        => dramaId > 0 ? NormalizeProjectType(GetDramaBrief(dramaId)?.ProjectType) : "drama";
+
+    /// <summary>
+    /// 取立项定的动作强度档（R1 写实克制 / R2 商业高燃 / R3 玄幻大招）。
+    /// 立项没填按 R2——技能包里 R2 就是默认档，这里保持一致，不让模型自己挑。
+    /// </summary>
+    public string GetActionLevel(int dramaId)
+        => NormalizeActionLevel(dramaId > 0 ? GetDramaBrief(dramaId)?.ActionLevel : null);
+
+    /// <summary>手上是项目（流水线一次跑一集），立项在漫剧上——上溯一级再取动作强度档。</summary>
+    public string GetActionLevelForProject(int projectId)
+        => GetActionLevel(GetDramaIdByProject(projectId));
+
+    /// <summary>动作强度白名单归一：R1 / R2 / R3，其余（含空）一律 R2。</summary>
+    public static string NormalizeActionLevel(string? level)
+    {
+        var t = (level ?? "").Trim().ToUpperInvariant();
+        return t is "R1" or "R2" or "R3" ? t : "R2";
     }
 
     // ============================================================
