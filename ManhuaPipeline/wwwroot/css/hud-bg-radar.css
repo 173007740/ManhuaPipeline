@@ -1,0 +1,145 @@
+/* ============================================================================
+   全站统一的「指挥中心」背景 —— 只留一个在转的：右侧 7 秒一圈的雷达盘
+
+   三层，全部画在 html / body 的伪元素上（跟工作台 dashboard.html 同源，
+   那份定义在 css/hud-static.css 里，这里抽出来是为了给其它页面用）：
+
+     html::after   右侧雷达盘，radar-sweep，7 秒一圈   ← 唯一在转的那个
+     html::before  红点与青色目标点，radar-targets，明暗闪烁
+     body::before  54px 网格 + 二进制大字，浮在内容之上（z-index 8、opacity .22、screen 混合）
+
+   为什么单独抽一份而不是让每个页面去引 hud-static.css：
+   hud-static.css 里除了背景，还有一大堆通用类名（.panel / .page / .primary /
+   .metric / .status / .eyebrow / .card-grid …），整份引到别的页面会按属性逐条
+   盖掉人家自己的版式。这里只搬背景，不动任何类名。
+
+   为什么开头要先「清一遍」：
+   admin-theme.css 在同名四个伪元素上也画了自己的一套（网格、右上刻度环、
+   左下同心圆、斜向青光），而且给 html::after 写了 inset:56px 0 0（等于 left:0）。
+   加载顺序在后面的会按属性逐条混合生效，残留的 left:0 会把雷达盘钉到屏幕左边。
+   所以先 content:none（让它不生成）+ inset:auto（清掉定位残留）+ border/background 清零，
+   再把我们要的三层重新定义出来。顺序不能变：本文件必须加载在 admin-theme.css 之后。
+
+   为什么没有 body::after（右上刻度环 48s）和 .hud-radar / .hud-rings：
+   那几个跟雷达盘同在画面里转，看着就是「好几个在转的特效」，视线被拉散，
+   统一只要雷达盘一个。见下面 .hud-radar / .hud-rings 的 display:none。
+
+   用法：在 </head> 之前加一行
+     <link rel="stylesheet" href="/css/hud-bg-radar.css?v=2">
+   粒子星图另配 /js/particle-bg.js（它会在没有容器时自己建一个）。
+   ============================================================================ */
+
+/* ---- 1. 先清：让 admin-theme.css（以及任何先加载的样式表）的同名伪元素不生成 ---- */
+body::before, body::after, html::before, html::after {
+    content: none;
+    inset: auto;
+    border: 0;
+    background: none;
+}
+
+/* ---- 2. hud-bg.css 那两层转的也不要：刻度环 48s、左下同心圆 72s 反向 ---- */
+.hud-radar, .hud-rings { display: none; }
+
+/* ---- 3. 底色：跟工作台一致的纯色深底（不设的话，只引 admin-theme 的页面会漏出白底） ---- */
+html, body { background: #02080e; }
+
+/* ---- 4. 二进制大字 + 网格（浮在内容之上，很淡，只是氛围） ---- */
+body::before {
+    content: "0101 0011 1010 0101  /  SYSTEM LINK\A\A P  O  W  E  R \A\A01001001 01001110 01001001 01010100";
+    position: fixed;
+    inset: 72px 0 24px;
+    z-index: 8;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    white-space: pre;
+    text-align: center;
+    color: #42f6ff;
+    font: 700 clamp(12px, 1.35vw, 20px)/1.55 Consolas, monospace;
+    letter-spacing: .42em;
+    opacity: .22;
+    text-shadow: 0 0 8px #05e8f0, 0 0 24px #05e8f099;
+    mix-blend-mode: screen;
+    background: none;
+    pointer-events: none;
+    animation: power-stitch 6s steps(1, end) infinite, power-float 12s ease-in-out infinite;
+}
+
+/* ---- 5. 雷达目标点（小红点与青点，明暗闪烁，不转） ---- */
+html::before {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    pointer-events: none;
+    right: clamp(65px, 14vw, 225px);
+    top: calc(50% - 110px);
+    width: 7px;
+    height: 7px;
+    border-radius: 50%;
+    background: #ff3852;
+    box-shadow: 0 0 8px #ff3852,
+                72px 138px 0 -1px #05e8f0, 72px 138px 9px #05e8f0,
+                -118px 196px 0 -1px #05e8f0, -118px 196px 9px #05e8f0,
+                35px -96px 0 -1px #ff3852, 35px -96px 9px #ff3852;
+    animation: radar-targets 2.2s steps(2, end) infinite;
+}
+
+/* ---- 6. 雷达盘（唯一在转的：7 秒一圈，带扫描扇形） ---- */
+html::after {
+    content: "";
+    position: fixed;
+    z-index: 0;
+    pointer-events: none;
+    right: clamp(-210px, -9vw, -80px);
+    top: 50%;
+    width: min(62vw, 760px);
+    aspect-ratio: 1;
+    border-radius: 50%;
+    opacity: .52;
+    border: 1px solid #05e8f04d;
+    background:
+        radial-gradient(circle at 50% 50%,
+            #05e8f0 0 3px, transparent 4px 12%,
+            #05e8f029 12.2% 12.5%, transparent 12.8% 24%,
+            #05e8f026 24.2% 24.5%, transparent 24.8% 36%,
+            #05e8f023 36.2% 36.5%, transparent 36.8% 48%,
+            #05e8f020 48.2% 48.5%, transparent 48.8% 61%,
+            #05e8f01d 61.2% 61.5%, transparent 61.8%),
+        repeating-conic-gradient(from 0deg, #05e8f02c 0 .35deg, transparent .35deg 15deg),
+        conic-gradient(from 0deg, transparent 0 300deg,
+            #05e8f000 300deg, #05e8f04d 337deg,
+            #62f8ffb8 357deg, #d9feff 359deg, transparent 360deg);
+    box-shadow: inset 0 0 45px #05e8f00d, 0 0 32px #05e8f00d;
+    transform: translateY(-50%);
+    transform-origin: 50% 50%;
+    animation: radar-sweep 7s linear infinite;
+    mix-blend-mode: screen;
+}
+
+/* ---- 关键帧 ---- */
+@keyframes radar-sweep {
+    from { transform: translateY(-50%) rotate(0); }
+    to   { transform: translateY(-50%) rotate(360deg); }
+}
+@keyframes radar-targets {
+    0%, 40% { opacity: .22; }
+    45%, 100% { opacity: .92; }
+}
+@keyframes power-float {
+    0%, 100% { transform: translate3d(-2vw, -2vh, 0) scale(.96); opacity: .14; }
+    50%      { transform: translate3d(2vw, 2vh, 0) scale(1.04);  opacity: .32; }
+}
+/* 定时把整段字符换成另一串（steps 所以是硬切，不是渐变）；少了它网格还在动，字是死的 */
+@keyframes power-stitch {
+    0%, 12%  { content: "0 1 0 1  0 0 1 1  1 0 1 0  0 1 0 1\A\A 0  1  0  1  0 \A\A1 0 1 0  0 1 1 0  1 0 0 1"; clip-path: inset(0 46% 0 46%); }
+    13%, 25% { content: "01010000  01001111  01010111  01000101  01010010\A\A P  0  W  1  R \A\A010101 001101 101001 010110"; clip-path: inset(0 30% 0 30%); }
+    26%, 44% { content: "01010000 01001111 01010111 01000101 01010010\A\A P  O  W  E  R \A\A00110101 01001110 01000111 01001001 01001110 01000101"; clip-path: inset(0 8% 0 8%); }
+    45%, 62% { content: "01001101 01000001 01001110 01000111 01000001\A\A MANGA ENGINE / POWER \A\A01000100 01001001 01010010 01000101 01000011 01010100 01001111 01010010"; clip-path: inset(0); }
+    63%, 80% { content: "01000100 01001001 01010010 01000101 01000011 01010100 01001111 01010010\A\A D I R E C T O R   O S \A\A01010000 01001111 01010111 01000101 01010010"; clip-path: inset(0); }
+    81%, 100% { content: "0101 0011 1010 0101  /  SYSTEM LINK\A\A P  O  W  E  R \A\A01001001 01001110 01001001 01010100"; clip-path: inset(0); }
+}
+
+/* 晕动症偏好下停掉动画（雷达盘留在原地，不转） */
+@media (prefers-reduced-motion: reduce) {
+    html::after, html::before, body::before { animation: none; }
+}

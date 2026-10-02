@@ -1,11 +1,21 @@
 /**
- * 全站 HUD 背景：粒子星图
- * 依赖：页面里先有 <div id="particleWrap"><canvas id="particleCanvas"></canvas></div>
+ * 全站 HUD 背景：粒子星图（70 个星点 + 近距离连线）
+ * 页面里有 <div id="particleWrap"><canvas id="particleCanvas"></canvas></div> 就直接用，
+ * 没有就自己建一个插到 body 最前面 —— 这样接入只需一行 <script>。
  * 最初只放在 dashboard.html 内联，现在抽到公共文件，避免各页各抄一份。
  */
 (function () {
     var canvas = document.getElementById('particleCanvas');
-    if (!canvas) return;
+    if (!canvas) {
+        var wrap = document.createElement('div');
+        wrap.id = 'particleWrap';
+        wrap.style.cssText = 'position:fixed;inset:0;overflow:hidden;pointer-events:none;z-index:0';
+        canvas = document.createElement('canvas');
+        canvas.id = 'particleCanvas';
+        canvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none';
+        wrap.appendChild(canvas);
+        document.body.insertBefore(wrap, document.body.firstChild);
+    }
     canvas.style.top = '0';
     canvas.style.width = '100%';
     canvas.style.pointerEvents = 'none';

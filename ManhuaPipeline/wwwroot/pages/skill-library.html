@@ -50,6 +50,7 @@
 
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
     <script src="/js/hud-chrome.js?v=10"></script>
+    <link rel="stylesheet" href="/css/hud-bg-radar.css?v=2">
 </head>
 <body>
     <nav class="navbar">
@@ -499,5 +500,6 @@
             $('#btnLogout').click(function () { $.post('/api/auth/logout').done(function () { window.location.href = '/'; }); });
         });
     </script>
+<script src="/js/particle-bg.js?v=2"></script>
 </body>
 </html>
