@@ -473,9 +473,15 @@
          这一页要的是工作台同款背景，那四层由下面这份 hud-static.css 提供，所以先把 admin-theme 的关掉。
          用 content:none 而不是 display:none —— 只掐掉「生成伪元素」这一步，
          后面 hud-static.css 里显式写的 content 就能把它自己的四层重新生成出来（同选择器，后者优先）。
-         顺序不能动：这条必须在 admin-theme.css 之后、hud-static.css 之前。 -->
+         顺序不能动：这条必须在 admin-theme.css 之后、hud-static.css 之前。
+         inset:auto 是必须的：admin-theme 给 html::after 写了 inset:56px 0 0（等于 left:0），
+         content:none 只让它不生成、清不掉这个 left:0；而 hud-static 只设 right/top 不设 left，
+         残留的 left:0 会把雷达盘整个钉到屏幕左边（实测 left 从 982px 变成 0px）。
+         同理 border/background 也清一遍，避免 admin-theme 的 1px 描边留在 hud-static 的星点上。 -->
     <style>
-      body::before, body::after, html::before, html::after { content: none; }
+      body::before, body::after, html::before, html::after {
+        content: none; inset: auto; border: 0; background: none;
+      }
     </style>
 
     <!-- 工作台同款背景，就是这个页面「雷达在背景转」的来源：
