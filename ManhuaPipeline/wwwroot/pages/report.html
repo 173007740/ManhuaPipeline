@@ -61,10 +61,14 @@
 <!-- 背景跟工作台 / 导演流水线同一份（右上刻度环 / 左下同心圆 / 斜向扫光） -->
 <link rel="stylesheet" href="/css/hud-bg.css?v=1">
 <style>
-  /* 关掉 admin-theme.css 自带的那四层背景特效（54px 网格 + 居中二进制大字 / 右侧刻度环 /
-     斜向青光 / 左下同心圆环）：跟 hud-bg.css 是两套，同时开着会叠成两层同心圆、两道扫光。
+  /* 关掉 admin-theme.css 自带的那三层背景特效：body::before 是 54px 网格 + 居中二进制大字，
+     html::after 是斜向青光，html::before 是左下同心圆环 —— 这三层 hud-bg.css 里没有对应物，
+     留着就是叠影。
+     唯独 body::after 不能关 —— 那是「右上刻度环」（在转的那个雷达）的挂载点，
+     hud-bg.css 也画在同一个伪元素上、且加载在后，会自然覆盖 admin-theme 那份。
+     之前这里写成四个一起 display:none，等于把刚接上的雷达又关掉了。
      只关这一页，不动 admin-theme.css 本身。 */
-  body::before, body::after, html::before, html::after { display: none; }
+  body::before, html::before, html::after { display: none; }
 </style>
     <script src="/js/hud-chrome.js?v=10"></script>
 </head>
