@@ -20,14 +20,25 @@
 
         .voice-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 14px; }
         .voice-card { background: var(--bg-glass); border: 1px solid var(--border); border-radius: var(--radius-lg); padding: 14px; display: flex; flex-direction: column; gap: 8px; position: relative; overflow: hidden; }
-        /* 有封面图时铺满卡片当背景，上面压一层暗色渐变保证文字可读 */
-        .voice-card.has-cover { background-size: cover; background-position: center; }
-        .voice-card.has-cover::before { content: ""; position: absolute; inset: 0; background: linear-gradient(180deg, rgba(6,8,16,.55), rgba(6,8,16,.85)); }
-        .voice-card.has-cover > * { position: relative; z-index: 1; }
-        .voice-card.has-cover .name { text-shadow: 0 1px 3px rgba(0,0,0,.8); }
-        .voice-card.has-cover .meta { color: rgba(226,232,240,.85); }
-        .voice-card.has-cover .note { color: rgba(226,232,240,.8); }
-        .voice-card .cover-tip { position: absolute; top: 8px; right: 10px; z-index: 2; font-size: 10px; color: rgba(226,232,240,.7); }
+        /* 封面不再铺满整张卡片，改成右上角一块小图。
+           以前的做法是 background-size:cover 铺底 + 一层暗色渐变压着保证文字可读，
+           结果整张卡片的底色被图吃掉，卡片之间看着很乱、文字也发灰。
+           现在是绝对定位的小方块，不占卡片高度，底色仍是原来的半透明玻璃底。 */
+        .voice-card .cover-thumb {
+          position: absolute;
+          top: 8px;
+          right: 8px;
+          width: 56px;
+          height: 56px;
+          border-radius: 8px;
+          object-fit: cover;          /* 头像多是竖图，裁成方块不变形 */
+          flex: none;
+          border: 1px solid var(--border);
+          background: #061018;
+          z-index: 2;
+        }
+        /* 音色名给右上角的小图让出位置，长名字照旧省略号截断 */
+        .voice-card.has-cover .name { padding-right: 68px; }
         .voice-card .name { font-size: 15px; font-weight: 700; color: var(--text); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
         .voice-card .meta { font-size: 11px; color: var(--text-muted); line-height: 1.8; }
         .voice-card .file { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
@@ -288,8 +299,9 @@
             items.forEach(function (v) {
                 var $c = $('<div class="voice-card"></div>');
                 if (v.imageUrl) {
-                    $c.addClass("has-cover").css("background-image", "url('" + esc(v.imageUrl) + "')");
-                    $c.append('<span class="cover-tip" title="封面图"><span class="material-icons" style="font-size:12px;vertical-align:middle">image</span></span>');
+                    // 封面走右上角的小方块（.cover-thumb），不再整块铺底
+                    $c.addClass("has-cover");
+                    $c.append('<img class="cover-thumb" src="' + esc(v.imageUrl) + '" alt="封面" title="封面图" loading="lazy">');
                 }
                 $c.append('<div class="name" title="' + esc(v.name) + '">' + esc(v.name) + "</div>");
                 // 卡片信息分三行：分类/标签 → 文件名 → 更新日期
