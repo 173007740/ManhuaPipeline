@@ -1,0 +1,39 @@
+/* ============================================================================
+   内嵌页按钮统一：跟 dashboard.html 的「新建漫剧」同一套 —— 青边 + 深青底 + 切角。
+   原型是 css/hud-static.css 里的 .primary（dashboard / skill-studio 引的那份）。
+   为什么不整份引 hud-static.css：那份里除了按钮还有一大堆通用类名
+   （.panel / .page / .primary / .metric / .status / .eyebrow / .card-grid …），
+   整份引到内嵌页会按属性逐条盖掉人家自己的版式。这里只搬按钮这一条。
+
+   加载位置有讲究：必须排在页面自己的内联 <style> 之后 —— 内嵌页大多自己定义过
+   .btn / .btn-grad / .btn-save（比如 skill-packs 的 .btn 是紫色渐变），
+   同名属性是「后来者覆盖先来者」，放前面会被盖回去。实际做法是紧跟在
+   hud-bg-radar.css 那行后面（也就是 </head> 之前）。
+
+   只改主操作按钮（保存 / 新增一类）。取消、放弃改动、删除这类次要和危险操作
+   保持原样 —— 全染成主色反而分不清哪个是确认键。
+   ============================================================================ */
+
+.btn-primary, .btn-grad, .btn-save {
+  border: 1px solid var(--cyan);
+  background: #06313b;
+  color: var(--cyan);
+  border-radius: 0;                 /* 切角靠 clip-path，圆角留着会露出弧边 */
+  box-shadow: none;
+  clip-path: polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+}
+
+.btn-primary:hover, .btn-grad:hover, .btn-save:hover {
+  background: #0a4756;
+  border-color: #8df1f7;
+  color: #8df1f7;
+  transform: none;                  /* style.css 的 .btn-primary:hover 带 translateY，切角会跟着抖 */
+}
+
+/* 小号按钮仍按小号走：config 里那九个「保存 xxx」是 btn btn-small btn-primary，
+   原型 .primary 写死了 height:40px，这里不照搬高度，只保留小号的 padding / 字号。 */
+.btn-primary.btn-small, .btn-primary.btn-sm {
+  height: auto;
+  padding: 6px 12px;
+  font-size: 12px;
+}
