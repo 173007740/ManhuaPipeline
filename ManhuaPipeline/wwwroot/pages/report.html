@@ -58,9 +58,19 @@
     </style>
 
     <link rel="stylesheet" href="/css/hud-chrome.css?v=10">
+<!-- 背景跟工作台 / 导演流水线同一份（右上刻度环 / 左下同心圆 / 斜向扫光） -->
+<link rel="stylesheet" href="/css/hud-bg.css?v=1">
+<style>
+  /* 关掉 admin-theme.css 自带的那四层背景特效（54px 网格 + 居中二进制大字 / 右侧刻度环 /
+     斜向青光 / 左下同心圆环）：跟 hud-bg.css 是两套，同时开着会叠成两层同心圆、两道扫光。
+     只关这一页，不动 admin-theme.css 本身。 */
+  body::before, body::after, html::before, html::after { display: none; }
+</style>
     <script src="/js/hud-chrome.js?v=10"></script>
 </head>
 <body>
+    <!-- 动画背景的挂点（css/hud-bg.css 认这个 id）：内容层 .container 由 admin-theme.css 抬在 z-index 1 -->
+    <div id="hudFx" aria-hidden="true"></div>
     <nav class="navbar">
         <div class="nav-inner">
             <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
