@@ -250,6 +250,12 @@ html::before {
 }
 
 /* ---- 按钮 ---- */
+/* .btn 是「次要按钮」的基底，必须自带底色和字色：以前这里只定了排版，
+   没有 background / color，于是凡是只写 class="btn"、不带 -primary / -outline /
+   -ghost / -danger 修饰的按钮，都会回落到浏览器默认的 buttonface —— 浅灰底 #f0f0f0
+   配黑字，在深色界面上看着就是一块白。全站 15 个页面约 65 个按钮是这个情况
+   （画布页的「新建画布 / 改名 / 删除 / 批量删 / 取消 / 关闭」最典型）。
+   带修饰的那些类下面各自覆盖 background，不受这条影响。 */
 .btn {
   display: inline-flex;
   align-items: center;
@@ -259,13 +265,22 @@ html::before {
   border-radius: var(--radius-sm);
   font-size: 13px;
   font-weight: 600;
-  border: 1px solid transparent;
+  border: 1px solid var(--line);
+  background: var(--bg-card);
+  color: var(--text);
   cursor: pointer;
   text-decoration: none;
   transition: all 0.18s ease;
   font-family: var(--font);
   line-height: 1;
   height: auto;
+}
+/* 放在 .btn-primary:hover / .btn-outline:hover / .btn-danger:hover 之前，
+   同优先级后来者胜，修饰类的 hover 照旧生效 */
+.btn:hover {
+  background: var(--bg-card-hover);
+  border-color: var(--cyan);
+  color: var(--cyan);
 }
 .btn .material-icons { font-size: 16px; }
 .btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none !important; box-shadow: none !important; }
