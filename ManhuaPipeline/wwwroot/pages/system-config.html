@@ -41,7 +41,13 @@
   <nav class="navbar">
     <div class="nav-inner">
       <a href="../index.html" class="logo" style="display:flex;align-items:flex-end;gap:12px;padding-bottom:8px;text-decoration:none;">
-        <span style="font-size:22px;font-weight:800;background:var(--accent-gradient);-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
+        <!-- 渐变文字不在这里写：admin-theme.css 的 .logo span 已经有一模一样的
+             （background:var(--accent-gradient) + -webkit-background-clip:text +
+              -webkit-text-fill-color:transparent + background-clip:text），
+             这里重复写一遍既冗余，又会让 VS 的 CSS 校验器报两条
+             「"text" 不是 background-clip 的有效值」（误报 —— text 是合法值，浏览器都支持）。
+             去掉内联这四条的显示效果完全一样，因为 .logo span 照样命中这个 span。 -->
+        <span style="font-size:22px;font-weight:800;"><img src="/favicon.png" style="width:22px;height:22px;vertical-align:middle;display:inline-block;" alt=""> MANGA ENGINE 漫创引擎</span>
         <span style="font-size:11px;font-weight:400;color:var(--text-muted);letter-spacing:0.3px;white-space:nowrap;">✦ MANGA ENGINE · AI 驱动漫创引擎 · 叙事导演工作台</span>
       </a>
       <div class="nav-links" id="navLinks">
